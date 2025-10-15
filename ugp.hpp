@@ -92,8 +92,6 @@ struct resource_reference_t : resource_reference_base_t <resource> {
 template <typename R>
 struct _return_operator {};
 
-#define $return _returner <<
-
 template <typename R, typename U>
 void operator<<(_return_operator <R>, const U &value)
 {
@@ -101,12 +99,18 @@ void operator<<(_return_operator <R>, const U &value)
 	// _return(value);
 }
 
-// TODO: pass name explicitly in the decl case, otherwise generate unique ID
-template <typename R>
-struct _def_operator {};
+enum class Stage {
+	Undefined,
 
-#define $def(R)		_def_operator <R> () << [_returner = _return_operator <R> ()]
-#define $scoped_def(R)	_def_operator <R> () << [&, _returner = _return_operator <R> ()]
+	// Standard stages
+	Vertex,
+	Fragment,
+	Compute,
+};
+
+// TODO: pass name explicitly in the decl case, otherwise generate unique ID
+template <Stage, typename Result>
+struct _def_operator {};
 
 template <typename R, typename ... Args>
 // struct function_t : thunder::TrackedBuffer {
@@ -129,8 +133,8 @@ constexpr auto signature_generator(std::function <R (Args...)> &&) -> signature_
 
 // TODO: custom vertex assembler stage
 
-template <typename R, typename F>
-auto operator<<(_def_operator <R>, F ftn)
+template <Stage C, typename R, typename F>
+auto operator<<(_def_operator <C, R>, F ftn)
 {
 	using function = decltype(std::function(ftn));
 	using signature = decltype(signature_generator(function()));

@@ -9,25 +9,33 @@ struct Position {
 	Position(const vec4 &value) : value(value) {}
 };
 
-template <typename T>
 struct Topology {
+	template <typename T>
 	struct Point : public T {};
+
+	template <typename T>
 	struct Line : public T {};
+	
+	template <typename T>
 	struct Triangle : public T {};
+	
+	template <typename T>
 	struct Patch : public T {};
 };
 
 // Optional result of the vertex shader
-template <typename T>
 struct Interpolant {
+	template <typename T>
 	struct Smooth : public T {
 		Smooth(const T &value) : T(value) {}
 	};
 	
+	template <typename T>
 	struct Flat : public T {
 		Flat(const T &value) : T(value) {}
 	};
 
+	template <typename T>
 	struct Noperspective : public T {
 		Noperspective(const T &value) : T(value) {}
 	};

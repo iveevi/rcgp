@@ -3,9 +3,9 @@
 #include "ugp.hpp"
 
 struct VertexAttributes {
-	Topology <vec3> ::Triangle position;
-	Topology <vec3> ::Triangle normal;
-	Topology <vec2> ::Triangle uv;
+	Topology::Triangle <vec3> position;
+	Topology::Triangle <vec3> normal;
+	Topology::Triangle <vec3> uv;
 
 	// TODO: intrinscs must be listed as members... (or parameters...)
 
@@ -14,9 +14,9 @@ struct VertexAttributes {
 
 struct RasterForward {
 	Position svpos;
-	Interpolant <vec3> ::Smooth position;
-	Interpolant <vec3> ::Smooth normal;
-	Interpolant <vec2> ::Smooth uv;
+	Interpolant::Smooth <vec3> position;
+	Interpolant::Smooth <vec3> normal;
+	Interpolant::Smooth <vec2> uv;
 
 	$reflection(svpos, position, normal, uv);
 };
@@ -43,36 +43,6 @@ struct MVP {
 
 ParameterBlock <MVP> mvp;
 
-auto vshader = $def(RasterForward)($import(mvp), VertexAttributes va)
-{
-	// vec4 hpos = vec4(va.position, 1);
-	// vec4 mpos = mvp.model * hpos;
-	// $return RasterForward {
-	// 	// TODO: trace source location to debug errors
-	// 	.svpos = mvp.proj * (mvp.view * mpos),
-	// 	.position = mpos.xyz(),
-	// 	.normal = transpose(inverse(mat3(mvp.model))) * va.normal,
-	// 	.uv = va.uv,
-	// };
-};
-
-template <int P>
-auto vshader_generator(float scale)
-{
-	return $scoped_def(RasterForward)($import(mvp), VertexAttributes va)
-	{
-		// // TODO: this needs to be piped into a jit begin/end scope...
-		// vec4 hpos = vec4(va.position, 1);
-		// vec4 mpos = mvp.model * hpos;
-		// $return RasterForward {
-		// 	.svpos = mvp.proj * (mvp.view * mpos),
-		// 	.position = mpos.xyz(),
-		// 	.normal = transpose(inverse(mat3(mvp.model))) * va.normal,
-		// 	.uv = va.uv,
-		// };
-	};
-}
-
 struct Sampler2D {
 	vec4 sample(vec2 uv) {
 		// return vec4(1, 0, 0, 1);
@@ -88,40 +58,104 @@ struct PBRTextures {
 	$reflection(diffuse, specular);
 };
 
-static_assert(reflection_holder <PBRTextures>);
-static_assert(std::is_same_v <PBRTextures::This, PBRTextures>);
-
 // TODO: index overwrite using layout... same for vertex input attributes...
 ParameterBlock <PBRTextures> textures;
 
-auto fshader = $def(SubpassResult <vec4>)($import(textures), $import(mvp), FragmentAttributes fa)
-{
-	// vec3 normal = fa.normal;
-	// vec2 uv = fa.uv;
-	// vec3 color = textures.diffuse.sample(uv).xyz();
-	// $return vec4(color, 1);
+// auto y = $stage(Vertex) $def(RasterForward) ($import(mvp)) {};
+// target syntax is def 'Vertex y(&mvp, va: VertexAttributes) -> RasterForward { ... }
+// the "&mvp" declaration attaches mvp to the context
+// or... $stage(Vertex) [](...) -> RasterForward
+// or... $stage(Vertex) $fn(...) -> $returns(RasterForward)
+// or... $S(Vertex) $fn(...) -> $R(RasterForward)
+
+template <int>
+struct proxy_tag {};
+
+template <typename T>
+struct foil {
+	using unfoil = T;
 };
+
+namespace fn_return_injection {
+
+template <typename T>
+struct Reader {
+	friend constexpr auto adl_lever(Reader <T>);
+};
+
+template <typename T, typename U>
+struct Writer {
+	friend constexpr auto adl_lever(Reader <T>) {
+		return foil <U> {};
+	}
+};
+
+inline void adl_lever();
+
+template <typename T>
+using Read = std::remove_pointer_t <decltype(adl_lever(Reader <T> {}))>;
+
+}
+
+template <Stage, int>
+struct _fn_operator {};
+
+template <Stage>
+struct _stage_operator {};
+
+#define $stage(C) _stage_operator <Stage::C> () *
+
+#define $vertex		$stage(Vertex)
+#define $fragment	$stage(Fragment)
+#define $compute	$stage(Compute)
+
+#define $returns(T) decltype(fn_return_injection::Writer <decltype(_return_proxy), RasterForward> {}, void())
+#define $return (_return_operator <fn_return_injection::Read <decltype(_return_proxy)> ::unfoil> ()) << 
+#define $fn (_fn_operator <Stage::Undefined, __COUNTER__ + 1> ()) << [_return_proxy = proxy_tag <__COUNTER__> ()]
+#define $cafn(...) (_fn_operator <Stage::Undefined, __COUNTER__ + 1> ()) << [__VA_ARGS__ __VA_OPT__(,) _return_proxy = proxy_tag <__COUNTER__> ()]
+
+template <Stage S, int I>
+auto operator<<(_fn_operator <S, I>, auto lambda)
+{
+	using R = typename fn_return_injection::Read <proxy_tag <I>> ::unfoil;
+	return (_def_operator <S, R> ()) << lambda;
+}
+
+template <Stage C, int I>
+auto operator*(_stage_operator <C>, _fn_operator <Stage::Undefined, I>)
+{
+	return _fn_operator <C, I> ();
+}
+
+auto z = $vertex $fn(i32 x, $import(mvp)) -> $returns(RasterForward)
+{
+	$return RasterForward {
+		.svpos = vec4(),
+		.position = vec3(),
+		.normal = vec3(),
+		.uv = vec2(),
+	};
+};
+
+auto f(int y)
+{
+	return $compute $cafn(&)(i32 x) -> $returns(RasterForward)
+	{
+		int ww = y;
+
+		$return RasterForward {
+			.svpos = vec4(),
+			.position = vec3(),
+			.normal = vec3(),
+			.uv = vec2(),
+		};
+	};
+}
+
+#define $fuse(A, B)
 
 int main()
 {
-	using A = decltype(vshader)::reflection;
-	using B = VertexAttributes::reflection;
-	using C = reflection_fetcher <VertexAttributes> ::type;
-
-	static_assert(reflection_holder <ParameterBlock <MVP>>);
-	using P = decltype(mvp)::reflection;
-
-	using D = decltype(fshader)::reflection;
-
-	fmt::println("mvp type: {}", $ss_type(decltype(mvp)).view());
-
-	fmt::println("reflected signature of vshader:\n{}", $ss_type(A).view());
-	fmt::println("reflected signature of fshader:\n{}", $ss_type(decltype(fshader)::reflection).view());
-
-	using R1 = resource_reference_t <mvp>;
-	using R2 = resource_reference_t <mvp>;
-	using R3 = resource_reference_t <textures>;
-
 	// TODO: static_reference as a basic unit for testing reference identity
 	// static_assert(std::is_same_v <R1, R2>);
 	// static_assert(std::is_same_v <R1, R3>,

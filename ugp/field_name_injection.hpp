@@ -4,15 +4,15 @@
 
 namespace field_name_injection {
 
-template <class T, size_t I>
+template <typename T, size_t I>
 struct field_ref {};
 
-template <class T>
+template <typename T>
 struct Reader {
 	friend constexpr auto adl_lever(Reader <T>);
 };
 
-template <class T, auto Name>
+template <typename T, auto Name>
 struct Writer {
 	friend constexpr auto adl_lever(Reader <T>) {
 		return Name;
