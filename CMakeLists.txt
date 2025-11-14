@@ -9,7 +9,7 @@ find_package(Vulkan REQUIRED)
 
 add_compile_options(-ftime-trace)
 
-include_directories(.)
+include_directories(. include)
 
 add_executable(prototype samples/prototype.cpp)
 add_executable(traditional samples/traditional.cpp)

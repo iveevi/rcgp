@@ -1,8 +1,8 @@
-#include "ugp/ugp.hpp"
+#include <ugp.hpp>
 
 struct RasterForward {
 	Position svpos;
-	Interpolant::Smooth <vec3> position;
+	Smooth <vec3> position;
 
 	$reflection(svpos, position);
 };
@@ -70,8 +70,8 @@ struct Transform {
 };
 
 struct GeometryBuffer {
-	Buffer <ivec3> triangles;
-	Buffer <Vertex> vertices;
+	TBuffer <ivec3> triangles;
+	TBuffer <Vertex> vertices;
 	Transform xform;
 
 	static GeometryBuffer from(const Device &, const Mesh &) {
@@ -180,7 +180,7 @@ struct Window {
 			.setImageFormat(result.format)
 			.setMinImageCount(surface_capabilities.minImageCount)
 			.setOldSwapchain(nullptr)
-			.setPresentMode(vk::PresentModeKHR::eImmediate)
+			.setPresentMode(vk::PresentModeKHR::eFifo)
 			.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
 			.setSurface(surface);
 
@@ -270,7 +270,8 @@ struct Queue : vk::Queue {
 struct CommandPool : vk::CommandPool {
 	static CommandPool from(const Device &device, const Queue &queue) {
 		auto cpool_info = vk::CommandPoolCreateInfo()
-			.setQueueFamilyIndex(queue.family_index);
+			.setQueueFamilyIndex(queue.family_index)
+			.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
 
 		return CommandPool(device.logical.createCommandPool(cpool_info));
 	}

@@ -3,6 +3,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include <fmt/printf.h>
+#include <fmt/color.h>
 
 #include "glfw.hpp"
 
@@ -14,8 +15,25 @@ VKAPI_ATTR VKAPI_CALL vk::Bool32 validation_callback
 	void *_
 )
 {
-	// TODO: logger...
-	fmt::println(stderr, "[vvl] {}", data->pMessage);
+	auto fg = fmt::fg(fmt::color::gray);
+	switch (severity) {
+	case vk::DebugUtilsMessageSeverityFlagBitsEXT::eError:
+		fg = fmt::fg(fmt::color::red);
+		break;
+	case vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning:
+		fg = fmt::fg(fmt::color::yellow);
+		break;
+	case vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo:
+		fg = fmt::fg(fmt::color::blue);
+		break;
+	default:
+		break;
+	}
+
+	auto header = fmt::format(fmt::emphasis::bold | fg, "[vvl]");
+	auto message = fmt::format(fmt::emphasis::conceal, "{}", data->pMessage);
+
+	fmt::println(stderr, "{} {}", header, message);
 	return false;
 }
 

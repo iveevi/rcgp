@@ -1,6 +1,6 @@
 #include <fmt/printf.h>
 
-#include "ugp/ugp.hpp"
+#include <ugp.hpp>
 
 struct VertexAttributes {
 	vec3 position;
