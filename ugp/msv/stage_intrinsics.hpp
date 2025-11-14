@@ -1,13 +1,13 @@
 #pragma once
 
 #include "../dsl/primitives.hpp"
+#include "../msv/reconstruct_type.hpp"
 
 // Required result of the vertex shader
-struct Position : vec4 {
-	// TODO: only emit when returning...
+struct Position {
 	Position(const vec4 &value, $location) {
 		jems::store_loc(loc,
-			jems::intrinsic_loc(loc, StageIntrinsic::eSVPosition),
+			jems::intrinsic_loc(loc, GlobalIntrinsic::eSVPosition),
 			value
 		);
 	}
@@ -21,22 +21,28 @@ enum Topology {
 };
 
 // Optional result of the vertex shader
-struct Interpolant {
-	template <typename T>
-	struct Smooth : public T {
-		Smooth(const T &value) : T(value) {}
-	};
-	
-	template <typename T>
-	struct Flat : public T {
-		Flat(const T &value) : T(value) {}
-	};
-
-	template <typename T>
-	struct Noperspective : public T {
-		Noperspective(const T &value) : T(value) {}
-	};
+template <typename T, ThreadOutput::Properties P>
+struct Interpolant : jems::handle {
+	// TODO: require reflection_expander, like reference
+	template <typename U>
+	requires std::is_convertible_v <U, T>
+	Interpolant(const U &value, $location)
+		: handle(jems::intrinsic_loc(loc,
+			ThreadOutput(reconstruct_type <T> (), 0, P)
+		))
+	{
+		jems::store_loc(loc, *this, T(value));
+	}
 };
+
+template <typename T>
+using Smooth = Interpolant <T, ThreadOutput::eSmooth>;
+
+template <typename T>
+using Flat = Interpolant <T, ThreadOutput::eFlat>;
+
+template <typename T>
+using NoPerspective = Interpolant <T, ThreadOutput::eNoPerspective>;
 
 // Required result of the fragment shader
 template <typename T>

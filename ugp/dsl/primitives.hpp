@@ -22,6 +22,19 @@ template <typename T, size_t N>
 struct vector_base : jems::handle {};
 
 template <typename T>
+struct vector_base <T, 3> : jems::handle {
+	vector_base() = default;
+
+	vector_base(const jems::handle &h) : handle(h) {}
+	
+	vector_base(const vector_base <T, 2> &xy, const scalar <T> &z, $location)
+		: handle(jems::construct_loc(loc,
+			jems::type_loc(loc, VectorType <T, 3> ()),
+			xy, z
+		)) {}
+};
+
+template <typename T>
 struct vector_base <T, 4> : jems::handle {
 	vector_base() = default;
 

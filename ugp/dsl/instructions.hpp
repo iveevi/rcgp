@@ -127,7 +127,7 @@ struct Argument {
 	uint32_t argi;
 };
 
-enum class StageIntrinsic {
+enum class GlobalIntrinsic {
 	eSVPosition,
 };
 
@@ -137,7 +137,26 @@ struct ThreadInput {
         uint32_t argi;
 };
 
-using intrinsic_base = variant <Argument, ThreadInput, StageIntrinsic>;
+struct ThreadOutput {
+	Reference type;
+	uint32_t argi;
+
+	// TODO: fragment shader inputs also need this
+	// (although they will be inferred by the ordered);
+	// we should move this to RateProperties in the global scope
+	enum Properties {
+		eSmooth,
+		eFlat,
+		eNoPerspective,
+	} properties;
+};
+
+using intrinsic_base = variant <
+	Argument,
+	ThreadInput,
+	ThreadOutput,
+	GlobalIntrinsic
+>;
 
 struct Intrinsic : intrinsic_base {
 	using intrinsic_base::variant;
@@ -172,6 +191,7 @@ struct Block : std::vector <Reference> {
 
 		std::vector <Argument> arguments;
 		std::vector <ThreadInput> thread_inputs;
+		std::vector <ThreadOutput> thread_outputs;
 		
 		void add_argument(Argument arg) {
 			if (arguments.size() > arg.argi) {
@@ -190,6 +210,18 @@ struct Block : std::vector <Reference> {
 			} else {
 				thread_inputs.resize(tin.argi + 1);
 				thread_inputs[tin.argi] = tin;
+			}
+		}
+		
+		void add_thread_output(ThreadOutput tout) {
+			if (thread_outputs.size() > tout.argi) {
+				// already registered
+				// TODO: this is fine, just make sure its the same or
+				// its uninitialized...
+				__builtin_trap();
+			} else {
+				thread_outputs.resize(tout.argi + 1);
+				thread_outputs[tout.argi] = tout;
 			}
 		}
 	} context;

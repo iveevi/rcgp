@@ -14,9 +14,9 @@ struct VertexAttributes {
 
 struct RasterForward {
 	Position svpos;
-	Interpolant::Smooth <vec3> position;
-	Interpolant::Smooth <vec3> normal;
-	Interpolant::Smooth <vec2> uv;
+	Smooth <vec3> position;
+	Smooth <vec3> normal;
+	Smooth <vec2> uv;
 
 	$reflection(svpos, position, normal, uv);
 };
@@ -133,9 +133,19 @@ int main()
 	// TODO: technically thread inputs should be in the context... make context in terms of types...
 	
 
+	// static_assert(std::is_convertible_v <int, Interpolant::Smooth <i32>>);
+
 	// NOTE: if a fn isnt vertex dont allow Position returns...
-	auto vs = $vertex $fn(vec2 pos, mat4 mat) -> $returns(Position) {
-		$return Position(mat * vec4(pos, 0, 1));
+	auto vs = $vertex $fn(vec2 pos, mat4 mat) -> $returns(
+		Position,
+		Smooth <vec3>,
+		Flat <i32>
+	) {
+		$return std::tuple {
+			Position(mat * vec4(pos, 0, 1)),
+			vec3(pos, 1.4),
+			12,
+		};
 	};
 
 	fmt::println("assembly:");

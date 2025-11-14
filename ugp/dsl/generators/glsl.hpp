@@ -39,13 +39,22 @@ struct GLSL {
 
 		std::string impl(Intrinsic intrinsic) {
 			vswitch (intrinsic) {
-			vcase(StageIntrinsic):
-				switch (intrinsic.as <StageIntrinsic> ()) {
-				case StageIntrinsic::eSVPosition:
+			vcase(GlobalIntrinsic):
+			{
+				switch (intrinsic.as <GlobalIntrinsic> ()) {
+				case GlobalIntrinsic::eSVPosition:
 					return "gl_Position";
 				default:
 					return "?";
 				}
+			}
+
+			vcase(ThreadOutput):
+			{
+				auto tout = intrinsic.as <ThreadOutput> ();
+				return fmt::format("lout{}", tout.argi);
+			}
+
 			default:
 				return "?";
 			}
@@ -198,6 +207,22 @@ struct GLSL {
 				thread_inputs.push_back(fmt::format("lin{}", tin.argi));
 				result += fmt::format("layout (location = {}) in {} lin{};\n",
 			  		tin.argi, type.main(tin.type), tin.argi);
+			}
+
+			result += "\n";
+			
+			for (auto &tout : block.context.thread_outputs) {
+				std::string qualifier = "?";
+				switch (tout.properties) {
+				case ThreadOutput::eSmooth: qualifier = "smooth"; break;
+				case ThreadOutput::eFlat: qualifier = "flat"; break;
+				case ThreadOutput::eNoPerspective: qualifier = "noperspective"; break;
+				default:
+					break;
+				}
+
+				result += fmt::format("layout (location = {}) {} out {} lout{};\n",
+			  		tout.argi, qualifier, type.main(tout.type), tout.argi);
 			}
 
 			// TODO: generate functions

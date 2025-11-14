@@ -85,10 +85,27 @@ struct Assembly {
 		return fmt::format("thread in({}, {})",
 			stringify(x.type), x.argi);
 	}
+
+	std::string stringify(ThreadOutput::Properties properties) {
+		switch (properties) {
+		case ThreadOutput::eSmooth: return "smooth";
+		case ThreadOutput::eFlat: return "flat";
+		case ThreadOutput::eNoPerspective: return "noperspective";
+		default:
+			break;
+		}
+
+		return "?";
+	}
 	
-	std::string stringify_impl(StageIntrinsic x, Reference ref) {
+	std::string stringify_impl(ThreadOutput x, Reference ref) {
+		return fmt::format("thread out({}, {}, {})",
+			stringify(x.type), x.argi, stringify(x.properties));
+	}
+	
+	std::string stringify_impl(GlobalIntrinsic x, Reference ref) {
 		switch (x) {
-		case StageIntrinsic::eSVPosition: return "SVPosition";
+		case GlobalIntrinsic::eSVPosition: return "SVPosition";
 		default:
 			break;
 		}
@@ -138,8 +155,16 @@ struct Assembly {
 
 		result += "  context {\n";
 		result += "    model: " + stringify(block.context.model) + ",\n";
-		for (auto tin : block.context.thread_inputs)
-			result += fmt::format("    thread in {}: {},\n", tin.argi, stringify(tin.type));
+		for (auto tin : block.context.thread_inputs) {
+			result += fmt::format("    thread in {}: {},\n",
+				tin.argi, stringify(tin.type));
+		}
+
+		for (auto tout : block.context.thread_outputs) {
+			result += fmt::format("    thread out {}: {} ({}),\n",
+				tout.argi, stringify(tout.type), stringify(tout.properties));
+		}
+
 		result += "  }\n";
 		
 		for (auto &instr : block) {
@@ -148,7 +173,7 @@ struct Assembly {
 			}, *instr);
 			auto loc = instr->debug_info.origin;
 			auto rel = std::filesystem::relative(loc.file_name());
-			result += fmt::format("  {:<30} ; from {}:{}\n",
+			result += fmt::format("  {:<40} ; from {}:{}\n",
 				str, rel.string(), loc.line());
 		}
 		result += "}";

@@ -13,6 +13,7 @@
 #include "msv/this_injection.hpp"
 #include "msv/type_hash.hpp"
 #include "msv/type_string_extensions.hpp"
+#include "msv/reconstruct_type.hpp"
 
 #include "rhi/session.hpp"
 #include "rhi/device.hpp"
@@ -25,10 +26,57 @@
 template <typename R>
 struct _return_operator {};
 
-template <typename R, typename U>
-void operator<<(_return_operator <R>, const U &value)
+template <typename T>
+struct return_handler_t {
+	static void main(const T &, size_t &argi) {
+		fmt::println("generic return handler for {}, argi={}", 
+	       		$ss_type(T).view(), argi);
+	}
+};
+
+template <typename T, ThreadOutput::Properties P>
+struct return_handler_t <Interpolant <T, P>> {
+	static void main(const Interpolant <T, P> &interpolant, size_t &argi) {
+		auto type = reconstruct_type <T> ();
+		auto tout = ThreadOutput(type, argi, P);
+		$tsb.context.add_thread_output(tout);
+
+		// Fix the argument index of the original value
+		auto &instr = *interpolant.ref;
+		instr.template as <Intrinsic> ()
+			.template as <ThreadOutput> ()
+			.argi = argi;
+
+		argi++;
+	}
+};
+
+template <typename ... Args>
+struct return_handler_t <std::tuple <Args...>> {
+	static void main(const std::tuple <Args...> &args, size_t &argi) {
+		std::apply([&](auto ... xs) {
+			std::make_tuple(return_handler(xs, argi)...);
+		}, args);
+	}
+};
+
+template <typename T>
+bool return_handler(const T &v, size_t &argi)
 {
-	static_assert(std::is_convertible_v <U, R>);
+	fmt::println("ftn for {}", $ss_type(T).view());
+	return_handler_t <T> ::main(v, argi);
+	return true;
+}
+
+template <typename R, typename U>
+requires std::is_convertible_v <U, R>
+void operator<<(const _return_operator <R>, U value)
+{
+	// Force conversion to get expected behavior
+	auto cvted = R(value);
+
+	size_t argi = 0;
+	return_handler(cvted, argi);
 }
 
 template <Stage S, typename R, typename ... Args>
@@ -51,18 +99,6 @@ void inject_execution_model()
 		$tsb.context.model = ExecutionModel::eVulkanVertex;
 	else
 		static_assert(false, "no execution model for stage");
-}
-
-template <typename T>
-auto reconstruct_type()
-{
-	// TODO: specialization structures to avoid explicit lists like this...
-	if constexpr (std::is_same_v <T, vec2>)
-		return jems::type(VectorType <float, 2> ());
-	else if constexpr (std::is_same_v <T, mat4>)
-		return jems::type(MatrixType <float, 4, 4> ());
-	else
-		static_assert(false, ($ss("failed to reconstruct type ") + $ss_type(T)).view());
 }
 
 template <typename T>
@@ -176,7 +212,22 @@ struct _stage_operator {};
 #define $fragment	$stage(RepresentationalFragment)
 #define $compute	$stage(RepresentationalCompute)
 
-#define $returns(T) decltype(fn_return_injection::Writer <decltype(_return_proxy), T> {}, void())
+template <typename ... Args>
+struct simplify_return_list {
+	using type = std::tuple <Args...>;
+};
+
+template <typename T>
+struct simplify_return_list <T> {
+	using type = T;
+};
+
+template <>
+struct simplify_return_list <> {
+	using type = void;
+};
+
+#define $returns(...) decltype(fn_return_injection::Writer <decltype(_return_proxy), simplify_return_list <__VA_ARGS__> ::type> {}, void())
 #define $return (_return_operator <fn_return_injection::Read <decltype(_return_proxy)> ::unfoil> ()) << 
 #define $fn (_fn_operator <Stage::Undefined, __COUNTER__ + 1> ()) << [_return_proxy = fn_return_injection::proxy_tag <__COUNTER__> ()] $context_capture
 #define $cafn(...) (_fn_operator <Stage::Undefined, __COUNTER__ + 1> ()) << [__VA_ARGS__ __VA_OPT__(,) _return_proxy = fn_return_injection::proxy_tag <__COUNTER__> ()] $context_capture
