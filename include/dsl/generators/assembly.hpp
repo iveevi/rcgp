@@ -48,9 +48,12 @@ struct Assembly {
 		vcase(int32_t): return "i32";
 		vcase(uint32_t): return "u32";
 		vcase(float): return "f32";
+
+		vcase(VectorType <float, 1>): return "vec1";
 		vcase(VectorType <float, 2>): return "vec2";
 		vcase(VectorType <float, 3>): return "vec3";
 		vcase(VectorType <float, 4>): return "vec4";
+
 		vcase(MatrixType <float, 4, 4>): return "mat4";
 		default:
 			break;
@@ -108,10 +111,11 @@ struct Assembly {
 	std::string stringify_impl(GlobalResource x, Reference ref) {
 		std::string kind = "?";
 		switch (x.kind) {
-		case GlobalResource::eUnallocated: kind = "unallocated"; break;
+		case GlobalResource::eXConstant: kind = "xconstant"; break;
 		case GlobalResource::ePushConstant: kind = "push_constant"; break;
-		case GlobalResource::eUniformBuffer: kind = "uniform_buffer"; break;
+		case GlobalResource::eConstantBuffer: kind = "constantm_buffer"; break;
 		case GlobalResource::eStorageBuffer: kind = "storage_buffer"; break;
+		case GlobalResource::eSampler: kind = "sampler"; break;
 		default:
 			break;
 		}

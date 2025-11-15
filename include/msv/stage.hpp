@@ -2,8 +2,8 @@
 
 #include <type_traits>
 
-#include "meta.hpp"
 #include "../dsl/tracer.hpp"
+#include "../util/meta.hpp"
 
 enum class Stage {
 	Undefined,
@@ -22,6 +22,10 @@ enum class Stage {
 	// stage with a slightly different JIT route (and resource
 	// handles to interface with the engine...; where do game
 	// scripts sit in the hierarchy of graphics programming?)
+	//
+	// TODO: alternatively we can use structs/types to indicate
+	// distinct stage in an extendable manner... its just a template
+	// parameter anyways...
 };
 
 constexpr bool is_representational(Stage S)

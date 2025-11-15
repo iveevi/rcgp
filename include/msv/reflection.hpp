@@ -2,12 +2,10 @@
 
 #include <cstdlib>
 
+#include "../util/meta.hpp"
+#include "field_name_injection.hpp"
 #include "macro_hell.hpp"
 #include "this_injection.hpp"
-#include "field_name_injection.hpp"
-
-// TODO: move this to util...
-#include "meta.hpp"
 
 // Reflection types
 template <typename Original, typename ... Ts>
@@ -19,6 +17,12 @@ auto new_aggregate_reflection(sequence <Ts...>)
 
 template <typename T>
 struct parameter_block_reflection {};
+
+template <typename T>
+struct structured_buffer_reflection {};
+
+template <typename T, size_t D>
+struct sampler_reflection {};
 
 template <auto &ref, typename T>
 struct reference_reflection {};
@@ -50,6 +54,8 @@ struct scaffold_field {
 #define AGGREGATE_SCAFFOLD_GENERATOR(T, field)	\
 	scaffold_field <decltype(T::field), (__COUNTER__ - counter_base - 1)> field;
 
+#define UGP_REFLECTION_STAMP static constexpr bool _ugp_has_reflection = true
+
 #define $reflection(...)							\
 	THIS_INJECTION();							\
 	using reflection = decltype(new_aggregate_reflection <This> (		\
@@ -62,4 +68,4 @@ struct scaffold_field {
 		MAP(AGGREGATE_SCAFFOLD_GENERATOR, This, __VA_ARGS__)		\
 	};									\
 	MAP(FIELD_NAME_INJECTION, This, __VA_ARGS__)				\
-	static constexpr bool _ugp_has_reflection = true;			\
+	UGP_REFLECTION_STAMP;

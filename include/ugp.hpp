@@ -16,6 +16,7 @@
 #include "msv/this_injection.hpp"
 #include "msv/type_hash.hpp"
 #include "msv/type_string_extensions.hpp"
+#include "msv/parameter_block_filter.hpp"
 
 #include "rhi/device.hpp"
 #include "rhi/session.hpp"

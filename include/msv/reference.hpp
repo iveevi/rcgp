@@ -8,9 +8,9 @@
 template <auto &resource>
 using reference_base = std::remove_reference_t <decltype(resource)>;
 
-template <auto &resource>
-struct reference : reference_base <resource> {
-	using value_type = reference_base <resource>;
+template <auto &rsrc>
+struct reference : reference_base <rsrc> {
+	using value_type = reference_base <rsrc>;
 
 	static_assert(has_reflection <value_type> (),
 	       // TODO: string only format style...
@@ -18,10 +18,10 @@ struct reference : reference_base <resource> {
 	       " has no valid reflection, perhaps you forgot to"
 	       " add it to the registry via $reflection(...)?")).view());
 
-	static constexpr auto &handle = resource;
+	static constexpr auto &handle = rsrc;
 
 	using reflection = reference_reflection <
-		resource,
+		rsrc,
 		typename value_type::reflection
 	>;
 };
@@ -29,8 +29,8 @@ struct reference : reference_base <resource> {
 template <typename T>
 struct is_reference : std::false_type {};
 
-template <auto &ref>
-struct is_reference <reference <ref>> : std::true_type {};
+template <auto &rsrc>
+struct is_reference <reference <rsrc>> : std::true_type {};
 
 #define $use(name)	reference <name> name
 
