@@ -1,9 +1,9 @@
 #pragma once
 
 #include "../dsl/jems.hpp"
-#include "expand_reflection.hpp"
-#include "reflection.hpp"
+#include "../dsl/primitives.hpp"
 #include "reference.hpp"
+#include "reflection.hpp"
 
 // TODO: needs a layout...
 template <typename T>
@@ -22,6 +22,11 @@ template <typename T, size_t D>
 struct Sampler : jems::handle {
 	using reflection = sampler_reflection <T, D>;
 	UGP_REFLECTION_STAMP;
+
+	// TODO: requires floating stuff
+	vector <T, D> sample(vector <float, D> x, $location) {
+		return  jems::builtin_intrinsic_loc(loc, BuiltinIntrinsic::eSample, ref, x);
+	}
 };
 
 using Sampler1D = Sampler <float, 1>;

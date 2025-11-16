@@ -7,7 +7,7 @@
 struct Position {
 	Position(const vec4 &value, $location) {
 		jems::store_loc(loc,
-			jems::intrinsic_loc(loc, GlobalIntrinsic::eSVPosition),
+			jems::global_intrinsic_loc(loc, GlobalIntrinsic::eSVPosition),
 			value
 		);
 	}
@@ -27,8 +27,8 @@ struct Interpolant : jems::handle {
 	template <typename U>
 	requires std::is_convertible_v <U, T>
 	Interpolant(const U &value, $location)
-		: handle(jems::intrinsic_loc(loc,
-			ThreadOutput(reconstruct_type <T> (), 0, P)
+		: handle(jems::thread_output_loc(loc,
+			reconstruct_type <T> (), 0, P
 		))
 	{
 		jems::store_loc(loc, *this, T(value));

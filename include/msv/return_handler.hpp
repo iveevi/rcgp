@@ -26,8 +26,7 @@ struct return_handler_t <Interpolant <T, P>> {
 
 		// Fix the argument index of the original value
 		auto &instr = *interpolant.ref;
-		instr.template as <Intrinsic> ()
-			.template as <ThreadOutput> ()
+		instr.template as <ThreadOutput> ()
 			.argi = argi;
 
 		argi++;

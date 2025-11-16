@@ -37,27 +37,17 @@ struct GLSL {
 			return "?";
 		}
 
-		std::string impl(Intrinsic intrinsic) {
-			vswitch (intrinsic) {
-			vcase(GlobalIntrinsic):
-			{
-				switch (intrinsic.as <GlobalIntrinsic> ()) {
-				case GlobalIntrinsic::eSVPosition:
-					return "gl_Position";
-				default:
-					return "?";
-				}
-			}
-
-			vcase(ThreadOutput):
-			{
-				auto tout = intrinsic.as <ThreadOutput> ();
-				return fmt::format("lout{}", tout.argi);
-			}
-
+		std::string impl(GlobalIntrinsic gi) {
+			switch (gi) {
+			case GlobalIntrinsic::eSVPosition:
+				return "gl_Position";
 			default:
 				return "?";
 			}
+		}
+
+		std::string impl(ThreadOutput tout) {
+			return fmt::format("lout{}", tout.argi);
 		}
 		
 		std::string main(Reference reference) {
@@ -98,18 +88,9 @@ struct GLSL {
 			return fmt::format("({} {} {})",
 				main(operation.a), op, main(operation.b));
 		}
-		
-		std::string impl(Intrinsic intrinsic) {
-			vswitch (intrinsic) {
-			vcase(ThreadInput):
-			{
-				auto &ti = intrinsic.as <ThreadInput> ();
-				return parent.thread_inputs[ti.argi];
-			}
 
-			default:
-				return "?";
-			}
+		std::string impl(ThreadInput tin) {
+			return parent.thread_inputs[tin.argi];
 		}
 		
 		std::string impl(Construct construct) {

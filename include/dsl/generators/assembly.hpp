@@ -3,7 +3,6 @@
 #include <map>
 
 #include "../instructions.hpp"
-#include "../../msv/static_string.hpp"
 #include "../../util/logging.hpp"
 
 namespace generators {
@@ -30,11 +29,6 @@ struct Assembly {
 	}
 
 	#define $assign stringify(ref) + " = " +
-	
-	std::string stringify_impl(auto x, Reference ref) {
-		// Implementation fallback
-		fatal("stringify_impl not implemented for {}", $ss_type(decltype(x)).view());
-	}
 
 	std::string stringify(Constant x, Reference ref) {
 		return $assign std::visit([](auto x) {
@@ -42,7 +36,7 @@ struct Assembly {
 		}, x);
 	}
 	
-	std::string stringify_impl(PrimitiveType x, Reference ref) {
+	std::string stringify_type(PrimitiveType x, Reference ref) {
 		vswitch(x) {
 		vcase(bool): return "bool";
 		vcase(int32_t): return "i32";
@@ -62,7 +56,7 @@ struct Assembly {
 		return "primitive(?)";
 	}
 
-	std::string stringify_impl(AggregateType x, Reference ref) {
+	std::string stringify_type(AggregateType x, Reference ref) {
 		std::string result;
 		for (size_t i = 0; i < x.size(); i++) {
 			result += stringify(x[i]);
@@ -72,10 +66,15 @@ struct Assembly {
 
 		return "aggregate(" + result + ")";
 	}
+
+	std::string stringify_type(ArrayType x, Reference ref) {
+		return fmt::format("array({}, {})",
+			stringify(x.base), stringify(x.size));
+	}
 	
 	std::string stringify(Type x, Reference ref) {
 		return $assign std::visit([&](auto x) {
-			return stringify_impl(x, ref);
+			return stringify_type(x, ref);
 		}, x);
 	}
 
@@ -103,12 +102,12 @@ struct Assembly {
 			stringify(x.value), x.fidx);
 	}
 
-	std::string stringify_impl(Argument x, Reference ref) {
+	std::string stringify(Argument x, Reference ref) {
 		return fmt::format("argument {}:{}",
 			stringify(x.type), x.argi);
 	}
 
-	std::string stringify_impl(GlobalResource x, Reference ref) {
+	std::string stringify(GlobalResource x, Reference ref) {
 		std::string kind = "?";
 		switch (x.kind) {
 		case GlobalResource::eXConstant: kind = "xconstant"; break;
@@ -124,16 +123,16 @@ struct Assembly {
 			return val ? fmt::format("{}", val.value()) : "nil";
 		};
 
-		return fmt::format("{}({}, {}:{})", kind,
+		return $assign fmt::format("{}({}, {}:{})", kind,
 			stringify(x.type), opint(x.group), opint(x.index));
 	}
 	
-	std::string stringify_impl(ThreadInput x, Reference ref) {
-		return fmt::format("thread in({}, {})",
+	std::string stringify(ThreadInput x, Reference ref) {
+		return $assign fmt::format("thread in({}, {})",
 			stringify(x.type), x.argi);
 	}
 
-	std::string stringify(ThreadOutput::Properties properties) {
+	std::string stringify_thread_io_properties(ThreadOutput::Properties properties) {
 		switch (properties) {
 		case ThreadOutput::eSmooth: return "smooth";
 		case ThreadOutput::eFlat: return "flat";
@@ -145,25 +144,21 @@ struct Assembly {
 		return "?";
 	}
 	
-	std::string stringify_impl(ThreadOutput x, Reference ref) {
-		return fmt::format("thread out({}, {}, {})",
-			stringify(x.type), x.argi, stringify(x.properties));
+	std::string stringify(ThreadOutput x, Reference ref) {
+		return $assign fmt::format("thread out({}, {}, {})",
+			stringify(x.type), x.argi,
+			stringify_thread_io_properties(x.properties));
 	}
 	
-	std::string stringify_impl(GlobalIntrinsic x, Reference ref) {
+	std::string stringify(GlobalIntrinsic x, Reference ref) {
 		switch (x) {
-		case GlobalIntrinsic::eSVPosition: return "SVPosition";
+		case GlobalIntrinsic::eSVPosition:
+			return $assign "SVPosition";
 		default:
 			break;
 		}
 		
 		return "?";
-	}
-
-	std::string stringify(Intrinsic x, Reference ref) {
-		return $assign std::visit([&](auto x) {
-			return stringify_impl(x, ref);
-		}, x);
 	}
 
 	std::string stringify(Construct x, Reference ref) {
@@ -178,10 +173,29 @@ struct Assembly {
 		return $assign result;
 	}
 
+	std::string stringify(BuiltinIntrinsic x, Reference ref) {
+		std::string ftn = "?";
+		switch (x.code) {
+		case BuiltinIntrinsic::eSample: ftn = "sample"; break;
+		case BuiltinIntrinsic::eDot: ftn = "dot"; break;
+		default:
+			break;
+		}
+
+		std::string args;
+		for (size_t i = 0; i < x.args.size(); i++) {
+			args += stringify(x.args[i]);
+			if (i + 1 < x.args.size())
+				args += ", ";
+		}
+
+		return $assign ftn + "(" + args + ")";
+	}
+
 	#undef $assign
 
-	std::string stringify(auto x, Reference ref) {
-		return "?";
+	std::string stringify(Block x, Reference ref) {
+		fatal("cannot generate assembly for block");
 	}
 
 	std::string stringify(ExecutionModel model) {
@@ -209,7 +223,8 @@ struct Assembly {
 
 		for (auto tout : block.context.thread_outputs) {
 			result += fmt::format("    thread out {}: {} ({}),\n",
-				tout.argi, stringify(tout.type), stringify(tout.properties));
+				tout.argi, stringify(tout.type),
+				stringify_thread_io_properties(tout.properties));
 		}
 
 		result += "  }\n";

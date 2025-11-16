@@ -24,7 +24,7 @@ struct Constant : variant <
 };
 
 struct Operation {
-	enum : uint32_t {
+	enum Code {
 		eAdd,
 		eSubtract,
 		eMultiply,
@@ -82,16 +82,13 @@ struct Type : variant <
 	using variant_self::variant;
 };
 
-struct invocable {
+struct Construct {
 	Reference type;
 	std::vector <Reference> args;
 
 	template <typename ... Args>
-	invocable(Reference type_, Args ... args_) : type(type_), args { args_ ... } {}
-};
-
-struct Construct : invocable {
-	using invocable::invocable;
+	Construct(Reference type_, Args ... args_)
+		: type(type_), args { args_ ... } {}
 };
 
 struct Argument {
@@ -140,14 +137,21 @@ struct ThreadOutput {
 	} properties;
 };
 
-struct Intrinsic : variant <
-	Argument,
-	ThreadInput,
-	ThreadOutput,
-	GlobalResource,
-	GlobalIntrinsic
-> {
-	using variant_self::variant;
+struct BuiltinIntrinsic {
+	enum Code {
+		eSample,
+		eNormalize,
+		eDot,
+		eSin,
+		eCos,
+		eTan,
+	} code;
+
+	std::vector <Reference> args;
+	
+	template <typename ... Args>
+	BuiltinIntrinsic(Code code_, Args ... args_)
+		: code(code_), args { args_ ... } {}
 };
 
 struct FieldAccess {
@@ -224,14 +228,19 @@ struct Block : std::vector <Reference> {
 };
 
 struct Instruction : variant <
+	Argument,
+	Block,
+	BuiltinIntrinsic,
 	Constant,
-	Operation,
-	Type,
 	Construct,
-	Intrinsic,
 	FieldAccess,
+	GlobalIntrinsic,
+	GlobalResource,
+	Operation,
 	Store,
-	Block
+	ThreadInput,
+	ThreadOutput,
+	Type
 > {
 	Debug debug_info;
 

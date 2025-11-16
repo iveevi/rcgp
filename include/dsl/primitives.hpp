@@ -11,6 +11,9 @@ struct scalar : jems::handle {
 	static_assert(std::is_arithmetic_v <T>);
 
 	scalar() = default;
+
+	scalar(const jems::handle &h) : handle(h) {}
+	
 	scalar(const T &value, $location)
 		: handle(jems::constant_loc(loc, value)) {}
 };
@@ -20,6 +23,19 @@ using f32 = scalar <float>;
 
 template <typename T, size_t N>
 struct vector_base : jems::handle {};
+
+template <typename T>
+struct vector_base <T, 2> : jems::handle {
+	vector_base() = default;
+
+	vector_base(const jems::handle &h) : handle(h) {}
+	
+	vector_base(const scalar <T> &x, const scalar <T> &y, $location)
+		: handle(jems::construct_loc(loc,
+			jems::type_loc(loc, VectorType <T, 2> ()),
+			x, y
+		)) {}
+};
 
 template <typename T>
 struct vector_base <T, 3> : jems::handle {
@@ -83,6 +99,7 @@ struct matrix : jems::handle {
 
 using mat4 = matrix <float, 4, 4>;
 
+// TODO: capture source location here...
 template <typename T>
 struct location_proxy {};
 
@@ -93,13 +110,16 @@ vector <T, M> operator*(const matrix <T, N, M> &m, const vector <T, N> &v)
 }
 
 template <typename T, size_t N, size_t M, size_t K>
-matrix <T, N, M> operator*(const matrix <T, N, K> &, const matrix <T, K, M> &)
+matrix <T, N, M> operator*(const matrix <T, N, K> &a, const matrix <T, K, M> &b)
 {
+	return jems::operation(Operation::eMultiply, a, b);
 }
 
-vec3 cross(vec3, vec3) {}
-vec3 dFdx(vec3) {}
-vec3 dFdy(vec3) {}
+template <typename T, size_t D>
+scalar <T> dot(const vector <T, D> &a, const vector <T, D> &b)
+{
+	return jems::builtin_intrinsic(BuiltinIntrinsic::eDot, a, b);
+}
 
 template <typename T, size_t N>
 vector <T, N> normalize(const vector <T, N> &)

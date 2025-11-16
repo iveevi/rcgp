@@ -88,7 +88,7 @@ struct stage_argument_injector <Stage::Undefined, T> {
 		auto type = reconstruct_type <T> ();
 		auto arg = Argument(type, state.argidx);
 		$tsb.context.add_argument(arg);
-		injector <T> ::main(value, jems::intrinsic(arg));
+		injector <T> ::main(value, jems::argument(arg));
 		return InjectionState::Delta {
 			.argument = true,
 			.thread_input = false,
@@ -108,7 +108,7 @@ template <typename T>
 struct resource_intrinsic <structured_buffer_reflection <T>> {
 	static auto intrinsic(uint32_t binding) {
 		auto type = reconstruct_type <T> ();
-		auto grsrc = jems::intrinsic(GlobalResource(type, GlobalResource::eStorageBuffer, std::nullopt, binding));
+		auto grsrc = jems::global_resource(type, GlobalResource::eStorageBuffer, std::nullopt, binding);
 		return grsrc;
 	}
 };
@@ -117,7 +117,7 @@ template <typename T, size_t D>
 struct resource_intrinsic <sampler_reflection <T, D>> {
 	static auto intrinsic(uint32_t binding) {
 		auto type = jems::type(VectorType <T, D> ());
-		auto grsrc = jems::intrinsic(GlobalResource(type, GlobalResource::eSampler, std::nullopt, binding));
+		auto grsrc = jems::global_resource(type, GlobalResource::eSampler, std::nullopt, binding);
 		return grsrc;
 	}
 };
@@ -163,7 +163,7 @@ struct resource_injector <ParameterBlock <T>, rsrc> {
 
 		if constexpr (!std::same_as <Uniform, void>) {
 			auto type = reconstruct_type <Uniform> ();
-			auto grsrc = jems::intrinsic(GlobalResource(type, GlobalResource::eXConstant, std::nullopt, counter++));
+			auto grsrc = jems::global_resource(type, GlobalResource::eXConstant, std::nullopt, counter++);
 			injector <Uniform> ::main(value, grsrc);
 		}
 
@@ -205,7 +205,7 @@ struct stage_argument_injector <S, T> {
 		auto type = reconstruct_type <T> ();
 		auto tin = ThreadInput(type, state.threadidx);
 		$tsb.context.add_thread_input(tin);
-		inject_item(value, jems::intrinsic(tin));
+		inject_item(value, jems::thread_input(tin));
 		return InjectionState::Delta {
 			.argument = false,
 			.thread_input = true,

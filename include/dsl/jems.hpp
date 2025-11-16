@@ -50,7 +50,12 @@ JEM(operation, Operation);
 JEM(constant, Constant);
 JEM(type, Type);
 JEM(construct, Construct);
-JEM(intrinsic, Intrinsic);
+JEM(argument, Argument);
+JEM(thread_input, ThreadInput);
+JEM(thread_output, ThreadOutput);
+JEM(global_resource, GlobalResource);
+JEM(global_intrinsic, GlobalIntrinsic);
+JEM(builtin_intrinsic, BuiltinIntrinsic);
 JEM(field_access, FieldAccess);
 JEM(store, Store);
 

@@ -154,6 +154,11 @@ int main()
 	
 	auto vs = $vertex $fn($use(material)) -> $returns(void) {
 		// TODO: confirm that material's fields are all populated...
+		vec2 uv = vec2(0, 1);
+
+		f32 s = dot(material.subsurface.point, material.subsurface.normal);
+
+		vec3 result = material.diffuse.sample(uv);
 	};
 
 	fmt::println("assembly:");
