@@ -5,6 +5,7 @@
 #include <type_traits>
 
 #include "jems.hpp"
+#include "macro_swizzle.hpp"
 
 template <typename T>
 struct scalar : jems::handle {
@@ -21,11 +22,28 @@ struct scalar : jems::handle {
 using i32 = scalar <int32_t>;
 using f32 = scalar <float>;
 
-template <typename T, size_t N>
+template <Swizzle::Code S, typename T, typename R>
+struct swizzle_component {
+	operator R() const {
+		static_assert(std::is_base_of_v <jems::handle, T>);
+		auto x = reinterpret_cast <const T *> (this);
+		auto c = jems::swizzle(S, x->ref);
+		return R(x->ref);
+	}
+
+	// TODO: assign operator, ect...
+};
+
+template <typename T, size_t D>
+struct vector;
+
+template <typename T, size_t D>
 struct vector_base : jems::handle {};
 
 template <typename T>
 struct vector_base <T, 2> : jems::handle {
+	SWIZZLE_D2;
+
 	vector_base() = default;
 
 	vector_base(const jems::handle &h) : handle(h) {}
@@ -39,6 +57,8 @@ struct vector_base <T, 2> : jems::handle {
 
 template <typename T>
 struct vector_base <T, 3> : jems::handle {
+	SWIZZLE_D3;
+
 	vector_base() = default;
 
 	vector_base(const jems::handle &h) : handle(h) {}
@@ -52,7 +72,7 @@ struct vector_base <T, 3> : jems::handle {
 
 template <typename T>
 struct vector_base <T, 4> : jems::handle {
-	vector_base() = default;
+	SWIZZLE_D4;
 
 	vector_base(const jems::handle &h) : handle(h) {}
 	
@@ -84,6 +104,10 @@ struct vector : vector_base <T, N> {
 	requires std::is_convertible_v <U, T>
 	friend vector operator+(const U &, const vector &) {}
 };
+
+static_assert(sizeof(vector <int32_t, 2>) == sizeof(jems::handle));
+static_assert(sizeof(vector <uint32_t, 3>) == sizeof(jems::handle));
+static_assert(sizeof(vector <float, 4>) == sizeof(jems::handle));
 
 // TODO: float32_t
 using vec2 = vector <float, 2>;

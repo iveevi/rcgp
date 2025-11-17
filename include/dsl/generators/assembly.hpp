@@ -192,6 +192,20 @@ struct Assembly {
 		return $assign ftn + "(" + args + ")";
 	}
 
+	std::string stringify(Swizzle x, Reference ref) {
+		std::string swz = "?";
+		switch (x.code) {
+		case Swizzle::eX: swz = "x"; break;
+		case Swizzle::eY: swz = "y"; break;
+		case Swizzle::eZ: swz = "z"; break;
+		default:
+			break;
+		}
+
+		return $assign fmt::format("swizzle({}, {})",
+			stringify(x.value), swz);
+	}
+
 	#undef $assign
 
 	std::string stringify(Block x, Reference ref) {

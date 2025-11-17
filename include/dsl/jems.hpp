@@ -56,6 +56,7 @@ JEM(thread_output, ThreadOutput);
 JEM(global_resource, GlobalResource);
 JEM(global_intrinsic, GlobalIntrinsic);
 JEM(builtin_intrinsic, BuiltinIntrinsic);
+JEM(swizzle, Swizzle);
 JEM(field_access, FieldAccess);
 JEM(store, Store);
 
