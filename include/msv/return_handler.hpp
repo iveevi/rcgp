@@ -42,6 +42,27 @@ struct return_handler_t <std::tuple <Args...>> {
 	}
 };
 
+template <aggregate T>
+struct return_handler_t <T> {
+	static void main(const T &value, size_t &argi) {
+		fmt::println("aggregate return handler: {}", $ss_type(T).view());
+
+		constexpr auto field_count = T::reflection::field_count;
+
+		auto proc = [&](auto el) {
+			constexpr auto idx = decltype(el)::value;
+			auto &fvalue = value.template _ugp_field_reference <idx> ();
+			return_handler(fvalue, argi);
+			return true;
+		};
+
+		auto els = el_series(std::make_index_sequence <field_count> ());
+		std::apply([&](auto ... xs) {
+			std::make_tuple(proc(xs)...);
+		}, els);
+	}
+};
+
 template <typename T>
 bool return_handler(const T &v, size_t &argi)
 {

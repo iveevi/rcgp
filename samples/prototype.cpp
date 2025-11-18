@@ -25,6 +25,10 @@ struct Camera {
 	mat4 view;
 	mat4 proj;
 
+	vec4 project(vec4 p) const {
+		return proj * view * p;
+	}
+
 	$reflection(view, proj);
 };
 
@@ -36,11 +40,17 @@ StructuredBuffer <Transforms> transforms;
 
 int main()
 {
-	auto vs = $vertex $fn($use(camera), $use(transforms), Vertex vertex) -> $returns(void)
+	auto vs = $vertex $fn($use(camera), $use(transforms), Vertex vertex) -> $returns(RasterForward)
 	{
 		auto xform = transforms[1];
-		auto hpos = xform * vec4(vertex.position, 1);
-		auto ppos = xform * vec4(vertex.normal, 0);
+		auto ppos = xform * vec4(vertex.position, 1);
+		auto pnorm = xform * vec4(vertex.normal, 0);
+		$return RasterForward {
+			.svpos = camera.project(ppos),
+			.position = vec3(ppos),
+			.normal = vec3(pnorm),
+			.uv = vertex.uv,
+		};
 	};
 
 	fmt::println("assembly:");

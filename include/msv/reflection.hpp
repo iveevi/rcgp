@@ -136,7 +136,20 @@ auto new_aggregate_reflection(sequence <Ts...>)
 		 		+ $ss_type(This)).view());			\
 			return _ugp_reference_default;				\
 		}								\
+	}									\
+	template <size_t D>							\
+	auto &_ugp_field_reference() const {					\
+		static constexpr size_t counter_base = __COUNTER__;		\
+		if constexpr (false) {}						\
+		MAP(AGGREGATE_FIELD_REFERENCE_GENERATOR, /* NA */, __VA_ARGS__)	\
+		else {								\
+			static_assert(false,					\
+		 		($ss("out of bounds field reference access of ")\
+		 		+ $ss_type(This)).view());			\
+			return _ugp_reference_default;				\
+		}								\
 	}
+	// TODO: macrofy the above
 
 // Access chain through static indices
 template <typename T, size_t I, size_t ... Is>
