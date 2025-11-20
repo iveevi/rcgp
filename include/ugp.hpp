@@ -18,8 +18,11 @@
 #include "msv/type_string_extensions.hpp"
 #include "msv/parameter_block_filter.hpp"
 
+#include "rhi/buffer.hpp"
 #include "rhi/device.hpp"
 #include "rhi/session.hpp"
+#include "rhi/window.hpp"
+#include "rhi/compiler.hpp"
 
 #include "dsl/generators/assembly.hpp"
 #include "dsl/generators/glsl.hpp"

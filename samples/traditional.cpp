@@ -1,230 +1,62 @@
 #include <ugp.hpp>
 
-struct RasterForward {
-	Position svpos;
-	Smooth <vec3> position;
-
-	$reflection(svpos, position);
-};
-
-struct MVP {
-	mat4 model;
-	mat4 view;
-	mat4 proj;
-
-	$reflection(model, view, proj);
-};
-
-ParameterBlock <MVP> mvp;
-
-// auto vs = $vertex $fn($use(mvp), vec3 position, vec3 normal, vec2 uv) -> $returns(RasterForward)
-// {
-// 	vec4 hpos = vec4(position, 1);
-// 	vec4 ppos = mvp.model * hpos;
-//
-// 	$return RasterForward {
-// 		.svpos = mvp.proj * mvp.view * ppos,
-// 		// .position = ppos.xyz,
-// 		.position = vec3(),
-// 	};
-// };
-//
-// auto fs = $fragment $fn(vec3 position) -> $returns(SubpassResult <vec4>)
-// {
-// 	vec3 dU = dFdx(position);
-// 	vec3 dV = dFdy(position);
-// 	vec3 N = normalize(cross(dU, dV));
-// 	$return vec4(0.5f + 0.5f * N, 1.0);
-// };
-
-// geometry buffers := index & vertex buffer is effectively
-// a map from primitive index -> primitive data
-// TODO: geometry streaming, geometry transformation, and shading stages later on...
-struct Vertex {
-	vec3 position;
-	vec3 normal;
-	vec2 uv;
-
-	// TODO: alignment is specified as a static constant?
-	// static auto alignment_policy = AlignmentPolicy::GLSL430/Scalar;
-	// OR macrofiy with
-	// $align(GLSL430); or $align(Scalar);
-
-	$reflection(position, normal, uv);
-};
-
-// TODO: need to overwrite to the host mirror...
-#define $solid(T) T
+#include "util/transform.hpp"
 
 // TODO: mesh/model stuff goes into ext/
 struct Mesh {};
 
-struct Buffer {};
+// TODO: first parameter should be alignment rules...
+// TODO: for now we are assuming GLSL alignment rules...
+// NOTE: TBuffer is typed by its elements as if it
+// were an aggregate with the fields Ts... Following
+// Vulkan/GLSL rules, all but the last field must be
+// trivially constructable; the last field may be an
+// unsized array indicated by T[]
 
-template <typename T>
-struct TBuffer : Buffer {};
+// In general, follow this convention:
+// X_layout_engine <uint32_t, glm::vec3[]> ::type
+// = sequence <
+// 	offset_by <uint32_t, 0>,
+// 	offset_by <glm::vec3[], 16>
+// >
 
-struct Transform {
-	// glm::vec3 translation;
-	// glm::vec3 scaling;
-};
+// TODO: no more fields after dynamic part
+template <typename T, size_t Offset>
+struct offset_by {};
 
-struct GeometryBuffer {
-	TBuffer <ivec3> triangles;
-	TBuffer <Vertex> vertices;
-	Transform xform;
+template <typename ... Ts>
+struct std430_layout_engine {};
+// TODO: next and type
 
-	static GeometryBuffer from(const Device &, const Mesh &) {
-		GeometryBuffer result;
+// TODO: LayoutMappedBuffer <layout T>
 
-		// TODO: fdsfdsf...
+template <typename ... Ts>
+struct FieldedBuffer {}; // : LayoutMappedBuffer <X_layout_engine <Ts...> ::type> {}
 
-		// TODO: alignment_policy and field generators...
-		auto v = $solid(Vertex) {
-			.position = vec3(),
-			.normal = vec3(),
-			.uv = vec2(),
-		};
+// template <typename ... Ts>
+// struct Buffer : Buffer {
+// 	// TODO: method to write individual fields at a time
+// 	// TODO: alternatively provide a host "staging" item
+// 	// where unsized arrays are converted to vectors or so...
+// };
 
-		return result;
-	};
-};
+// using PointsBuffer = TBuffer <
+// 	uint32_t, 	// count
+// 	glm::vec3[]	// positions
+// >;
 
-// TODO: material stuff...
+// NOTE: so the flow from DSL storage buffer to host handle;
+// take the expanded reflection, convert the fields into
+// host equivalents (ordinary + array), then compute their
+// layout, and serve the TBuffer of that layout...
+// AND
+// serve a host staging/data prep structure; the base type
+// will be a tuple, but then use the scaffold field members
+// to indirectly do this (with overloaded op=)
 
 enum class CommandsPhase {
 	Begin,
 	End,
-};
-
-template <typename T>
-struct List : std::vector <T> {
-	using std::vector <T> ::vector;
-
-	// TODO: map
-};
-
-struct Window {
-	GLFWwindow *handle;
-	vk::SurfaceKHR surface;
-
-	vk::Format format;
-	vk::SwapchainKHR swapchain;
-	List <vk::ImageView> views;
-
-	struct Frame {
-		vk::Fence fence;
-		vk::Semaphore presented;
-		vk::Semaphore rendered;
-		vk::Extent2D extent;
-		uint32_t image_index;
-	};
-
-	List <Frame> frames;
-
-	size_t frames_in_flight;
-	size_t frame_index;
-
-	bool alive() const {
-		return not glfwWindowShouldClose(handle);
-	}
-
-	void poll() const {
-		glfwPollEvents();
-	}
-
-	vk::Extent2D extent() const {
-		int width;
-		int height;
-
-		glfwGetFramebufferSize(handle, &width, &height);
-
-		return vk::Extent2D(width, height);
-	}
-
-	Frame next_frame() {
-		frame_index = (frame_index + 1) % frames_in_flight;
-		auto &frame = frames[frame_index];
-		frame.extent = extent();
-		return frame;
-	}
-
-	// TODO: callback methods...
-
-	// TODO: info struct...
-	static Window from(const Session &session, const Device &device) {
-		auto &ldev = device.logical;
-		auto &pdev = device.physical;
-
-		Window result;
-
-		// GLFW window handle creation
-		glfwInit();
-		result.handle = glfwCreateWindow(1024, 1024, "ugp", nullptr, nullptr);
-
-		// Surface creation
-		VkSurfaceKHR surface;
-		glfwCreateWindowSurface(session.handle, result.handle, nullptr, &surface);
-		result.surface = surface;
-
-		// Swapchain creation
-		result.format = vk::Format::eB8G8R8A8Unorm;
-
-		auto surface_capabilities = pdev.getSurfaceCapabilitiesKHR(surface);
-
-		// TODO: usage should also be in info
-		auto swapchain_info = vk::SwapchainCreateInfoKHR()
-			.setImageArrayLayers(1)
-			.setImageColorSpace(vk::ColorSpaceKHR::eSrgbNonlinear)
-			.setImageExtent(result.extent())
-			.setImageFormat(result.format)
-			.setMinImageCount(surface_capabilities.minImageCount)
-			.setOldSwapchain(nullptr)
-			.setPresentMode(vk::PresentModeKHR::eFifo)
-			.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
-			.setSurface(surface);
-
-		result.swapchain = ldev.createSwapchainKHR(swapchain_info);
-
-		// Prepare images
-		auto images = ldev.getSwapchainImagesKHR(result.swapchain);
-
-		result.views.reserve(images.size());
-		for (auto &image : images) {
-			auto range = vk::ImageSubresourceRange()
-				.setAspectMask(vk::ImageAspectFlagBits::eColor)
-				.setBaseArrayLayer(0)
-				.setBaseMipLevel(0)
-				.setLayerCount(1)
-				.setLevelCount(1);
-
-			auto view_info = vk::ImageViewCreateInfo()
-				.setImage(image)
-				.setViewType(vk::ImageViewType::e2D)
-				.setSubresourceRange(range)
-				.setFormat(result.format);
-
-			result.views.push_back(ldev.createImageView(view_info));
-		}
-
-		result.frame_index = 0;
-		result.frames_in_flight = images.size();
-
-		// Allocate synchronization information
-		auto fence_info = vk::FenceCreateInfo()
-			.setFlags(vk::FenceCreateFlagBits::eSignaled);
-
-		auto semaphore_info = vk::SemaphoreCreateInfo();
-
-		result.frames.resize(result.frames_in_flight);
-		for (auto &frame : result.frames) {
-			frame.fence = ldev.createFence(fence_info);
-			frame.rendered = ldev.createSemaphore(semaphore_info);
-			frame.presented = ldev.createSemaphore(semaphore_info);
-		}
-
-		return result;
-	}
 };
 
 struct group_device_window {
@@ -316,7 +148,7 @@ int main()
 
 	// Are compiler's combinators?
 	// TODO: should allow one/arbitrary argument combinators?
-	auto compiler = Compiler::from(device, Compiler::Info());
+	// auto compiler = Compiler::from(device, Compiler::Info());
 	// auto vsm = compiler(vs);
 	// auto fsm = compiler(fs);
 	//

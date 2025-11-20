@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "session.hpp"
 #include "../msv/stage.hpp"
 
@@ -14,31 +16,7 @@ struct Device {
 		std::vector <const char *> extensions;
 	};
 
-	static auto from(const Session &session, vk::detail::DispatchLoaderDynamic &dld, const Info &info) {
-		Device device;
+	static Device from(const Session &session, vk::detail::DispatchLoaderDynamic &dld, const Info &info);
 
-		// Allocate the physical device
-		device.physical = session.handle.enumeratePhysicalDevices().front();
-		device.properties = device.physical.getMemoryProperties();
-
-		// Allocate the logical device
-		// TODO: more complex queue structuring...
-		auto priority = 1.0f;
-
-		auto device_queues_info = vk::DeviceQueueCreateInfo()
-			.setQueueFamilyIndex(0)
-			.setQueuePriorities(priority)
-			.setQueueCount(1);
-
-		auto device_info = vk::DeviceCreateInfo()
-			.setQueueCreateInfos(device_queues_info)
-			.setPEnabledExtensionNames(info.extensions);
-
-		device.logical = device.physical.createDevice(device_info);
-
-		// Attach to dynamic loader
-		dld.init(device.logical);
-
-		return device;
-	}
+	uint32_t find_memory_type(uint32_t filter, vk::MemoryPropertyFlags flags) const;
 };

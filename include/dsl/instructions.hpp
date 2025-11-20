@@ -313,7 +313,7 @@ struct Instruction : variant <
 		: variant_self(base), debug_info(debug_info_) {}
 };
 
-void Block::apply_group_allocation_map(const group_allocation_map &map)
+inline void Block::apply_group_allocation_map(const group_allocation_map &map)
 {
 	for (auto &[addr, group] : map) {
 		auto &refs = context.global_resources[addr];

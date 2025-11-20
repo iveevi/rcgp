@@ -5,13 +5,13 @@
 
 namespace glfw {
 
-void boot()
+inline void boot()
 {
 	glfwInit();
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 }
 
-void load_extensions(std::vector <const char *> &list)
+inline void load_extensions(std::vector <const char *> &list)
 {
 	uint32_t count;
 	const char **extensions = glfwGetRequiredInstanceExtensions(&count);

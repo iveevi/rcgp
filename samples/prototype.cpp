@@ -2,6 +2,8 @@
 
 #include <ugp.hpp>
 
+#include <mrd.hpp>
+
 struct Vertex {
 	vec3 position;
 	vec3 normal;
@@ -67,73 +69,36 @@ auto new_allocation(std::tuple <Records...> records)
 	return map;
 }
 
-#include <glslang/Public/ResourceLimits.h>
-#include <glslang/Public/ShaderLang.h>
-#include <glslang/SPIRV/GlslangToSpv.h>
-
-std::vector <uint32_t> glsl_to_spirv(const std::string &glsl, const EShLanguage &stage)
-{
-	const char *cstr[] = { glsl.c_str() };
-
-	glslang::SpvOptions options;
-	options.generateDebugInfo = true;
-
-	glslang::TShader shader(stage);
-
-	shader.setStrings(cstr, 1);
-	shader.setEnvTarget(
-		glslang::EShTargetLanguage::EShTargetSpv,
-		glslang::EShTargetLanguageVersion::EShTargetSpv_1_6
-	);
-
-	// Enable SPIR-V and Vulkan rules when parsing GLSL
-	EShMessages messages = EShMessages {
-		EShMsgDefault
-		| EShMsgSpvRules
-		| EShMsgVulkanRules
-		| EShMsgDebugInfo
-	};
-
-	if (!shader.parse(GetDefaultResources(), 460, false, messages)) {
-		std::string log = shader.getInfoLog();
-		fmt::println("failed to compile to SPIRV:\n{}", log);
-		// io::display_lines("SOURCE", glsl);
-		return {};
-	}
-
-	// Link the program
-	glslang::TProgram program;
-
-	program.addShader(&shader);
-
-	if (!program.link(messages)) {
-		std::string log = program.getInfoLog();
-		fmt::println("failed to link SPIRV code:\n{}", log);
-		// io::display_lines("SOURCE", glsl);
-		return {};
-	}
-
-	std::vector <uint32_t> spirv;
-	glslang::GlslangToSpv(*program.getIntermediate(stage), spirv, &options);
-	return spirv;
-}
-
-struct Compiler {
-	const vk::Device &reference;
-
-	struct Info {
-		// ...
-	};
-
-	static Compiler from(const Device &device, const Info &info) {
-		Compiler result(device.logical);
-
-		return result;
-	}
-};
+// TODO: for mirrors, do we need $ordinary(T)?
+// ideal for storing aggregate instead of rewriting
+// all the time...
+//
+// $ordinary(T) := constant buffer section; disable if empty...
+//
+// NOTE: the best we can seemingly do is to just filter
+// through fields and nullify resource types...
+//
+// TODO: also needs to apply padding that matches the layout...
+// struct ordinary {
+// 	padded <N1, orindary <type>> f1;
+// 	padded <N2, ordinary <type>> f2;
+// 	[[no_unique_address]] nil <3> f3;
+// 	padded <N4, typename type::ordinary f4>; <- nested aggregate
+// }
+//
+// NOTE: dynamically sized arrays as not allowed in ordinaries
+// but they should be supported in some way for storage buffers
+//
+// TODO: scaffold should still remain as the 
 
 int main()
 {
+	auto session_info = Session::Info {};
+	auto [session, dld] = Session::from(session_info);
+
+	auto device_info = Device::Info {};
+	auto device = Device::from(session, dld, device_info);
+
 	// TODO: ensure in compile that ALL resources are bound by reference
 	auto vs = $vertex $fn($use(camera), $use(transforms), Vertex vertex) -> $returns(RasterForward)
 	{
@@ -148,6 +113,7 @@ int main()
 		};
 	};
 
+	// TODO: test with one shared and not shared resource... (camera, shading params...)
 	auto fs = $fragment $fn(FragmentInput fin) -> $returns(vec4)
 	{
 		vec3 light = normalize(vec3(1, 1, 1));
@@ -166,13 +132,16 @@ int main()
 	auto map = new_allocation(allocation());
 	vs.apply_group_allocation_map(map);
 
+	auto compiler_info = Compiler::Info {};
+	auto compiler = Compiler::from(device, compiler_info);
+
 	auto glsl = generators::GLSL(vs).generate();
 	fmt::println("vertex:\n{}", glsl);
-	auto spirv = glsl_to_spirv(glsl, EShLangVertex);
+	auto spirv = compiler.glsl_to_spirv(glsl, EShLangVertex);
 	fmt::println("spirv words: {}", spirv.size());
 
-	glsl = generators::GLSL(fs).generate();
-	fmt::println("fragment:\n{}", glsl);
-	spirv = glsl_to_spirv(glsl, EShLangFragment);
-	fmt::println("spirv words: {}", spirv.size());
+	// glsl = generators::GLSL(fs).generate();
+	// fmt::println("fragment:\n{}", glsl);
+	// spirv = compiler.glsl_to_spirv(glsl, EShLangFragment);
+	// fmt::println("spirv words: {}", spirv.size());
 }

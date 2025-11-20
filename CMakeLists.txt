@@ -10,10 +10,28 @@ find_package(Vulkan REQUIRED)
 add_compile_options(-ftime-trace)
 
 set(ALLOW_EXTERNAL_SPIRV_TOOLS TRUE)
+set(MRD_GLM_PATH "${CMAKE_CURRENT_LIST_DIR}/ext/glm")
 
 add_subdirectory(ext/glslang EXCLUDE_FROM_ALL)
+add_subdirectory(ext/mrd EXCLUDE_FROM_ALL)
 
-include_directories(include ext/glslang)
+include_directories(include ext/glslang ext/glm ext/mrd)
+
+add_library(ugp STATIC
+	source/rhi/buffer.cpp
+	source/rhi/compiler.cpp
+	source/rhi/device.cpp
+	source/rhi/session.cpp
+	source/rhi/window.cpp
+)
+
+target_link_libraries(ugp PUBLIC
+	fmt
+	glfw
+	Vulkan::Vulkan
+	glslang::glslang
+	glslang::glslang-default-resource-limits
+)
 
 add_executable(prototype samples/prototype.cpp)
 add_executable(traditional samples/traditional.cpp)
@@ -22,11 +40,9 @@ target_precompile_headers(prototype PRIVATE <vulkan/vulkan.hpp>)
 target_precompile_headers(traditional REUSE_FROM prototype)
 
 target_link_libraries(prototype
-	fmt
-	glfw
-	Vulkan::Vulkan
-	glslang::glslang
-	glslang::glslang-default-resource-limits
+	PRIVATE
+	ugp
+	mrd
 )
 
-target_link_libraries(traditional fmt glfw Vulkan::Vulkan)
+target_link_libraries(traditional PRIVATE ugp)
