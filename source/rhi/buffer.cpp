@@ -57,29 +57,29 @@ Buffer Buffer::from(const Device &device, vk::DeviceSize size, vk::BufferUsageFl
 	return result;
 }
 
-BufferArena::BufferArena(Buffer backing, vk::DeviceSize alignment_)
-	: buffer(std::move(backing))
-	, alignment(alignment_)
-	{}
-
-Buffer BufferArena::allocate(vk::DeviceSize bytes)
-{
-	auto align_up = [](vk::DeviceSize value, vk::DeviceSize alignment) {
-		return (value + alignment - 1) & ~(alignment - 1);
-	};
-
-	auto start = align_up(head, alignment);
-	auto end = start + bytes;
-
-	if (end > buffer.size)
-		fatal("arena allocation exceeded buffer size ({} > {})", end, buffer.size);
-
-	head = end;
-
-	Buffer slice = buffer;
-	slice.offset = buffer.offset + start;
-	slice.size = bytes;
-
-	slices.push_back(slice);
-	return slice;
-}
+// BufferArena::BufferArena(Buffer backing, vk::DeviceSize alignment_)
+// 	: buffer(std::move(backing))
+// 	, alignment(alignment_)
+// 	{}
+//
+// Buffer BufferArena::allocate(vk::DeviceSize bytes)
+// {
+// 	auto align_up = [](vk::DeviceSize value, vk::DeviceSize alignment) {
+// 		return (value + alignment - 1) & ~(alignment - 1);
+// 	};
+//
+// 	auto start = align_up(head, alignment);
+// 	auto end = start + bytes;
+//
+// 	if (end > buffer.size)
+// 		fatal("arena allocation exceeded buffer size ({} > {})", end, buffer.size);
+//
+// 	head = end;
+//
+// 	Buffer slice = buffer;
+// 	slice.offset = buffer.offset + start;
+// 	slice.size = bytes;
+//
+// 	slices.push_back(slice);
+// 	return slice;
+// }

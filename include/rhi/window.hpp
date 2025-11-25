@@ -8,6 +8,7 @@
 #include <GLFW/glfw3.h>
 
 #include "device.hpp"
+#include "image.hpp"
 
 struct Window {
 	GLFWwindow *handle;
@@ -15,9 +16,7 @@ struct Window {
 
 	vk::Format format;
 	vk::SwapchainKHR swapchain;
-	std::vector <vk::Image> images;
-	std::vector <vk::ImageView> views;
-	std::vector <vk::ImageLayout> image_layouts;
+	std::vector <Image> images;
 
 	struct Frame {
 		vk::Fence fence;
@@ -39,6 +38,9 @@ struct Window {
 	vk::Extent2D extent() const;
 
 	Frame next_frame();
+
+	Image &image(size_t index);
+	const Image &image(size_t index) const;
 
 	static Window from(const Session &session, const Device &device);
 };

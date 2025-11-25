@@ -59,25 +59,31 @@ Window Window::from(const Session &session, const Device &device)
 
 	result.swapchain = ldev.createSwapchainKHR(swapchain_info);
 
-	result.images = ldev.getSwapchainImagesKHR(result.swapchain);
-	result.image_layouts.assign(result.images.size(), vk::ImageLayout::eUndefined);
+	auto swapchain_images = ldev.getSwapchainImagesKHR(result.swapchain);
 
-	result.views.reserve(result.images.size());
-	for (auto &image : result.images) {
-		auto range = vk::ImageSubresourceRange()
-			.setAspectMask(vk::ImageAspectFlagBits::eColor)
-			.setBaseArrayLayer(0)
-			.setBaseMipLevel(0)
-			.setLayerCount(1)
-			.setLevelCount(1);
+	result.images.reserve(swapchain_images.size());
+	for (auto &handle : swapchain_images) {
+		Image image;
+		image.handle = handle;
+		image.extent = result.extent();
+		image.format = result.format;
 
 		auto view_info = vk::ImageViewCreateInfo()
-			.setImage(image)
+			.setImage(handle)
 			.setViewType(vk::ImageViewType::e2D)
-			.setSubresourceRange(range)
+			.setSubresourceRange(
+				vk::ImageSubresourceRange()
+					.setAspectMask(vk::ImageAspectFlagBits::eColor)
+					.setBaseArrayLayer(0)
+					.setBaseMipLevel(0)
+					.setLayerCount(1)
+					.setLevelCount(1)
+			)
 			.setFormat(result.format);
 
-		result.views.push_back(ldev.createImageView(view_info));
+		image.view = ldev.createImageView(view_info);
+
+		result.images.push_back(image);
 	}
 
 	result.frame_index = 0;
@@ -96,4 +102,14 @@ Window Window::from(const Session &session, const Device &device)
 	}
 
 	return result;
+}
+
+Image &Window::image(size_t index)
+{
+	return images[index];
+}
+
+const Image &Window::image(size_t index) const
+{
+	return images[index];
 }

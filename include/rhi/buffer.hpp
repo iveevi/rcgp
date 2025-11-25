@@ -25,14 +25,14 @@ struct Buffer {
 	static Buffer from(const Device &device, vk::DeviceSize size, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags properties);
 };
 
-struct BufferArena {
-	Buffer buffer;
-	vk::DeviceSize head = 0;
-	vk::DeviceSize alignment = 256;
-	std::vector <Buffer> slices;
-
-	BufferArena() = default;
-	explicit BufferArena(Buffer backing, vk::DeviceSize alignment = 256);
-
-	Buffer allocate(vk::DeviceSize bytes);
-};
+// struct BufferArena {
+// 	Buffer buffer;
+// 	vk::DeviceSize head = 0;
+// 	vk::DeviceSize alignment = 256;
+// 	std::vector <Buffer> slices;
+//
+// 	BufferArena() = default;
+// 	explicit BufferArena(Buffer backing, vk::DeviceSize alignment = 256);
+//
+// 	Buffer allocate(vk::DeviceSize bytes);
+// };

@@ -19,16 +19,6 @@ struct alignment <T> {
 };
 
 template <native_scalar T>
-struct alignment <vector <T, 2>> {
-	static constexpr size_t value = 8;
-};
-
-template <native_scalar T>
-struct alignment <vector <T, 3>> {
-	static constexpr size_t value = 16;
-};
-
-template <native_scalar T>
 struct alignment <glm::tvec2 <T, glm::qualifier::defaultp>> {
 	static constexpr size_t value = 8;
 };

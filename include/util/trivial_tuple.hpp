@@ -19,6 +19,7 @@ struct trivial_tuple <> {
 
 template <typename T, typename ... Ts>
 struct trivial_tuple <T, Ts...> {
+	// TODO: private...
 	T x;
 	[[no_unique_address]] trivial_tuple <Ts...> rest;
 

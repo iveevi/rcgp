@@ -1,249 +1,163 @@
-#include "dsl/primitives.hpp"
-#include "msv/alignment.hpp"
-#include "util/meta.hpp"
+#include <array>
+#include <concepts>
+#include <vector>
 #include <glm/glm.hpp>
 
 #include <ugp.hpp>
-#include <utility>
 
-// NOTE: nested aggregates will at use the above...
-
-// TODO: first parameter should be alignment rules...
-// TODO: for now we are assuming GLSL alignment rules...
-// NOTE: TBuffer is typed by its elements as if it
-// were an aggregate with the fields Ts... Following
-// Vulkan/GLSL rules, all but the last field must be
-// trivially constructable; the last field may be an
-// unsized array indicated by T[]
-
-// In general, follow this convention:
-// X_layout_engine <uint32_t, glm::vec3[]> ::type
-// = sequence <
-// 	offset_by <uint32_t, 0>,
-// 	offset_by <glm::vec3[], 16>
-// >
-// padded_t = ...
-
-template <typename T, size_t N>
-struct padded_t {
-	T value;
-	[[no_unique_address]] char _pad[N];
-};
-
-template <typename T, size_t N>
-struct alignment <padded_t <T, N>> {
-	static constexpr size_t value = alignment <T> ::value;
-};
-
-// TODO: trivial and dynamic _tuples...
-
-template <auto &A, std::size_t ... Is>
-constexpr auto array_to_index_sequence_impl(std::index_sequence <Is...>)
-{
-	return std::index_sequence <A[Is]...> {};
-}
-
-template <auto &A>
-using array_to_index_sequence = decltype(array_to_index_sequence_impl <A> (std::make_index_sequence <A.size()> {}));
-
-// TODO: no more fields after dynamic part
-template <typename ... Ts>
-consteval auto std430_layout_engine_impl()
-{
-	constexpr size_t N = sizeof...(Ts);
-
-	// TODO: need to deal with dynamic parts...
-	// constexpr bool dynamic = dynamic_v <Ts> || ...;
-	constexpr auto sizes = std::array <size_t, N> { sizeof(Ts)... };
-	constexpr auto aligns = std::array <size_t, N> { alignment_v <Ts> ... };
-
-	// At most one section of padding after each field
-	std::array <size_t, N> padding;
-
-	size_t offset = 0;
-	size_t malign = 0; // max align recorded
-
-	for (size_t i = 0; i < N; i++) {
-		auto corrected = align_up(offset, aligns[i]);
-
-		if (i > 0)
-			padding[i - 1] = corrected - offset;
-
-		offset = corrected + sizes[i];
-		malign = std::max(malign, aligns[i]);
-	}
-
-	// TODO: unless its dynamically sized...
-	padding[N - 1] = align_up(offset, malign) - offset;
-
-	return padding;
-}
-
-template <typename Fields, typename Padding>
-struct layout_stitcher {
-	using type = sequence <>;
-};
-
-template <typename T, typename ... Ts, size_t I, size_t ... Is>
-struct layout_stitcher <sequence <T, Ts...>, std::index_sequence <I, Is...>> {
-	using next = layout_stitcher <sequence <Ts...>, std::index_sequence <Is...>>;
-	using type = next::type::template push_front_t <padded_t <T, I>>;
-};
-
-template <typename ... Ts>
-consteval auto std430_layout_engine_dispatch(sequence <Ts...>)
-{
-	static constexpr auto padding = std430_layout_engine_impl <Ts...> ();
-
-	using field_seq = sequence <Ts...>;
-	using padding_seq = array_to_index_sequence <padding>;
-
-	using stitched = layout_stitcher <field_seq, padding_seq> ::type;
-
-	return typename stitched::trivial_tuple();
-}
-
-template <typename T>
-struct fix_alignment_impl {
-	using type = T;
-};
-
-template <typename T, size_t N>
-struct fix_alignment_impl <T[N]> {
-	static constexpr size_t padding = align_up(sizeof(T), alignment_v <T>) - sizeof(T);
-	using base = padded_t <T, padding>;
-	using type = base[N];
-};
-
-template <typename T>
-struct fix_alignment_impl <T[]> {
-	static constexpr size_t padding = align_up(sizeof(T), alignment_v <T>) - sizeof(T);
-	using base = padded_t <T, padding>;
-	using type = base[];
-};
-
-template <typename ... Ts>
-consteval auto fix_alignment(sequence <Ts...>) -> sequence <typename fix_alignment_impl <Ts> ::type...>;
-
-template <typename ... Ts>
-consteval auto std430_layout_engine(sequence <Ts...> seq)
-{
-	using fseq = decltype(fix_alignment(seq));
-	using tuple = decltype(std430_layout_engine_dispatch(std::declval <fseq> ()));
-	return tuple();
-}
-
-// TODO: pass as template template to buffers, etc?
-template <typename ... Ts>
-using std430_layout_t = decltype(std430_layout_engine(std::declval <sequence <Ts...>> ()));
-
-// TODO: array elements need to be padded as well...
-// use the old strategy for padded tuples...
-using y = decltype(fix_alignment(std::declval <sequence <uint32_t, glm::vec3[3], uint32_t>> ()));
-using x = decltype(std430_layout_engine(std::declval <sequence <uint32_t, glm::vec3[3], uint32_t>> ()));
 using x = std430_layout_t <uint32_t, glm::vec3[3], uint32_t>;
 static_assert(sizeof(x) == 80);
 static_assert(x::offset <0> () == 0);
 static_assert(x::offset <1> () == 16);
 static_assert(x::offset <2> () == 64);
 
-template <template <typename ...> typename Layout, typename ... Ts>
-struct FieldedBuffer {
-	using tuple = Layout <Ts...>;
-}; // : LayoutMappedBuffer <X_layout_engine <Ts...> ::type> {}
+template <typename T>
+struct TupleBuffer {};
 
-using FX = FieldedBuffer <std430_layout_t, uint32_t>;
-auto xx = FX();
-auto xy = FX::tuple();
+template <typename ... Ts>
+struct TupleBuffer <trivial_tuple <Ts...>> : Buffer {
+	using value_type = trivial_tuple <Ts...>;
 
-// template <typename ... Ts>
-// struct ?Buffer : Buffer {
-// 	// TODO: method to write individual fields at a time
-// 	// TODO: alternatively provide a host "staging" item
-// 	// where unsized arrays are converted to vectors or so...
-// };
+	TupleBuffer() = default;
 
-// using PointsBuffer = TBuffer <
-// 	uint32_t, 	// count
-// 	glm::vec3[]	// positions
-// >;
+	TupleBuffer(const Buffer &buffer) : Buffer(buffer) {}
 
-// NOTE: so the flow from DSL storage buffer to host handle;
-// take the expanded reflection, convert the fields into
-// host equivalents (ordinary + array), then compute their
-// layout, and serve the TBuffer of that layout...
-// AND
-// serve a host staging/data prep structure; the base type
-// will be a tuple, but then use the scaffold field members
-// to indirectly do this (with overloaded op=)
-
-struct group_device_window {
-	Device &device;
-	Window &window;
-
-	void wait(Window::Frame &frame, uint64_t timeout = UINT64_MAX) {
-		auto result = device.logical.waitForFences(frame.fence, true, timeout);
-		device.logical.resetFences(frame.fence);
+	void upload(const value_type &value) {
+		Buffer::upload(&value, sizeof(value), 0);
 	}
 
-	bool acquire_image(Window::Frame &frame, uint64_t timeout = UINT64_MAX) {
-		auto result = device.logical.acquireNextImageKHR(
-			window.swapchain,
-			timeout,
-			frame.presented,
-			nullptr,
-			&frame.image_index
-		);
-
-		return !(result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR);
-	}
-};
-
-auto group(Device &device, Window &window)
-{
-	return group_device_window(device, window);
-}
-
-struct Queue : vk::Queue {
-	uint32_t family_index;
-	uint32_t queue_index;
-
-	static Queue from(const Device &device) {
-		// TODO: queue info struct with family flags..
-		Queue result(device.logical.getQueue(0, 0));
-		result.family_index = 0;
-		result.queue_index = 0;
+	static TupleBuffer from(const Device &device, vk::BufferUsageFlagBits usage, vk::MemoryPropertyFlagBits properties) {
+		TupleBuffer result = Buffer::from(device, sizeof(value_type), usage, properties);
 		return result;
 	}
 };
 
-struct CommandPool : vk::CommandPool {
-	static CommandPool from(const Device &device, const Queue &queue) {
-		auto cpool_info = vk::CommandPoolCreateInfo()
-			.setQueueFamilyIndex(queue.family_index)
-			.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
+template <template <typename ...> typename Layout, typename ... Ts>
+using TBuffer = TupleBuffer <Layout <Ts...>>;
 
-		return CommandPool(device.logical.createCommandPool(cpool_info));
+struct TraditionalGraphicsPipeline : vk::Pipeline {
+	vk::PipelineLayout layout;
+
+	struct Info {
+		vk::ShaderModule vmodule;
+		vk::ShaderModule fmodule;
+		vk::RenderPass renderpass;
+		vk::Extent2D extent;
+		vk::ArrayProxy <const vk::VertexInputBindingDescription> bindings;
+		vk::ArrayProxy <const vk::VertexInputAttributeDescription> attributes;
+		vk::PipelineLayout layout = {};
+	};
+
+	TraditionalGraphicsPipeline() = default;
+	TraditionalGraphicsPipeline(vk::Pipeline pipeline, vk::PipelineLayout layout_)
+		: vk::Pipeline(pipeline), layout(layout_) {}
+
+	static TraditionalGraphicsPipeline from(const Device &device, const vk::detail::DispatchLoaderDynamic &ldl, const Info &info) {
+		auto shader_stages = std::array {
+			vk::PipelineShaderStageCreateInfo()
+				.setStage(vk::ShaderStageFlagBits::eVertex)
+				.setModule(info.vmodule)
+				.setPName("main"),
+			vk::PipelineShaderStageCreateInfo()
+				.setStage(vk::ShaderStageFlagBits::eFragment)
+				.setModule(info.fmodule)
+				.setPName("main"),
+		};
+
+		auto vertex_input = vk::PipelineVertexInputStateCreateInfo()
+			.setVertexBindingDescriptions(info.bindings)
+			.setVertexAttributeDescriptions(info.attributes);
+
+		auto input_assembly = vk::PipelineInputAssemblyStateCreateInfo()
+			.setTopology(vk::PrimitiveTopology::eTriangleList)
+			.setPrimitiveRestartEnable(false);
+
+		auto viewport = vk::Viewport()
+			.setX(0.0f)
+			.setY(0.0f)
+			.setWidth(static_cast <float> (info.extent.width))
+			.setHeight(static_cast <float> (info.extent.height))
+			.setMinDepth(0.0f)
+			.setMaxDepth(1.0f);
+
+		auto scissor = vk::Rect2D()
+			.setOffset({ 0, 0 })
+			.setExtent(info.extent);
+
+		auto viewport_state = vk::PipelineViewportStateCreateInfo()
+			.setViewports(viewport)
+			.setScissors(scissor);
+
+		auto rasterization = vk::PipelineRasterizationStateCreateInfo()
+			.setDepthClampEnable(false)
+			.setRasterizerDiscardEnable(false)
+			.setPolygonMode(vk::PolygonMode::eFill)
+			.setCullMode(vk::CullModeFlagBits::eBack)
+			.setFrontFace(vk::FrontFace::eClockwise)
+			.setDepthBiasEnable(false)
+			.setLineWidth(1.0f);
+
+		auto multisampling = vk::PipelineMultisampleStateCreateInfo()
+			.setRasterizationSamples(vk::SampleCountFlagBits::e1)
+			.setSampleShadingEnable(false)
+			.setMinSampleShading(1.0f);
+
+		auto color_blend_attachment = vk::PipelineColorBlendAttachmentState()
+			.setBlendEnable(false)
+			.setColorWriteMask(
+				vk::ColorComponentFlagBits::eR |
+				vk::ColorComponentFlagBits::eG |
+				vk::ColorComponentFlagBits::eB |
+				vk::ColorComponentFlagBits::eA
+			);
+
+		auto color_blend = vk::PipelineColorBlendStateCreateInfo()
+			.setAttachments(color_blend_attachment);
+
+		auto pipeline_layout = info.layout;
+		if (!pipeline_layout)
+			pipeline_layout = device.logical.createPipelineLayout(vk::PipelineLayoutCreateInfo(), nullptr, ldl);
+
+		auto pipeline_info = vk::GraphicsPipelineCreateInfo()
+			.setLayout(pipeline_layout)
+			.setPInputAssemblyState(&input_assembly)
+			.setPVertexInputState(&vertex_input)
+			.setPRasterizationState(&rasterization)
+			.setPMultisampleState(&multisampling)
+			.setPColorBlendState(&color_blend)
+			.setPViewportState(&viewport_state)
+			.setStages(shader_stages)
+			.setRenderPass(info.renderpass)
+			.setSubpass(0);
+
+		auto [result, pipeline] = device.logical.createGraphicsPipeline(nullptr, pipeline_info, nullptr, ldl);
+		// (void)result; // TODO: handle failures gracefully
+
+		return TraditionalGraphicsPipeline(pipeline, pipeline_layout);
 	}
 };
 
-struct group_device_cpool {
-	const Device &device;
-	const CommandPool &cpool;
+const std::string vshader = R"(
+#version 450
 
-	auto allocate(uint32_t count) {
-		return device.logical.allocateCommandBuffers(
-			vk::CommandBufferAllocateInfo()
-				.setCommandBufferCount(count)
-				.setCommandPool(cpool)
-		);
-	}
-};
+layout (location = 0) in vec2 position;
 
-auto group(const Device &device, const CommandPool &cpool)
+void main()
 {
-	return group_device_cpool(device, cpool);
+	gl_Position = vec4(position, 0, 1);
 }
+)";
+
+const std::string fshader = R"(
+#version 450
+
+layout (location = 0) out vec4 color;
+
+void main()
+{
+	color = vec4(1);
+}
+)";
 
 int main()
 {
@@ -260,13 +174,119 @@ int main()
 	};
 
 	auto device = Device::from(session, dld, device_info);
-	auto &ldev = device.logical;
+	// auto &ldev = device.logical;
 
 	auto window = Window::from(session, device);
 
 	auto queue = Queue::from(device);
 	auto cpool = CommandPool::from(device, queue);
 	auto cmdbuffers = group(device, cpool).allocate(window.frames_in_flight);
+
+	auto compiler = Compiler::from(device, Compiler::Info());
+	
+	auto vspv = compiler.glsl_to_spirv(vshader, EShLangVertex);
+	auto fspv = compiler.glsl_to_spirv(fshader, EShLangFragment);
+
+	auto vmodule = compiler.spirv_to_shader_module(vspv);
+	auto fmodule = compiler.spirv_to_shader_module(fspv);
+
+	// TODO: translate a sequence of types to binding AND attributes
+	// TODO: what if we encode the vertices? then jit vec and struct vec
+	// should be different... but we can still treat the encoded vec
+	// as a vec2 in DSL code...
+	// Or, better yet, allow the user to define their own derivative
+	// which is then translated in different ways...
+	auto binding_descs = std::array {
+		vk::VertexInputBindingDescription()
+			.setBinding(0)
+			.setStride(sizeof(glm::vec2))
+			.setInputRate(vk::VertexInputRate::eVertex),
+	};
+
+	auto attribute_descs = std::array {
+		vk::VertexInputAttributeDescription()
+			.setLocation(0)
+			.setBinding(0)
+			.setFormat(vk::Format::eR32G32Sfloat)
+			.setOffset(0),
+	};
+
+	auto attachments = Attachments();
+
+	attachments["color"] = vk::AttachmentDescription()
+		.setFormat(window.format)
+		.setSamples(vk::SampleCountFlagBits::e1)
+		.setLoadOp(vk::AttachmentLoadOp::eClear)
+		.setStoreOp(vk::AttachmentStoreOp::eStore)
+		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+		.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+		.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+
+	auto color = attachments.reference("color", vk::ImageLayout::eColorAttachmentOptimal);
+
+	// TODO: could make this a group(device, dld) method?
+	auto rp = renderpass(device, dld,
+		attachments,
+		subpass(color_attachments { color },
+			depth_attachments {},
+			color_attachments {},
+			input_attachments {})
+	);
+
+	std::vector <vk::Framebuffer> framebuffers;
+	framebuffers.reserve(window.images.size());
+	for (auto &image : window.images) {
+		auto fb_info = vk::FramebufferCreateInfo()
+			.setRenderPass(rp)
+			.setAttachments(image.view)
+			.setWidth(image.extent.width)
+			.setHeight(image.extent.height)
+			.setLayers(1);
+
+		framebuffers.push_back(device.logical.createFramebuffer(fb_info, nullptr, dld));
+	}
+
+	auto pipeline_info = TraditionalGraphicsPipeline::Info {
+		.vmodule = vmodule,
+		.fmodule = fmodule,
+		.renderpass = rp,
+		.extent = window.extent(),
+		.bindings = binding_descs,
+		.attributes = attribute_descs,
+	};
+
+	auto pipeline = TraditionalGraphicsPipeline::from(device, dld, pipeline_info);
+
+	using PBuffer = TBuffer <std430_layout_t, uint32_t, glm::vec3[3], uint32_t>;
+
+	// auto pbuf = PBuffer::from(
+	// 	device,
+	// 	vk::BufferUsageFlagBits::eUniformBuffer,
+	// 	vk::MemoryPropertyFlagBits::eDeviceLocal
+	// );
+	//
+	// auto pbuf_value = PBuffer::value_type();
+	// pbuf_value.get <0> () = 12;
+	// pbuf_value.get <1> ()[2] = glm::vec3(1);
+	//
+	// pbuf.upload(pbuf_value);
+
+	// TODO: should be TBuffer <std430..., glm::vec2[]>
+	auto vertices = std::array {
+		glm::vec2(-0.5f, -0.5f),
+		glm::vec2(0.5f, -0.5f),
+		glm::vec2(0.0f, 0.5f),
+	};
+
+	auto vertex_buffer = Buffer::from(
+		device,
+		sizeof(vertices),
+		vk::BufferUsageFlagBits::eVertexBuffer,
+		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
+	);
+
+	vertex_buffer.upload(vertices.data(), sizeof(vertices));
 
 	while (window.alive()) {
 		window.poll();
@@ -286,32 +306,50 @@ int main()
 		cmd.reset();
 		cmd.begin(vk::CommandBufferBeginInfo());
 
-		auto &image = window.images[frame.image_index];
-		auto &layout = window.image_layouts[frame.image_index];
-		if (layout != vk::ImageLayout::ePresentSrcKHR) {
-			auto range = vk::ImageSubresourceRange()
-				.setAspectMask(vk::ImageAspectFlagBits::eColor)
-				.setBaseArrayLayer(0)
-				.setBaseMipLevel(0)
-				.setLayerCount(1)
-				.setLevelCount(1);
+		auto &image = window.image(frame.image_index);
+		auto to_color = image.memory_barrier(
+			vk::ImageLayout::eColorAttachmentOptimal,
+			{},
+			vk::AccessFlagBits::eColorAttachmentWrite
+		);
 
-			auto barrier = vk::ImageMemoryBarrier()
-				.setImage(image)
-				.setOldLayout(layout)
-				.setNewLayout(vk::ImageLayout::ePresentSrcKHR)
-				.setSrcAccessMask({})
-				.setDstAccessMask({})
-				.setSubresourceRange(range);
+		cmd.pipelineBarrier(
+			vk::PipelineStageFlagBits::eTopOfPipe,
+			vk::PipelineStageFlagBits::eColorAttachmentOutput,
+			{}, {}, {}, to_color
+		);
 
-			cmd.pipelineBarrier(
-				vk::PipelineStageFlagBits::eTopOfPipe,
-				vk::PipelineStageFlagBits::eBottomOfPipe,
-				{}, {}, {}, barrier
-			);
+		auto render_area = vk::Rect2D()
+			.setOffset({ 0, 0 })
+			.setExtent(frame.extent);
 
-			layout = vk::ImageLayout::ePresentSrcKHR;
-		}
+		auto clear_value = vk::ClearValue()
+			.setColor(vk::ClearColorValue(std::array <float, 4> { 0.05f, 0.05f, 0.05f, 1.0f }));
+
+		auto rp_begin = vk::RenderPassBeginInfo()
+			.setRenderPass(rp)
+			.setFramebuffer(framebuffers[frame.image_index])
+			.setRenderArea(render_area)
+			.setClearValues(clear_value);
+
+		cmd.beginRenderPass(rp_begin, vk::SubpassContents::eInline);
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
+		vk::DeviceSize vb_offset = 0;
+		cmd.bindVertexBuffers(0, vertex_buffer.handle, vb_offset);
+		cmd.draw(3, 1, 0, 0);
+		cmd.endRenderPass();
+
+		auto to_present = image.memory_barrier(
+			vk::ImageLayout::ePresentSrcKHR,
+			vk::AccessFlagBits::eColorAttachmentWrite,
+			{}
+		);
+
+		cmd.pipelineBarrier(
+			vk::PipelineStageFlagBits::eColorAttachmentOutput,
+			vk::PipelineStageFlagBits::eBottomOfPipe,
+			{}, {}, {}, to_present
+		);
 
 		cmd.end();
 
