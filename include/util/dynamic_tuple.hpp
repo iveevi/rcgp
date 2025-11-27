@@ -15,12 +15,10 @@ class dynamic_tuple <T[], Ts...> {
 
 	static constexpr size_t static_count = sizeof...(Ts);
 	
-	statics_t statics_storage;
+	[[no_unique_address]] statics_t statics_storage;
 	std::vector <T> dynamics_storage;
 public:
 	dynamic_tuple() = default;
-
-	explicit dynamic_tuple(size_t elements) : dynamics_storage(elements) {}
 
 	template <size_t Index>
 	auto &get() {
@@ -40,23 +38,22 @@ public:
 		return statics_t::template offset <Index> ();
 	}
 
-	static constexpr size_t dynamic_offset() {
-		return align_up(sizeof(statics_t), alignof(T));
-	}
-
-	static constexpr size_t static_size() {
-		return dynamic_offset();
+	static constexpr size_t statics_size() {
+		if constexpr (sizeof...(Ts))
+			return sizeof(statics_t);
+		else
+			return 0;
 	}
 
 	static constexpr size_t size(size_t elements) {
-		return static_size() + sizeof(T) * elements;
+		return statics_size() + sizeof(T) * elements;
 	}
 
-	std::vector <T> &dynamic() {
+	std::vector <T> &dynamics() {
 		return dynamics_storage;
 	}
 
-	const std::vector <T> &dynamic() const {
+	const std::vector <T> &dynamics() const {
 		return dynamics_storage;
 	}
 

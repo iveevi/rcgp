@@ -148,9 +148,11 @@ int main()
 		| vk::MemoryPropertyFlagBits::eHostCoherent
 	);
 
-	auto vbuf_value = VBuffer::value_type(3);
-	auto dyn = vbuf_value.dynamic();
+	auto vbuf_value = VBuffer::value_type();
+
+	auto &dyn = vbuf_value.dynamics();
 	dyn.resize(3);
+
 	dyn[0] = glm::vec2(-0.5f, -0.5f);
 	dyn[1] = glm::vec2(0.5f, -0.5f);
 	dyn[2] = glm::vec2(0.0f, 0.5f);

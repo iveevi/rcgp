@@ -45,13 +45,13 @@ struct TupleBuffer <dynamic_tuple <T[], Ts...>> : Buffer {
 		if (elements > max_elements)
 			fatal("dynamic tuple upload exceeds allocation ({} > {})", elements, max_elements);
 
-		if (elements > value.dynamic().size())
-			fatal("dynamic tuple upload elements exceed source size ({} > {})", elements, value.dynamic().size());
+		if (elements > value.dynamics().size())
+			fatal("dynamic tuple upload elements exceed source size ({} > {})", elements, value.dynamics().size());
 
-		auto static_bytes = value_type::static_size();
-		auto dyn_bytes = sizeof(T) * elements;
+		auto static_bytes = value_type::statics_size();
+		auto dynamics_bytes = sizeof(T) * elements;
 
-		std::vector <std::byte> staging(static_bytes + dyn_bytes);
+		std::vector <std::byte> staging(static_bytes + dynamics_bytes);
 
 		const auto &statics = value.statics();
 		std::memcpy(staging.data(), &statics, sizeof(statics));
@@ -59,8 +59,8 @@ struct TupleBuffer <dynamic_tuple <T[], Ts...>> : Buffer {
 		if (static_bytes > sizeof(statics))
 			std::memset(staging.data() + sizeof(statics), 0, static_bytes - sizeof(statics));
 
-		auto dyn_ptr = staging.data() + static_bytes;
-		std::memcpy(dyn_ptr, value.dynamic().data(), dyn_bytes);
+		auto dptr = staging.data() + static_bytes;
+		std::memcpy(dptr, value.dynamics().data(), dynamics_bytes);
 
 		Buffer::upload(staging.data(), staging.size(), relative_offset);
 	}
