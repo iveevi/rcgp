@@ -1,15 +1,13 @@
 #pragma once
 
-#include <array>
 #include <cstddef>
-#include <vector>
 
 // Trivially constructable tuple that supports POD fields and dynamic arrays
 template <typename ... Ts>
-struct trivial_tuple {};
+class trivial_tuple {};
 
 template <>
-struct trivial_tuple <> {
+class trivial_tuple <> {
 	template <size_t Index>
 	static consteval size_t offset() {
 		static_assert(Index != Index, "tuple index out of range");
@@ -18,11 +16,10 @@ struct trivial_tuple <> {
 };
 
 template <typename T, typename ... Ts>
-struct trivial_tuple <T, Ts...> {
-	// TODO: private...
+class trivial_tuple <T, Ts...> {
 	T x;
 	[[no_unique_address]] trivial_tuple <Ts...> rest;
-
+public:
 	template <size_t Index>
 	auto &get() {
 		if constexpr (Index == 0) {
@@ -49,11 +46,4 @@ struct trivial_tuple <T, Ts...> {
 			return sizeof(T) + trivial_tuple <Ts...> ::template offset <Index - 1> ();
 		}
 	}
-
-	static constexpr bool dynamic = [] constexpr {
-		if constexpr (sizeof...(Ts))
-			return trivial_tuple <Ts...> ::dynamic;
-		else
-			return false;
-	} ();
 };

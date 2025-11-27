@@ -21,6 +21,7 @@ add_library(ugp STATIC
 	source/rhi/buffer.cpp
 	source/rhi/compiler.cpp
 	source/rhi/device.cpp
+	source/rhi/pipelines/traditional.cpp
 	source/rhi/session.cpp
 	source/rhi/window.cpp
 )

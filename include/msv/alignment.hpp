@@ -4,11 +4,7 @@
 #include <glm/glm.hpp>
 
 #include "../dsl/primitives.hpp"
-
-constexpr size_t align_up(size_t value, size_t alignment)
-{
-	return (value + alignment - 1) & ~(alignment - 1);
-}
+#include "../util/align.hpp"
 
 template <typename T>
 struct alignment {};

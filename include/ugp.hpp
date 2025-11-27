@@ -24,9 +24,11 @@
 #include "rhi/compiler.hpp"
 #include "rhi/device.hpp"
 #include "rhi/group.hpp"
+#include "rhi/pipelines/traditional.hpp"
 #include "rhi/queue.hpp"
 #include "rhi/renderpass.hpp"
 #include "rhi/session.hpp"
+#include "rhi/tuple_buffer.hpp"
 #include "rhi/window.hpp"
 
 #include "dsl/generators/assembly.hpp"
