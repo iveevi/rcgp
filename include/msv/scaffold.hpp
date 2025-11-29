@@ -2,6 +2,18 @@
 
 #include "reflection.hpp"
 
+// Forward declarations
+template <reflected T, int64_t N>
+struct array;
+
+// Pair of type and manual alignment
+template <typename T, size_t N>
+struct scaffold_hint {
+	using type = T;
+	
+	static constexpr size_t value = N;
+};
+
 // Scaffold for primitive/built-in types
 template <size_t Align, typename T>
 struct alignas(Align) scaffold_fundamental {
@@ -10,6 +22,7 @@ struct alignas(Align) scaffold_fundamental {
 	// TODO: constructors and operators...
 };
 
+// Scaffold for structual types with fields
 template <size_t Align, typename T>
 struct alignas(Align) scaffold_structural : T {
 	constexpr scaffold_structural() = default;
@@ -20,35 +33,54 @@ struct alignas(Align) scaffold_structural : T {
 	}
 };
 
-template <size_t Align, typename Original, typename Mapped>
+// Scaffold lookup procedure
+template <typename Hint, typename View>
 struct scaffold_lookup {
+	static_assert(false,
+	       ($ss("no scaffold_lookup registered for hint { ")
+		+ $ss_type(Hint) + $ss(" } and view { ")
+		+ $ss_type(View) + $ss(" }")).view());
+};
+
+// Structural types
+template <typename Mapped, size_t Align, typename View>
+struct scaffold_lookup <scaffold_hint <Mapped, Align>, View> {
 	using type = scaffold_structural <Align, Mapped>;
 };
 
-template <size_t Align, typename Original, typename Mapped>
+// Primitive/built-in types
+template <typename Mapped, size_t Align, typename View>
 requires (std::is_fundamental_v <Mapped>)
-struct scaffold_lookup <Align, Original, Mapped> {
+struct scaffold_lookup <scaffold_hint <Mapped, Align>, View> {
 	using type = scaffold_fundamental <Align, Mapped>;
 };
 
-// This will allow us to represent nested things as sequence <A, B, sequence <C, D>, ...>
-template <size_t Align, aggregate T, typename ... Ts>
-struct scaffold_lookup <Align, T, sequence <Ts...>> {
-	using type = T::template scaffold <Align, Ts...>;
+// Aggregate types
+template <typename ... Ts, size_t Align, aggregate View>
+struct scaffold_lookup <scaffold_hint <sequence <Ts...>, Align>, View> {
+	using type = View::template scaffold <Align, Ts...>;
 };
 
-// TODO: statically sized arrays,
-// TODO: unsized arrays...
+// Statically sized array types
+template <typename Element, size_t N1, size_t Align, reflected ElementView, int64_t N2>
+struct scaffold_lookup <
+	scaffold_hint <std::array <Element, N1>, Align>,
+	array <ElementView, N2>
+>
+{
+	static_assert(N1 == N2, "bad");
+	// NOTE: assuming that the array's alignment (Align) is negligible
+	// since it should be equal to the element-wise alignment; might not
+	// be true for completely scalar block layout
+	using element = scaffold_lookup <Element, ElementView> ::type;
+	using type = std::array <element, N1>;
+};
 
+// Generating the scaffold in the reflection building process
 #define GEN_SCAFFOLD_FIELDS(T, field)					\
-	using pad_##field = Ts...[__COUNTER__ - counter_base - 1];	\
-	scaffold_lookup <						\
-		pad_##field::value,					\
-		decltype(T::field),					\
-		typename pad_##field::type				\
-	> ::type field;
+	using hint_##field = Ts...[__COUNTER__ - counter_base - 1];	\
+	scaffold_lookup <hint_##field, decltype(T::field)> ::type field;
 
-// TODO: require type_and_alignment inputs
 #define DEFINE_SCAFFOLD(...)						\
 	template <size_t Align, typename ... Ts>			\
 	requires (sizeof...(Ts) == reflection::field_count)		\

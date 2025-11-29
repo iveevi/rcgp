@@ -4,7 +4,6 @@
 
 #include "msv/context.hpp"
 #include "msv/function_return_injection.hpp"
-#include "msv/layout/layout.hpp"
 #include "msv/parameter_block_filter.hpp"
 #include "msv/reconstruct_type.hpp"
 #include "msv/reference.hpp"
@@ -29,7 +28,6 @@
 #include "rhi/queue.hpp"
 #include "rhi/renderpass.hpp"
 #include "rhi/session.hpp"
-#include "rhi/tuple_buffer.hpp"
 #include "rhi/window.hpp"
 
 #include "dsl/generators/assembly.hpp"

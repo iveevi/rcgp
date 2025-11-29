@@ -4,8 +4,6 @@
 
 #include <ugp.hpp>
 
-#include "util/dynamic_tuple.hpp"
-
 const std::string vshader = R"(
 #version 450
 
@@ -36,18 +34,6 @@ using unsized_array = std::vector <T>;
 
 } // namespace detail
 
-template <typename T, size_t N>
-struct type_and_alignment {
-	using type = T;
-	
-	static constexpr size_t value = N;
-};
-
-// TODO: layouts take reflection and spit out
-// a sequence of type_and_alignment... (or nested sequences)
-
-namespace {
-
 namespace std430 {
 
 template <typename T>
@@ -58,15 +44,46 @@ struct layout_engine {
 template <typename Original, typename ... Ts>
 struct layout_engine <aggregate_reflection <Original, Ts...>> {
 	static constexpr size_t alignment = std::max({ layout_engine <Ts> ::alignment... });
-	using type = sequence <typename layout_engine <Ts> ::type...>;
+	using hint = scaffold_hint <
+		sequence <typename layout_engine <Ts> ::hint...>,
+		alignment
+	>;
+};
+
+template <typename T, int64_t N>
+requires (N > 0)
+struct layout_engine <array_reflection <T, N>> {
+	static constexpr size_t alignment = layout_engine <T> ::alignment;
+	using hint = scaffold_hint <
+		std::array <typename layout_engine <T> ::hint, N>,
+		alignment
+	>;
 };
 
 template <native_scalar T, size_t N, size_t M>
 struct layout_engine <primitive_reflection <matrix <T, N, M>>> {
 	// TODO: equals the alignment of row vector
 	static constexpr size_t alignment = 16;
-	using type = type_and_alignment <
+	using hint = scaffold_hint <
 		glm::mat <M, N, T>,
+		alignment
+	>;
+};
+
+template <native_scalar T, size_t D>
+struct layout_engine <primitive_reflection <vector <T, D>>> {
+	static constexpr size_t alignment = [] constexpr {
+		switch (D) {
+		case 4:
+		case 3:
+			return 16;
+		case 2:
+			return 8;
+		}
+	} ();
+
+	using hint = scaffold_hint <
+		glm::vec <D, T>,
 		alignment
 	>;
 };
@@ -80,6 +97,17 @@ using std430 = std430::layout_engine <T>;
 
 } // namespace layouts
 
+template <typename T, template <typename> typename Engine = layouts::std430>
+struct data_mirror {
+	using layout = Engine <expand_reflection_t <T>>;
+	using hint = layout::hint;
+	// TODO: remove
+	using lookup = scaffold_lookup <hint, T>;
+	using type = scaffold_lookup <hint, T> ::type;
+};
+
+#define $mirror(T, ...) data_mirror <T __VA_OPT__(,) __VA_ARGS__> ::type
+
 struct View {
 	mat4 model;
 	mat4 view;
@@ -88,21 +116,6 @@ struct View {
 	$reflection(model, view, proj);
 };
 
-template <template <typename> typename Engine, typename T>
-struct data_mirror {
-	using layout = Engine <expand_reflection_t <T>>;
-	using type = scaffold_lookup <
-		layout::alignment, T,
-		typename layout::type
-	> ::type;
-};
-
-#define $mirror(L, T) data_mirror <layouts::L, T> ::type
-
-using S = data_mirror <layouts::std430, View> ::type;
-
-}
-
 struct X {
 	vec3 x;
 	vec3 y;
@@ -110,30 +123,50 @@ struct X {
 	$reflection(x, y);
 };
 
-auto ftn = [] {
-	// TODO: now layouts will only need to
-	// compute alignment requirements...
-	using Y = scaffold_lookup <
-		4,
-		X,
-		sequence <
-			type_and_alignment <glm::vec3, 4>,
-			type_and_alignment <glm::vec3, 4>
-		>
-	> ::type;
+struct XNested {
+	vec2 w;
+	X nested;
 
-	static_assert(sizeof(Y) == 24);
+	$reflection(w, nested);
+};
+
+auto ftn = [] {
+	using Y = $mirror(X);
+
+	static_assert(sizeof(Y) == 32);
 	static_assert(offsetof(Y, x) == 0);
-	static_assert(offsetof(Y, y) == 12);
+	static_assert(offsetof(Y, y) == 16);
 
 	Y y {
 		.x = glm::vec3(1.0f),
-		// .y = glm::vec3(2.0f),
+		.y = glm::vec3(2.0f),
 	};
 
-	S s {
+	auto s = $mirror(View) {
 		.model = glm::mat4(1.0),
 		.proj = glm::mat4(0.1),
+	};
+
+	using Z = $mirror(array <vec2, 3>);
+
+	Z z;
+	z[2] = glm::vec2(2.0f);
+
+	using A = $mirror(XNested);
+
+	A a {
+		.nested = {
+			.y = glm::vec3(1.0f),
+		},
+	};
+
+	a.nested.x = glm::vec3(1.0f);
+	
+	using W = $mirror(array <X, 12>);
+	W w {
+		W::value_type {
+			.x = glm::vec3(1.0f),
+		},
 	};
 };
 
@@ -158,13 +191,6 @@ auto ftn = [] {
 // 	then we also need a $constant(pblock) mirror which extracts a trviial_tuple from the
 // 	parameter block and sets all resource fields to constant_block_disable
 // 	UNLESS there is some way to mask out fields...
-
-// TODO: base TBuffer from this...
-// Static-dynamic partition:
-// 	Static = void --> purely dynamic
-// 	Dynamic = void --> purely static
-template <typename Static, size_t Offset, typename Dynamic>
-struct SDPartition {};
 
 // TODO: write down the implementation design somewhere in docs...
 // will help spotting parts that are stupid
@@ -200,11 +226,15 @@ int main()
 	auto fmodule = compiler.spirv_to_shader_module(fspv);
 
 	// TODO: translate a sequence of types to binding AND attributes
+	// 
 	// TODO: what if we encode the vertices? then jit vec and struct vec
 	// should be different... but we can still treat the encoded vec
 	// as a vec2 in DSL code...
 	// Or, better yet, allow the user to define their own derivative
 	// which is then translated in different ways...
+	//
+	// TODO: actually vertices also have a layout (default would be scalar)
+	// but that still doesnt fix the encoding shit
 	auto binding_descs = std::array {
 		vk::VertexInputBindingDescription()
 			.setBinding(0)
@@ -267,28 +297,22 @@ int main()
 
 	auto pipeline = TraditionalGraphicsPipeline::from(device, dld, pipeline_info);
 
-	// TODO: nested aggregates... TODO: should be array <Vertex>
-	// TODO: will need to rethink TBuffer...
-	using VBuffer = TBuffer <::layouts::std430, glm::vec2[]>;
-
-	auto vbuf = VBuffer::from(
+	auto vbuf = Buffer::from(
 		device,
-		3,
+		3 * sizeof(glm::vec2),
 		vk::BufferUsageFlagBits::eVertexBuffer,
 		vk::MemoryPropertyFlagBits::eHostVisible
 		| vk::MemoryPropertyFlagBits::eHostCoherent
 	);
 
-	auto vbuf_value = VBuffer::value_type();
-
-	auto &dyn = vbuf_value.dynamic();
+	auto dyn = std::vector <glm::vec2> ();
 	dyn.resize(3);
 
 	dyn[0] = glm::vec2(-0.5f, -0.5f);
 	dyn[1] = glm::vec2(0.5f, -0.5f);
 	dyn[2] = glm::vec2(0.0f, 0.5f);
 
-	vbuf.upload(vbuf_value, dyn.size());
+	vbuf.upload(dyn.data(), dyn.size() * sizeof(glm::vec2));
 
 	while (window.alive()) {
 		window.poll();

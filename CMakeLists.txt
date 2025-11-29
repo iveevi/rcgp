@@ -14,7 +14,9 @@ set(MRD_GLM_PATH "${CMAKE_CURRENT_LIST_DIR}/ext/glm")
 
 add_subdirectory(ext/glslang EXCLUDE_FROM_ALL)
 add_subdirectory(ext/mrd EXCLUDE_FROM_ALL)
-add_subdirectory(ext/Catch2 EXCLUDE_FROM_ALL)
+
+# TODO: remove if not using
+# add_subdirectory(ext/Catch2 EXCLUDE_FROM_ALL)
 
 include_directories(include ext/glslang ext/glm ext/mrd)
 
@@ -34,13 +36,6 @@ target_link_libraries(ugp PUBLIC
 	glslang::glslang
 	glslang::glslang-default-resource-limits
 )
-
-add_executable(testing
-	testing/layouts/std430_offsets.cpp
-	testing/layouts/std430_writes.cpp
-)
-
-target_link_libraries(testing PRIVATE ugp Catch2::Catch2WithMain)
 
 add_executable(prototype samples/prototype.cpp)
 add_executable(traditional samples/traditional.cpp)
