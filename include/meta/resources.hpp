@@ -6,21 +6,27 @@
 #include "reflection.hpp"
 #include "reflection_builder.hpp"
 
-// TODO: needs a layout...
 template <reflected T>
-struct ParameterBlock {
-	using reflection = parameter_block_reflection <T>;
+struct ResourceGroup {
+	using reflection = resource_group_reflection <T>;
 	DEFINE_REFLECTION_STAMP();
 };
 
-// TODO: these should be weak handles... so that $use(...) unlocks them
-// StructuredBuffer -> structured_buffer_handle
 template <reflected T>
-// TODO: this is actually an array of T, not T itself...
-struct StructuredBuffer : T {
-	using reflection = structured_buffer_reflection <T>;
+struct ConstantBuffer : T {
+	using reflection = constant_buffer_reflection <T>;
 	DEFINE_REFLECTION_STAMP();
 };
+
+// TODO: Read/write flags and aliases...
+template <reflected T>
+struct StorageBuffer : T {
+	using reflection = storage_buffer_reflection <T>;
+	DEFINE_REFLECTION_STAMP();
+};
+
+template <reflected T>
+using ArrayBuffer = StorageBuffer <array <T>>;
 
 template <native_scalar T, size_t D>
 struct Sampler : jems::handle {
@@ -38,16 +44,26 @@ using Sampler1D = Sampler <float, 1>;
 using Sampler2D = Sampler <float, 2>;
 using Sampler3D = Sampler <float, 3>;
 
-// TODO: RWStructuredBuffer as an alias with RW flags...
+// NOTE: ray payload will be a resource block!
 template <typename T>
 struct RayPayload : T {};
+
+// Aliases for single resource blocks
+template <reflected T>
+using MonoConstantBuffer = ResourceGroup <ConstantBuffer <T>>;
+
+template <reflected T>
+using MonoStorageBuffer = ResourceGroup <StorageBuffer <T>>;
 
 // Inspection
 template <typename T>
 struct is_resource_reflection : std::false_type {};
 
 template <typename T>
-struct is_resource_reflection <structured_buffer_reflection <T>> : std::true_type {};
+struct is_resource_reflection <constant_buffer_reflection <T>> : std::true_type {};
+
+template <typename T>
+struct is_resource_reflection <storage_buffer_reflection <T>> : std::true_type {};
 
 template <typename T, size_t D>
 struct is_resource_reflection <sampler_reflection <T, D>> : std::true_type {};
@@ -56,8 +72,7 @@ template <typename T>
 constexpr bool is_resource_reflection_v = is_resource_reflection <T> ::value;
 
 // Overriding reference behavior
-// TODO: do this for the other resources... 
-template <typename T, ParameterBlock <T> &rsrc>
+template <typename T, ResourceGroup <T> &rsrc>
 struct reference_base <rsrc> {
 	using type = T;
 };

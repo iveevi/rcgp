@@ -96,10 +96,10 @@ struct type_string <aggregate_reflection <Original, Args...>> {
 };
 
 template <typename T>
-struct type_string <parameter_block_reflection <T>> {
+struct type_string <resource_group_reflection <T>> {
 	template <size_t I>
 	static consteval auto eval() {
-		return $ss("parameter block of ") + $ss_type_indented(T, I);
+		return $ss("resource group of ") + $ss_type_indented(T, I);
 	}
 };
 

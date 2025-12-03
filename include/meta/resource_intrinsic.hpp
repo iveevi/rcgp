@@ -15,7 +15,16 @@ struct resource_intrinsic {
 };
 
 template <typename T>
-struct resource_intrinsic <structured_buffer_reflection <T>> {
+struct resource_intrinsic <constant_buffer_reflection <T>> {
+	static auto intrinsic(uint32_t binding) {
+		auto type = reconstruct_type <T> ();
+		auto grsrc = jems::global_resource(type, GlobalResource::eConstantBuffer, std::nullopt, binding);
+		return grsrc;
+	}
+};
+
+template <typename T>
+struct resource_intrinsic <storage_buffer_reflection <T>> {
 	static auto intrinsic(uint32_t binding) {
 		auto type = reconstruct_type <T> ();
 		auto grsrc = jems::global_resource(type, GlobalResource::eStorageBuffer, std::nullopt, binding);

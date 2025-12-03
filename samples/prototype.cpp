@@ -42,54 +42,11 @@ struct Camera {
 	$reflection(view, proj);
 };
 
-ParameterBlock <Camera> camera;
+ResourceGroup <Camera> camera;
 
 using Transforms = array <mat4>;
 
-StructuredBuffer <Transforms> transforms;
-
-// Descriptor group allocation
-template <auto &rsrc, size_t I>
-struct group_allocation_record {};
-
-template <auto &rsrc, size_t I>
-bool fill_allocation(group_allocation_map &map, group_allocation_record <rsrc, I>)
-{
-	map.emplace((void *) &rsrc, I);
-	return true;
-}
-
-template <typename ... Records>
-auto new_allocation(std::tuple <Records...> records)
-{
-	group_allocation_map map;
-	std::apply([&](auto ... xs) {
-		std::make_tuple(fill_allocation(map, xs)...);
-	}, records);
-	return map;
-}
-
-// TODO: for mirrors, do we need $ordinary(T)?
-// ideal for storing aggregate instead of rewriting
-// all the time...
-//
-// $ordinary(T) := constant buffer section; disable if empty...
-//
-// NOTE: the best we can seemingly do is to just filter
-// through fields and nullify resource types...
-//
-// TODO: also needs to apply padding that matches the layout...
-// struct ordinary {
-// 	padded <N1, orindary <type>> f1;
-// 	padded <N2, ordinary <type>> f2;
-// 	[[no_unique_address]] nil <3> f3;
-// 	padded <N4, typename type::ordinary f4>; <- nested aggregate
-// }
-//
-// NOTE: dynamically sized arrays as not allowed in ordinaries
-// but they should be supported in some way for storage buffers
-//
-// TODO: scaffold should still remain as the 
+ResourceGroup <StorageBuffer <Transforms>> transforms;
 
 int main()
 {

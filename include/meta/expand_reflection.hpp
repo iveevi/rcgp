@@ -21,8 +21,8 @@ struct expand_reflection <array_reflection <T, N>> {
 };
 
 template <typename T>
-struct expand_reflection <parameter_block_reflection <T>> {
-	using type = parameter_block_reflection <expand_reflection_t <T>>;
+struct expand_reflection <resource_group_reflection <T>> {
+	using type = resource_group_reflection <expand_reflection_t <T>>;
 };
 
 template <typename Original, typename ... Ts>

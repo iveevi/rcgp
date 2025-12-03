@@ -48,7 +48,7 @@ TraditionalGraphicsPipeline TraditionalGraphicsPipeline::from(const Device &devi
 		.setRasterizerDiscardEnable(false)
 		.setPolygonMode(vk::PolygonMode::eFill)
 		.setCullMode(vk::CullModeFlagBits::eBack)
-		.setFrontFace(vk::FrontFace::eClockwise)
+		.setFrontFace(vk::FrontFace::eCounterClockwise)
 		.setDepthBiasEnable(false)
 		.setLineWidth(1.0f);
 

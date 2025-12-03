@@ -35,3 +35,9 @@ auto &static_access_chain(T &value)
 {
 	return static_access_chain_handler <T, I, Is...> ::main(value);
 }
+
+template <reflected T>
+auto &static_access_chain(T &value)
+{
+	return value;
+}

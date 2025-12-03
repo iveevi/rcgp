@@ -1,53 +1,93 @@
 #include <array>
 #include <vector>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include <ugp.hpp>
 
-const std::string vshader = R"(
-#version 450
+#include "util/aperature.hpp"
+#include "util/transform.hpp"
 
-layout (location = 0) in vec2 position;
+// struct alignas(0) Points {
+// 	u32 count;
+//
+// 	struct Array {
+// 		vec3 delta;
+//
+// 		// array <u32> positions;
+// 		array <vec2> positions;
+//
+// 		$reflection(delta, positions);
+// 	} array;
+//
+// 	$reflection(count, array);
+// 	// TODO: if T is a dynamic aggregate,
+// 	// then align should fallback to 0 (i.e. natural)
+// 	// for it to work would be need to pack structs with pragma?
+// };
 
-void main()
-{
-	gl_Position = vec4(position, 0, 1);
-}
-)";
+// TODO: StructuredBuffer becomes:
+// - StorageBuffer <T>
+// - ArrayBuffer <T> := StorageBuffer <array <T>>
+//
+// it shall be a pure handle, and then references
+// must be with ParameterBlock <StorageBuffer <T>>
+// with an alias as StorageBufferResource
 
-const std::string fshader = R"(
-#version 450
+template <typename T, vk::VertexInputRate>
+struct attribute_stream_reflection {};
 
-layout (location = 0) out vec4 color;
-
-void main()
-{
-	color = vec4(1);
-}
-)";
-
-struct alignas(0) Points {
-	u32 count;
-
-	struct Array {
-		vec3 delta;
-
-		// array <u32> positions;
-		array <vec2> positions;
-
-		$reflection(delta, positions);
-	} array;
-
-	$reflection(count, array);
-	// TODO: if T is a dynamic aggregate,
-	// then align should fallback to 0 (i.e. natural)
+// Standalone resource, so no qualms about being embedded within parameter blocks
+template <reflected T, vk::VertexInputRate R = vk::VertexInputRate::eVertex>
+struct AttributeStream {
+	using reflection = attribute_stream_reflection <T, R>;
+	DEFINE_REFLECTION_STAMP();
 };
+
+template <reflected T, vk::VertexInputRate R, AttributeStream <T, R> &rsrc>
+struct reference_base <rsrc> {
+	using type = T;
+};
+
+template <reflected T, vk::VertexInputRate R, AttributeStream <T, R> &rsrc>
+struct stage_argument_injector <Stage::RepresentationalVertex, reference <rsrc>> {
+	static auto main(reference <rsrc> &value, const InjectionState &state) {
+		return stage_argument_injector <Stage::RepresentationalVertex, T> ::main(value, state);
+	}
+};
+
+struct View {
+	mat4 proj;
+	mat4 view;
+	mat4 model;
+
+	$reflection(proj, view, model);
+};
+
+AttributeStream <vec3> position;
+AttributeStream <vec3> color;
+
+MonoConstantBuffer <View> view;
+
+auto vs = $vertex $fn($use(position), $use(color), $use(view)) -> $returns(Position, vec3)
+{
+	auto mvp = view.proj * view.view * view.model;
+	$return std::tuple(Position(mvp * vec4(position, 1.0)), color);
+};
+
+auto fs = $fragment $fn(vec3 color) -> $returns(vec4)
+{
+	$return vec4(color, 1);
+};
+
+// TODO: structs need a layout (defaults to std430)
 
 // TODO: write down the implementation design somewhere in docs...
 // will help spotting parts that are stupid
 int main()
 {
 	auto session_info = Session::Info {
+		// .validation = false,
 		.validation_bootstrap = false,
 	};
 
@@ -70,26 +110,34 @@ int main()
 
 	auto compiler = Compiler::from(device, Compiler::Info());
 	
+	using allocation = std::tuple <
+		group_allocation_record <view, 0>
+	>;
+
+	auto map = new_allocation(allocation());
+	vs.apply_group_allocation_map(map);
+	fs.apply_group_allocation_map(map);
+
+	auto vshader = generators::GLSL(vs).generate();
+	auto fshader = generators::GLSL(fs).generate();
+
+	fmt::println("vertex shader:\n{}", vshader);
+	fmt::println("fragment shader:\n{}", fshader);
+	
 	auto vspv = compiler.glsl_to_spirv(vshader, EShLangVertex);
 	auto fspv = compiler.glsl_to_spirv(fshader, EShLangFragment);
 
 	auto vmodule = compiler.spirv_to_shader_module(vspv);
 	auto fmodule = compiler.spirv_to_shader_module(fspv);
 
-	// TODO: translate a sequence of types to binding AND attributes
-	// 
-	// TODO: what if we encode the vertices? then jit vec and struct vec
-	// should be different... but we can still treat the encoded vec
-	// as a vec2 in DSL code...
-	// Or, better yet, allow the user to define their own derivative
-	// which is then translated in different ways...
-	//
-	// TODO: actually vertices also have a layout (default would be scalar)
-	// but that still doesnt fix the encoding shit
 	auto binding_descs = std::array {
 		vk::VertexInputBindingDescription()
 			.setBinding(0)
-			.setStride(sizeof(glm::vec2))
+			.setStride(sizeof(glm::vec4))
+			.setInputRate(vk::VertexInputRate::eVertex),
+		vk::VertexInputBindingDescription()
+			.setBinding(1)
+			.setStride(sizeof(glm::vec4))
 			.setInputRate(vk::VertexInputRate::eVertex),
 	};
 
@@ -97,9 +145,32 @@ int main()
 		vk::VertexInputAttributeDescription()
 			.setLocation(0)
 			.setBinding(0)
-			.setFormat(vk::Format::eR32G32Sfloat)
+			.setFormat(vk::Format::eR32G32B32Sfloat)
+			.setOffset(0),
+		vk::VertexInputAttributeDescription()
+			.setLocation(1)
+			.setBinding(1)
+			.setFormat(vk::Format::eR32G32B32Sfloat)
 			.setOffset(0),
 	};
+
+	auto set_layout_binding = vk::DescriptorSetLayoutBinding()
+		.setBinding(0)
+		.setDescriptorCount(1)
+		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+		.setStageFlags(vk::ShaderStageFlagBits::eVertex);
+
+	auto descriptor_set_layout = device.logical.createDescriptorSetLayout(
+		vk::DescriptorSetLayoutCreateInfo().setBindings(set_layout_binding),
+		nullptr,
+		dld
+	);
+
+	auto pipeline_layout = device.logical.createPipelineLayout(
+		vk::PipelineLayoutCreateInfo().setSetLayouts(descriptor_set_layout),
+		nullptr,
+		dld
+	);
 
 	auto attachments = Attachments();
 
@@ -127,6 +198,7 @@ int main()
 	std::vector <vk::Framebuffer> framebuffers;
 	framebuffers.reserve(window.images.size());
 	for (auto &image : window.images) {
+		// TODO: wrapper... group(device, rp).new_framebuffer(image, 1)?
 		auto fb_info = vk::FramebufferCreateInfo()
 			.setRenderPass(rp)
 			.setAttachments(image.view)
@@ -144,35 +216,155 @@ int main()
 		.extent = window.extent(),
 		.bindings = binding_descs,
 		.attributes = attribute_descs,
+		.layout = pipeline_layout,
 	};
 
 	auto pipeline = TraditionalGraphicsPipeline::from(device, dld, pipeline_info);
 
-	// TODO: cube rendering...
-	auto vbuf = MirrorBuffer <array <vec2>> ::from(
-		device,
-		12,
+	// Positions
+	const std::array positions = {
+		// Front (+Z)
+		glm::vec3(-1.0f, -1.0f,  1.0f), glm::vec3( 1.0f, -1.0f,  1.0f), glm::vec3( 1.0f,  1.0f,  1.0f),
+		glm::vec3(-1.0f, -1.0f,  1.0f), glm::vec3( 1.0f,  1.0f,  1.0f), glm::vec3(-1.0f,  1.0f,  1.0f),
+		// Back (-Z)
+		glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec3(-1.0f,  1.0f, -1.0f), glm::vec3( 1.0f,  1.0f, -1.0f),
+		glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec3( 1.0f,  1.0f, -1.0f), glm::vec3( 1.0f, -1.0f, -1.0f),
+		// Left (-X)
+		glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec3(-1.0f, -1.0f,  1.0f), glm::vec3(-1.0f,  1.0f,  1.0f),
+		glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec3(-1.0f,  1.0f,  1.0f), glm::vec3(-1.0f,  1.0f, -1.0f),
+		// Right (+X)
+		glm::vec3( 1.0f, -1.0f, -1.0f), glm::vec3( 1.0f,  1.0f, -1.0f), glm::vec3( 1.0f,  1.0f,  1.0f),
+		glm::vec3( 1.0f, -1.0f, -1.0f), glm::vec3( 1.0f,  1.0f,  1.0f), glm::vec3( 1.0f, -1.0f,  1.0f),
+		// Top (+Y)
+		glm::vec3(-1.0f,  1.0f, -1.0f), glm::vec3(-1.0f,  1.0f,  1.0f), glm::vec3( 1.0f,  1.0f,  1.0f),
+		glm::vec3(-1.0f,  1.0f, -1.0f), glm::vec3( 1.0f,  1.0f,  1.0f), glm::vec3( 1.0f,  1.0f, -1.0f),
+		// Bottom (-Y)
+		glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec3( 1.0f, -1.0f, -1.0f), glm::vec3( 1.0f, -1.0f,  1.0f),
+		glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec3( 1.0f, -1.0f,  1.0f), glm::vec3(-1.0f, -1.0f,  1.0f),
+	};
+
+	const std::array colors = {
+		// Front (red)
+		glm::vec3(1, 0, 0), glm::vec3(1, 0, 0), glm::vec3(1, 0, 0),
+		glm::vec3(1, 0, 0), glm::vec3(1, 0, 0), glm::vec3(1, 0, 0),
+		// Back (green)
+		glm::vec3(0, 1, 0), glm::vec3(0, 1, 0), glm::vec3(0, 1, 0),
+		glm::vec3(0, 1, 0), glm::vec3(0, 1, 0), glm::vec3(0, 1, 0),
+		// Left (blue)
+		glm::vec3(0, 0, 1), glm::vec3(0, 0, 1), glm::vec3(0, 0, 1),
+		glm::vec3(0, 0, 1), glm::vec3(0, 0, 1), glm::vec3(0, 0, 1),
+		// Right (yellow)
+		glm::vec3(1, 1, 0), glm::vec3(1, 1, 0), glm::vec3(1, 1, 0),
+		glm::vec3(1, 1, 0), glm::vec3(1, 1, 0), glm::vec3(1, 1, 0),
+		// Top (magenta)
+		glm::vec3(1, 0, 1), glm::vec3(1, 0, 1), glm::vec3(1, 0, 1),
+		glm::vec3(1, 0, 1), glm::vec3(1, 0, 1), glm::vec3(1, 0, 1),
+		// Bottom (cyan)
+		glm::vec3(0, 1, 1), glm::vec3(0, 1, 1), glm::vec3(0, 1, 1),
+		glm::vec3(0, 1, 1), glm::vec3(0, 1, 1), glm::vec3(0, 1, 1),
+	};
+
+	auto pbuf = MirrorBuffer <array <vec3>> ::from(
+		device, positions.size(),
 		vk::BufferUsageFlagBits::eVertexBuffer,
 		vk::MemoryPropertyFlagBits::eHostVisible
 		| vk::MemoryPropertyFlagBits::eHostCoherent
 	);
 
-	auto vbuf_value = vbuf.new_value();
+	auto pbuf_value = pbuf.new_value();
+	pbuf_value.resize(positions.size());
+	for (size_t i = 0; i < positions.size(); ++i)
+		pbuf_value[i] = positions[i];
+	pbuf.write(pbuf_value);
 
-	vbuf_value.resize(3);
-	vbuf_value[0] = glm::vec2(-0.5f, -0.5f);
-	vbuf_value[1] = glm::vec2(0.5f, -0.5f);
-	vbuf_value[2] = glm::vec2(0.0f, 0.5f);
+	auto cbuf = MirrorBuffer <array <vec3>> ::from(
+		device, colors.size(),
+		vk::BufferUsageFlagBits::eVertexBuffer,
+		vk::MemoryPropertyFlagBits::eHostVisible
+		| vk::MemoryPropertyFlagBits::eHostCoherent
+	);
+	
+	auto cbuf_value = cbuf.new_value();
+	cbuf_value.resize(colors.size());
+	for (size_t i = 0; i < colors.size(); ++i)
+		cbuf_value[i] = colors[i];
+	cbuf.write(cbuf_value);
 
-	vbuf.write(vbuf_value);
+	// Camera
+	Aperature aperature;
+	Transform xform;
+
+	xform.translation = glm::vec3(0, 0, 20);
+	aperature.aspect = static_cast <float> (window.extent().width) / window.extent().height;
+
+	// TODO: if we have a conditional mirror buffer with prepopulated
+	// flags, then move extra flags to the last param...
+	auto view_buf = MirrorBuffer <View> ::from(
+		device,
+		vk::BufferUsageFlagBits::eUniformBuffer,
+		vk::MemoryPropertyFlagBits::eHostVisible
+		| vk::MemoryPropertyFlagBits::eHostCoherent
+	);
+
+	view_buf.write($mirror(View) {
+		.proj = aperature.projection_matrix(),
+		.view = xform.view_matrix(),
+		.model = glm::mat4(1.0f),
+	});
+
+	auto pool_size = vk::DescriptorPoolSize()
+		.setType(vk::DescriptorType::eUniformBuffer)
+		.setDescriptorCount(1);
+
+	auto descriptor_pool = device.logical.createDescriptorPool(
+		vk::DescriptorPoolCreateInfo()
+			.setMaxSets(1)
+			.setPoolSizes(pool_size),
+		nullptr,
+		dld
+	);
+
+	auto descriptor_set = device.logical.allocateDescriptorSets(
+		vk::DescriptorSetAllocateInfo()
+			.setDescriptorPool(descriptor_pool)
+			.setSetLayouts(descriptor_set_layout),
+		dld
+	).front();
+
+	auto view_buf_info = vk::DescriptorBufferInfo()
+		.setBuffer(view_buf.handle)
+		.setOffset(0)
+		.setRange(sizeof(View));
+
+	auto descriptor_write = vk::WriteDescriptorSet()
+		.setDstSet(descriptor_set)
+		.setDstBinding(0)
+		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+		.setBufferInfo(view_buf_info);
+
+	device.logical.updateDescriptorSets(descriptor_write, nullptr, dld);
 
 	while (window.alive()) {
 		window.poll();
 
+		auto frame = window.next_frame();
+
+		auto extent = frame.extent;
+		auto angle = static_cast <float> (glfwGetTime());
+		auto model = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::rotate(model, angle * 0.5f, glm::vec3(1.0f, 0.0f, 0.0f));
+		aperature.aspect = static_cast <float> (extent.width) / extent.height;
+
+		view_buf.write($mirror(View) {
+			.proj = aperature.projection_matrix(),
+			.view = xform.view_matrix(),
+			// .model = model,
+			.model = glm::mat4(1.0f),
+		});
+
+		// TODO: window.is_pressed(Key::Q)
 		if (glfwGetKey(window.handle, GLFW_KEY_Q) == GLFW_PRESS)
 			glfwSetWindowShouldClose(window.handle, true);
-
-		auto frame = window.next_frame();
 
 		group(device, window).wait(frame);
 		auto acquired = group(device, window).acquire_image(frame);
@@ -212,9 +404,15 @@ int main()
 
 		cmd.beginRenderPass(rp_begin, vk::SubpassContents::eInline);
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
-		vk::DeviceSize vb_offset = 0;
-		cmd.bindVertexBuffers(0, vbuf.handle, vb_offset);
-		cmd.draw(3, 1, 0, 0);
+		cmd.bindDescriptorSets(
+			vk::PipelineBindPoint::eGraphics,
+			pipeline.layout,
+			0,
+			descriptor_set,
+			{}
+		);
+		cmd.bindVertexBuffers(0, { pbuf.handle, cbuf.handle }, { 0, 0 });
+		cmd.draw(static_cast <uint32_t> (positions.size()), 1, 0, 0);
 		cmd.endRenderPass();
 
 		auto to_present = image.memory_barrier(

@@ -10,6 +10,10 @@ struct read_only_intrinsic {
 	operator T() const {
 		return T::reinterpret(jems::global_intrinsic(G));
 	}
+
+	void override_reference(const Reference &ref) {
+		fatal("bad override");
+	}
 };
 
 template <GlobalIntrinsic G, reflected T>
@@ -29,6 +33,10 @@ struct Position {
 			jems::global_intrinsic_loc(loc, GlobalIntrinsic::eScreenPosition),
 			value
 		);
+	}
+
+	void override_reference(const Reference &ref) {
+		fatal("bad override");
 	}
 };
 
