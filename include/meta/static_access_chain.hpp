@@ -2,6 +2,11 @@
 
 #include "reflection.hpp"
 
+template <typename T, size_t ... Is>
+struct field_trace {
+	using value_type = T;
+};
+
 // Access chain through static indices
 template <typename T, size_t I, size_t ... Is>
 struct static_access_chain_handler {

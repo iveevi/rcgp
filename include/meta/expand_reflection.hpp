@@ -32,3 +32,9 @@ struct expand_reflection <aggregate_reflection <Original, Ts...>> {
 		expand_reflection_t <Ts>...
 	>;
 };
+
+template <reflected T>
+constexpr bool is_dynamic_v = is_dynamic_reflection <expand_reflection_t <T>> ::value;
+
+template <reflected T>
+constexpr bool is_static_v = !is_dynamic_reflection <expand_reflection_t <T>> ::value;

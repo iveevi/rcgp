@@ -3,12 +3,13 @@
 #include <cstdlib>
 #include <stdfloat>
 #include <type_traits>
+#include <vector>
 
 #include "jems.hpp"
 #include "macro_swizzle.hpp"
 #include "../util/logging.hpp"
-#include "../msv/reflection.hpp"
-#include "../msv/reflection_builder.hpp"
+#include "../meta/reflection.hpp"
+#include "../meta/reflection_builder.hpp"
 
 // Classifying host primitive types
 template <typename T>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../msv/static_string.hpp"
+#include "../../meta/static_string.hpp"
 #include "../../util/logging.hpp"
 #include "../instructions.hpp"
 

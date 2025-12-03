@@ -61,6 +61,22 @@ struct is_aggregate_reflection <aggregate_reflection <Original, Ts...>> : std::t
 template <typename T>
 constexpr bool is_aggregate_reflection_v = is_aggregate_reflection <T> ::value;
 
+template <typename T>
+struct is_dynamic_reflection : std::false_type {};
+
+template <typename T>
+struct is_dynamic_reflection <array_reflection <T, -1>> : std::true_type {};
+
+template <typename Original, typename ... Ts>
+struct is_dynamic_reflection <aggregate_reflection <Original, Ts...>>
+	: std::bool_constant <(is_dynamic_reflection <Ts> ::value || ...)> {};
+
+template <typename T>
+constexpr bool is_dynamic_reflection_v = is_dynamic_reflection <T> ::value;
+
+template <typename T>
+constexpr bool is_static_reflection_v = !is_dynamic_reflection <T> ::value;
+
 // Querying reflection status
 template <typename T>
 constexpr bool has_reflection()

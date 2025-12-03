@@ -3,7 +3,6 @@
 #include <vector>
 
 #include "session.hpp"
-#include "../msv/stage.hpp"
 
 struct Device {
 	vk::Device logical;
