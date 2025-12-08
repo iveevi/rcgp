@@ -7,9 +7,14 @@
 template <auto & ... refs>
 struct implicit_context {};
 
-// TODO: macrofy this pattern...
-template <typename T> struct is_implicit_context : std::false_type {};
-template <auto & ... refs> struct is_implicit_context <implicit_context <refs...>> : std::true_type {};
+template <typename T>
+struct is_implicit_context : std::false_type {};
+
+template <auto & ... refs>
+struct is_implicit_context <implicit_context <refs...>> : std::true_type {};
+
+template <typename T>
+constexpr bool is_implicit_context_v = is_implicit_context <T> ::value;
 
 template <auto & ... refs>
 auto new_implicit_context_impl(implicit_context <refs...>) -> implicit_context <refs...>;

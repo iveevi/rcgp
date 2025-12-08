@@ -85,9 +85,9 @@ struct _stage_operator {};
 
 #define $stage(S) _stage_operator <Stage::S> () *
 
-#define $vertex		$stage(RepresentationalVertex)
-#define $fragment	$stage(RepresentationalFragment)
-#define $compute	$stage(RepresentationalCompute)
+#define $vertex		$stage(Vertex)
+#define $fragment	$stage(Fragment)
+#define $compute	$stage(Compute)
 
 template <typename ... Args>
 struct simplify_return_list {

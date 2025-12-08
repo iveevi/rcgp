@@ -197,6 +197,7 @@ struct GLSL {
 			// TODO: use specializations for this...
 			vswitch (primitive) {
 			vcase(int): return "int";
+			vcase(float): return "float";
 			vcase(VectorType <float, 2>): return "vec2";
 			vcase(VectorType <float, 3>): return "vec3";
 			vcase(VectorType <float, 4>): return "vec4";

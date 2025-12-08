@@ -156,27 +156,32 @@ struct vector : public vector_base <T, N> {
 	}
 
 	// Arithmetic operations
-	template <typename U>
-	requires std::is_convertible_v <U, T>
-	friend vector operator*(const U &s, const vector &v) {
-		return reinterpret(jems::operation(Operation::eMultiply, scalar <T> (s), v));
+	friend vector operator+(const vector &a, const vector &b) {
+		return reinterpret(jems::operation(Operation::eAdd, a, b));
 	}
-	
+
 	template <typename U>
-	requires std::is_convertible_v <U, T>
+	requires std::is_convertible_v <U, scalar <T>>
 	friend vector operator+(const U &s, const vector &v) {
 		return reinterpret(jems::operation(Operation::eAdd, scalar <T> (s), v));
 	}
 	
 	template <typename U>
-	requires std::is_convertible_v <U, T>
+	requires std::is_convertible_v <U, scalar <T>>
 	friend vector operator+(const vector &v, const U &s) {
 		return reinterpret(jems::operation(Operation::eAdd, v, scalar <T> (s)));
 	}
 	
 	template <typename U>
-	friend vector operator+(const vector &a, const vector &b) {
-		return reinterpret(jems::operation(Operation::eAdd, a, b));
+	requires std::is_convertible_v <U, scalar <T>>
+	friend vector operator*(const U &s, const vector &v) {
+		return reinterpret(jems::operation(Operation::eMultiply, scalar <T> (s), v));
+	}
+	
+	template <typename U>
+	requires std::is_convertible_v <U, scalar <T>>
+	friend vector operator*(const vector &v, const U &s) {
+		return reinterpret(jems::operation(Operation::eMultiply, v, scalar <T> (s)));
 	}
 };
 
@@ -217,6 +222,13 @@ public:
 
 	static auto reinterpret(const jems::handle &h) {
 		return matrix(h);
+	}
+	
+	// Arithmetic operations
+	template <typename U>
+	requires std::is_convertible_v <U, scalar <T>>
+	friend matrix operator*(const U &s, const matrix &m) {
+		return reinterpret(jems::operation(Operation::eMultiply, scalar <T> (s), m));
 	}
 };
 

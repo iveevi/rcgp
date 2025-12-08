@@ -16,9 +16,9 @@
 template <Stage S>
 void inject_execution_model()
 {
-	if constexpr (S == Stage::RepresentationalVertex)
+	if constexpr (S == Stage::Vertex)
 		$tsb.context.model = ExecutionModel::eVulkanVertex;
-	else if constexpr (S == Stage::RepresentationalFragment)
+	else if constexpr (S == Stage::Fragment)
 		$tsb.context.model = ExecutionModel::eVulkanFragment;
 	else
 		static_assert(false, "no execution model for stage");
@@ -64,7 +64,7 @@ struct stage_argument_injector <S, reference <rsrc>> {
 
 // For vertex and fragment shaders, primitive arguments are thread inputs
 template <Stage S, primitive T>
-requires (S == Stage::RepresentationalVertex || S == Stage::RepresentationalFragment)
+requires (S == Stage::Vertex || S == Stage::Fragment)
 struct stage_argument_injector <S, T> {
 	static auto main(T &value, const InjectionState &state) {
 		auto type = reconstruct_type <T> ();
@@ -78,14 +78,14 @@ struct stage_argument_injector <S, T> {
 
 // TODO: remove the above for vertex shaders...
 template <reflected T, vk::VertexInputRate R, AttributeStream <T, R> &rsrc>
-struct stage_argument_injector <Stage::RepresentationalVertex, reference <rsrc>> {
+struct stage_argument_injector <Stage::Vertex, reference <rsrc>> {
 	static auto main(reference <rsrc> &value, const InjectionState &state) {
-		return stage_argument_injector <Stage::RepresentationalVertex, T> ::main(value, state);
+		return stage_argument_injector <Stage::Vertex, T> ::main(value, state);
 	}
 };
 
 template <Stage S, aggregate T>
-requires (S == Stage::RepresentationalVertex || S == Stage::RepresentationalFragment)
+requires (S == Stage::Vertex || S == Stage::Fragment)
 struct stage_argument_injector <S, T> {
 	static auto main(T &value, const InjectionState &state) {
 		constexpr auto field_count = T::reflection::field_count;

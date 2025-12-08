@@ -1,10 +1,5 @@
 #include <array>
 #include <vector>
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/quaternion.hpp>
-#include <GLFW/glfw3.h>
 
 #include <mrd.hpp>
 
@@ -39,23 +34,85 @@ struct View {
 	$reflection(proj, view, model);
 };
 
+struct Shared {
+	vec3 tint;
+	f32 scale;
+
+	$reflection(tint, scale);
+};
+
 AttributeStream <vec3> position;
 AttributeStream <vec3> normal;
 
 MonoConstantBuffer <View> view;
+MonoConstantBuffer <Shared> shared;
 
-auto vs = $vertex $fn($use(position), $use(normal), $use(view)) -> $returns(Position, vec3)
+auto vs = $vertex $fn($use(position), $use(normal), $use(view), $use(shared)) -> $returns(Position, vec3)
 {
-	auto mvp = view.proj * view.view * view.model;
+	auto mvp = shared.scale * view.proj * view.view * view.model;
+	// auto mvp = view.proj * view.view * view.model;
 	auto normal_mat = transpose(inverse(mat3(view.model)));
 	auto world_n = normalize(normal_mat * normal);
 	$return std::tuple(Position(mvp * vec4(position, 1.0)), world_n);
 };
 
-auto fs = $fragment $fn(vec3 normal) -> $returns(vec4)
+// TODO: push constant
+MonoConstantBuffer <vec3> light_direction;
+
+auto fs = $fragment $fn($use(light_direction), $use(shared), vec3 normal) -> $returns(vec4)
 {
-	$return vec4(0.5 * normalize(normal) + 0.5, 1.0f);
+	// $return vec4(0.5 * normalize(normal) + 0.5, 1.0f);
+	auto shade = max(dot(light_direction, normal), 0.0f);
+	$return vec4(shared.tint * shade, 1.0f);
 };
+
+template <typename T>
+struct command_state {};
+
+// struct TGP {
+// 	auto dispatch() {
+// 		return command_state <int> ();
+// 	}
+// };
+
+auto begin_command_buffer()
+{
+	return command_state <int> ();
+}
+
+template <Stage S, typename T>
+struct staged_argument {};
+
+template <typename ... Ts>
+struct tgp {};
+
+template <typename ... Ts>
+struct find_implicit_context {
+	static constexpr auto contexts = std::array { is_implicit_context_v <Ts>... };
+	static constexpr auto idx = first_on(contexts);
+	using type = Ts...[idx];
+};
+
+// TODO: tests
+using S = $mirror(Shared);
+static_assert(sizeof(S) == 16);
+static_assert(offsetof(S, tint) == 0);
+static_assert(offsetof(S, scale) == 12);
+
+template <typename VRet, typename ... As, typename FRet, typename ... Bs>
+auto comb(const stage <Stage::Vertex, VRet, As...> &vertex,
+	  const stage <Stage::Fragment, FRet, Bs...> &fragment)
+{
+	// TODO: check between vshader output and fshader input
+	// TODO: store # of attachments required from # of fshader outputs
+	// using parameters = sequence <
+	// 	staged_argument <Stage::Vertex, As>...,
+	// 	staged_argument <Stage::Fragment, Bs>...
+	// >;
+	using VCtx = find_implicit_context <As...> ::type;
+	using FCtx = find_implicit_context <Bs...> ::type;
+	return sequence <VCtx, FCtx> ::singleton;
+}
 
 // TODO: structs need a layout (defaults to std430)
 // 
@@ -103,10 +160,22 @@ int main()
 	auto cpool = CommandPool::from(device, queue);
 	auto cmdbuffers = group(device, cpool).allocate(window.frames_in_flight);
 
+	auto dpool_info = DescriptorPool::Info {
+		.max_sets = 1 << 10,
+		.uniform_buffers = 1 << 10,
+	};
+
+	auto dpool = DescriptorPool::from(device, dpool_info);
+
 	auto compiler = Compiler::from(device, Compiler::Info());
 
+	// TODO: comb from compiler and other options...
+	auto c = comb(vs, fs);
+
 	using allocation = std::tuple <
-		group_allocation_record <view, 0>
+		group_allocation_record <view, 0>,
+		group_allocation_record <light_direction, 1>,
+		group_allocation_record <shared, 2>
 	>;
 
 	auto map = new_allocation(allocation());
@@ -150,20 +219,46 @@ int main()
 	};
 
 	// TODO: should be able to construct the pipeline layout from the group allocation
-	auto set_layout_binding = vk::DescriptorSetLayoutBinding()
-		.setBinding(0)
-		.setDescriptorCount(1)
-		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-		.setStageFlags(vk::ShaderStageFlagBits::eVertex);
+	auto view_binding = vk::DescriptorSetLayoutBinding()
+			.setBinding(0)
+			.setDescriptorCount(1)
+			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+			.setStageFlags(vk::ShaderStageFlagBits::eVertex);
 
-	auto descriptor_set_layout = device.logical.createDescriptorSetLayout(
-		vk::DescriptorSetLayoutCreateInfo().setBindings(set_layout_binding),
+	auto light_binding = vk::DescriptorSetLayoutBinding()
+			.setBinding(0)
+			.setDescriptorCount(1)
+			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+			.setStageFlags(vk::ShaderStageFlagBits::eFragment);
+
+	auto shared_binding = vk::DescriptorSetLayoutBinding()
+			.setBinding(0)
+			.setDescriptorCount(1)
+			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment);
+
+	auto view_dsl = device.logical.createDescriptorSetLayout(
+		vk::DescriptorSetLayoutCreateInfo().setBindings(view_binding),
+		nullptr,
+		dld
+	);
+	
+	auto light_dsl = device.logical.createDescriptorSetLayout(
+		vk::DescriptorSetLayoutCreateInfo().setBindings(light_binding),
+		nullptr,
+		dld
+	);
+	
+	auto shared_dsl = device.logical.createDescriptorSetLayout(
+		vk::DescriptorSetLayoutCreateInfo().setBindings(shared_binding),
 		nullptr,
 		dld
 	);
 
+	auto dsls = std::array { view_dsl, light_dsl, shared_dsl };
+
 	auto pipeline_layout = device.logical.createPipelineLayout(
-		vk::PipelineLayoutCreateInfo().setSetLayouts(descriptor_set_layout),
+		vk::PipelineLayoutCreateInfo().setSetLayouts(dsls),
 		nullptr,
 		dld
 	);
@@ -235,7 +330,7 @@ int main()
 	auto &mesh = model.meshes[0];
 	fmt::println("# of verts: {}, # of triangles: {}", mesh.positions.size(), mesh.primitives.size());
 
-	auto pbuf = MirrorBuffer <array <vec3>, layouts::scalar> ::from(
+	auto pbuf = MirrorBuffer <array <vec3>> ::from(
 		device, mesh.positions.size(),
 		vk::BufferUsageFlagBits::eVertexBuffer,
 		vk::MemoryPropertyFlagBits::eHostVisible
@@ -244,10 +339,10 @@ int main()
 
 	auto pbuf_value = pbuf.new_value();
 	pbuf_value.resize(mesh.positions.size());
-	std::memcpy(pbuf_value.data(), mesh.positions.data(), sizeof(glm::vec3) * pbuf_value.size());
+	std::memcpy(pbuf_value.data(), mesh.positions.data(), pbuf_value.bytes());
 	pbuf.write(pbuf_value);
 
-	auto nbuf = MirrorBuffer <array <vec3>, layouts::scalar> ::from(
+	auto nbuf = MirrorBuffer <array <vec3>> ::from(
 		device, mesh.normals.size(),
 		vk::BufferUsageFlagBits::eVertexBuffer,
 		vk::MemoryPropertyFlagBits::eHostVisible
@@ -256,7 +351,7 @@ int main()
 
 	auto nbuf_value = nbuf.new_value();
 	nbuf_value.resize(mesh.normals.size());
-	std::memcpy(nbuf_value.data(), mesh.normals.data(), sizeof(glm::vec3) * nbuf_value.size());
+	std::memcpy(nbuf_value.data(), mesh.normals.data(), nbuf_value.bytes());
 	nbuf.write(nbuf_value);
 
 	auto ibuf = MirrorBuffer <array <ivec3>, layouts::scalar> ::from(
@@ -285,37 +380,65 @@ int main()
 		vk::BufferUsageFlagBits::eUniformBuffer,
 		vk::MemoryPropertyFlagBits::eHostVisible
 		| vk::MemoryPropertyFlagBits::eHostCoherent
-	);
-
-	view_buf.write($mirror(View) {
+	).write($mirror(View) {
 		.proj = aperature.projection_matrix(),
 		.view = xform.view_matrix(),
 		.model = glm::mat4(1.0f),
 	});
-
-	auto descriptor_pool = DescriptorPool::from(device, DescriptorPool::Info {
-		.max_sets = 1,
-		.uniform_buffers = 1,
+	
+	auto light_buf = MirrorBuffer <vec3> ::from(
+		device,
+		vk::BufferUsageFlagBits::eUniformBuffer,
+		vk::MemoryPropertyFlagBits::eHostVisible
+		| vk::MemoryPropertyFlagBits::eHostCoherent
+	).write(glm::normalize(glm::vec3(1, 1, 1)));
+	
+	auto shared_buf = MirrorBuffer <Shared> ::from(
+		device,
+		vk::BufferUsageFlagBits::eUniformBuffer,
+		vk::MemoryPropertyFlagBits::eHostVisible
+		| vk::MemoryPropertyFlagBits::eHostCoherent
+	).write($mirror(Shared) {
+		.tint = glm::vec3(1, 0.5, 0.5),
+		.scale = 1.5f,
 	});
 
-	auto descriptor_set = device.logical.allocateDescriptorSets(
+	auto dsets = device.logical.allocateDescriptorSets(
 		vk::DescriptorSetAllocateInfo()
-			.setDescriptorPool(descriptor_pool)
-			.setSetLayouts(descriptor_set_layout),
+			.setDescriptorPool(dpool)
+			.setSetLayouts(dsls),
 		dld
-	).front();
+	);
 
 	auto view_buf_info = view_buf.descriptor_info();
-
-	auto descriptor_write = vk::WriteDescriptorSet()
-		.setDstSet(descriptor_set)
+	auto view_write = vk::WriteDescriptorSet()
+		.setDstSet(dsets[0])
 		.setDstBinding(0)
 		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 		.setBufferInfo(view_buf_info);
+	
+	auto light_buf_info = light_buf.descriptor_info();
+	auto light_write = vk::WriteDescriptorSet()
+		.setDstSet(dsets[1])
+		.setDstBinding(0)
+		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+		.setBufferInfo(light_buf_info);
+	
+	auto shared_buf_info = shared_buf.descriptor_info();
+	auto shared_write = vk::WriteDescriptorSet()
+		.setDstSet(dsets[2])
+		.setDstBinding(0)
+		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+		.setBufferInfo(shared_buf_info);
 
-	device.logical.updateDescriptorSets(descriptor_write, nullptr, dld);
+	// TODO: during command seq we should auto batch descriptor set
+	// operations and do one updatedescriptorsets call just before dispatch
+	device.logical.updateDescriptorSets(
+		{ view_write, light_write, shared_write },
+		nullptr, dld
+	);
 
-	window.on_drag(GLFW_MOUSE_BUTTON_LEFT, [&](double /*xpos*/, double /*ypos*/, double dx, double dy) {
+	window.on_drag(GLFW_MOUSE_BUTTON_LEFT, [&](double, double, double dx, double dy) {
 		// Rotate camera in place (viewport tumble): yaw around world up, pitch around camera right.
 		const float rot_speed = 0.005f; // radians per pixel
 		auto yaw = glm::angleAxis(-float(dx * rot_speed), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -366,6 +489,8 @@ int main()
 			.model = model,
 		});
 
+		light_buf.write(glm::normalize(glm::vec3(sin(angle), cos(2 * angle), sin(2 - angle))));
+
 		if (window.is_pressed(Key::Escape))
 			window.close();
 
@@ -399,7 +524,7 @@ int main()
 		cmd.bindDescriptorSets(
 			vk::PipelineBindPoint::eGraphics,
 			pipeline.layout,
-			0, descriptor_set, {}
+			0, dsets, {}
 		);
 		cmd.bindVertexBuffers(0, { pbuf.handle, nbuf.handle }, { 0, 0 });
 		cmd.bindIndexBuffer(ibuf.handle, 0, vk::IndexType::eUint32);
