@@ -30,7 +30,7 @@
 #include "rhi/compiler.hpp"
 #include "rhi/device.hpp"
 #include "rhi/group.hpp"
-#include "rhi/pipelines/traditional.hpp"
+#include "rhi/pipelines/rasterization.hpp"
 #include "rhi/queue.hpp"
 #include "rhi/renderpass.hpp"
 #include "rhi/session.hpp"

@@ -1,5 +1,6 @@
 #include <array>
 #include <vector>
+#include <cstdint>
 
 #include <mrd.hpp>
 
@@ -57,16 +58,33 @@ struct command_state {};
 // 	}
 // };
 
+template <typename ... Ts>
+struct AnnotatedRasterizationPipeline {
+	vk::Pipeline handle;
+	vk::PipelineLayout layout;
+	std::vector <vk::DescriptorSetLayout> dsls;
+
+	using VertexBuffer = void;
+	// using IndexBuffer = void; TODO: ?
+};
+
 auto begin_command_buffer()
 {
 	return command_state <int> ();
 }
 
-template <Stage S, typename T>
-struct staged_argument {};
+template <typename T, Stage ... Ss>
+struct stage_wrapper {
+	using stages = std::integer_sequence <Stage, Ss...>;
+	using type = T;
 
-template <typename ... Ts>
-struct tgp {};
+	template <Stage S>
+	using append_stage = std::conditional_t <
+		((Ss == S) || ...),
+		stage_wrapper <T, Ss...>,
+		stage_wrapper <T, Ss..., S>
+	>;
+};
 
 template <typename ... Ts>
 struct find_implicit_context {
@@ -75,26 +93,82 @@ struct find_implicit_context {
 	using type = Ts...[idx];
 };
 
-// TODO: tests
-using S = $mirror(Shared);
-static_assert(sizeof(S) == 16);
-static_assert(offsetof(S, tint) == 0);
-static_assert(offsetof(S, scale) == 12);
-
-template <typename VRet, typename ... As, typename FRet, typename ... Bs>
-auto comb(const stage <Stage::Vertex, VRet, As...> &vertex,
-	  const stage <Stage::Fragment, FRet, Bs...> &fragment)
+template <auto &... refs, size_t ... Is>
+auto sequence_to_group_allocation_impl(const sequence <reference <refs>...> &, const std::index_sequence <Is...> &)
 {
-	// TODO: check between vshader output and fshader input
-	// TODO: store # of attachments required from # of fshader outputs
-	// using parameters = sequence <
-	// 	staged_argument <Stage::Vertex, As>...,
-	// 	staged_argument <Stage::Fragment, Bs>...
-	// >;
-	using VCtx = find_implicit_context <As...> ::type;
-	using FCtx = find_implicit_context <Bs...> ::type;
-	return sequence <VCtx, FCtx> ::singleton;
+	return std::make_tuple(group_allocation_record <refs, Is> ()...);
 }
+
+template <typename ... Ts>
+auto sequence_to_group_allocation(const sequence <Ts...> &)
+{
+	return sequence_to_group_allocation_impl(
+		sequence <typename Ts::type...> ::singleton,
+		std::make_index_sequence <sizeof...(Ts)> ()
+	);
+}
+
+template <Stage S, auto &ref, typename ... Ts>
+auto add_global_resource(const sequence <Ts...> &in)
+{
+	using base = reference <ref> ::raw_base;
+	if constexpr (!is_global_resource_v <base>) {
+		return in;
+	} else {
+		constexpr auto exists = (std::same_as <typename Ts::type, reference <ref>> || ...);
+
+		if constexpr (exists) {
+			return sequence <
+				std::conditional_t <
+					std::same_as <typename Ts::type, reference <ref>>,
+					typename Ts::template append_stage <S>,
+					Ts
+				> ...
+			> ::singleton;
+		} else {
+			return sequence <Ts..., stage_wrapper <reference <ref>, S>> ::singleton;
+		}
+	}
+}
+
+template <Stage S, typename ... Ts, auto &b, auto &...bs>
+auto add_implicit_context(const sequence <Ts...> &in, const implicit_context <b, bs...> &)
+{
+	auto out = add_global_resource <S, b> (in);
+	if constexpr (sizeof...(bs))
+		return add_implicit_context <S> (out, implicit_context <bs...> ());
+	else
+		return out;
+}
+
+template <typename ... Ts>
+struct RasterizationPipelineCombinator {
+	// TODO: options...
+
+	template <typename VRet, typename ... As, typename FRet, typename ... Bs>
+	auto operator()(stage <Stage::Vertex, VRet, As...> &vertex,
+		 	stage <Stage::Fragment, FRet, Bs...> &fragment)
+	{
+		// TODO: check between vshader output and fshader input
+		// TODO: store # of attachments required from # of fshader outputs
+		using vertex_icontext = find_implicit_context <As...> ::type;
+		using fragment_icontext = find_implicit_context <Bs...> ::type;
+
+		auto grvs0 = sequence <> ::singleton;
+		auto grvs1 = add_implicit_context <Stage::Vertex> (grvs0, vertex_icontext());
+		auto grvs = add_implicit_context <Stage::Fragment> (grvs1, fragment_icontext());
+
+		auto alloc = sequence_to_group_allocation(grvs);
+		auto gamap = new_allocation(alloc);
+		vs.apply_group_allocation_map(gamap);
+		fs.apply_group_allocation_map(gamap);
+
+		return grvs;
+	}
+};
+
+template <typename ... Ts>
+using rpc = RasterizationPipelineCombinator <Ts...>;
 
 // TODO: structs need a layout (defaults to std430)
 // 
@@ -106,7 +180,6 @@ auto comb(const stage <Stage::Vertex, VRet, As...> &vertex,
 int main()
 {
 	auto session_info = Session::Info {
-		// .validation = false,
 		.validation_bootstrap = false,
 	};
 
@@ -119,7 +192,6 @@ int main()
 	};
 
 	auto device = Device::from(session, dld, device_info);
-	// auto &ldev = device.logical;
 
 	auto window = Window::from(session, device);
 
@@ -152,17 +224,13 @@ int main()
 	auto compiler = Compiler::from(device, Compiler::Info());
 
 	// TODO: comb from compiler and other options...
+	auto comb = rpc();
 	auto c = comb(vs, fs);
 
-	using allocation = std::tuple <
-		group_allocation_record <view, 0>,
-		group_allocation_record <light_direction, 1>,
-		group_allocation_record <shared, 2>
-	>;
-
-	auto map = new_allocation(allocation());
-	vs.apply_group_allocation_map(map);
-	fs.apply_group_allocation_map(map);
+	// auto alloc = sequence_to_group_allocation(c);
+	// auto map = new_allocation(alloc);
+	// vs.apply_group_allocation_map(map);
+	// fs.apply_group_allocation_map(map);
 
 	auto vshader = generators::GLSL(vs).generate();
 	auto fshader = generators::GLSL(fs).generate();
@@ -237,7 +305,8 @@ int main()
 		dld
 	);
 
-	auto dsls = std::array { view_dsl, light_dsl, shared_dsl };
+	// auto dsls = std::array { view_dsl, light_dsl, shared_dsl };
+	auto dsls = std::array { view_dsl, shared_dsl, light_dsl };
 
 	auto pipeline_layout = device.logical.createPipelineLayout(
 		vk::PipelineLayoutCreateInfo().setSetLayouts(dsls),
@@ -291,7 +360,8 @@ int main()
 		);
 	}
 
-	auto pipeline_info = TraditionalGraphicsPipeline::Info {
+	// TODO: shoudl eventually remove RasterizationPipeline
+	auto pipeline_info = RasterizationPipeline::Info {
 		.vmodule = vmodule,
 		.fmodule = fmodule,
 		.renderpass = rp,
@@ -302,15 +372,20 @@ int main()
 		.depth_test = true,
 	};
 
-	auto pipeline = TraditionalGraphicsPipeline::from(device, dld, pipeline_info);
+	auto pipeline = RasterizationPipeline::from(device, dld, pipeline_info);
 
 	constexpr mrd::ModelEncodings encodings;
 
 	using Model = mrd::Model <encodings>;
 
+	auto mb = [](uint32_t bytes) { return bytes / (1 << 20); };
+
 	auto model = Model::load("/home/venki/data/models/asian-dragon.stl");
 	auto &mesh = model.meshes[0];
 	fmt::println("# of verts: {}, # of triangles: {}", mesh.positions.size(), mesh.primitives.size());
+	fmt::println("bytes: {} MB", mb(mesh.size_bytes()));
+	mesh.deduplicate();
+	fmt::println("bytes: {} MB", mb(mesh.size_bytes()));
 
 	auto pbuf = MirrorBuffer <array <vec3>> ::from(
 		device, mesh.positions.size(),
@@ -321,7 +396,7 @@ int main()
 
 	auto pbuf_value = pbuf.new_value();
 	pbuf_value.resize(mesh.positions.size());
-	std::memcpy(pbuf_value.data(), mesh.positions.data(), pbuf_value.bytes());
+	std::memcpy(pbuf_value.data(), mesh.positions.data(), pbuf_value.size_bytes());
 	pbuf.write(pbuf_value);
 
 	auto nbuf = MirrorBuffer <array <vec3>> ::from(
@@ -333,7 +408,7 @@ int main()
 
 	auto nbuf_value = nbuf.new_value();
 	nbuf_value.resize(mesh.normals.size());
-	std::memcpy(nbuf_value.data(), mesh.normals.data(), nbuf_value.bytes());
+	std::memcpy(nbuf_value.data(), mesh.normals.data(), nbuf_value.size_bytes());
 	nbuf.write(nbuf_value);
 
 	auto ibuf = MirrorBuffer <array <ivec3>, layouts::scalar> ::from(
@@ -399,24 +474,24 @@ int main()
 		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 		.setBufferInfo(view_buf_info);
 	
-	auto light_buf_info = light_buf.descriptor_info();
-	auto light_write = vk::WriteDescriptorSet()
+	auto shared_buf_info = shared_buf.descriptor_info();
+	auto shared_write = vk::WriteDescriptorSet()
 		.setDstSet(dsets[1])
 		.setDstBinding(0)
 		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-		.setBufferInfo(light_buf_info);
+		.setBufferInfo(shared_buf_info);
 	
-	auto shared_buf_info = shared_buf.descriptor_info();
-	auto shared_write = vk::WriteDescriptorSet()
+	auto light_buf_info = light_buf.descriptor_info();
+	auto light_write = vk::WriteDescriptorSet()
 		.setDstSet(dsets[2])
 		.setDstBinding(0)
 		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-		.setBufferInfo(shared_buf_info);
+		.setBufferInfo(light_buf_info);
 
 	// TODO: during command seq we should auto batch descriptor set
 	// operations and do one updatedescriptorsets call just before dispatch
 	device.logical.updateDescriptorSets(
-		{ view_write, light_write, shared_write },
+		{ view_write, shared_write, light_write },
 		nullptr, dld
 	);
 

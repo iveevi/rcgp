@@ -13,6 +13,7 @@ struct AttributeStream {
 	DEFINE_REFLECTION_STAMP();
 };
 
+// TODO: should not allow attribute streams in resource groups... they should be standalone?
 template <reflected T>
 struct ResourceGroup {
 	using reflection = resource_group_reflection <T>;
@@ -62,21 +63,28 @@ using MonoConstantBuffer = ResourceGroup <ConstantBuffer <T>>;
 template <reflected T>
 using MonoStorageBuffer = ResourceGroup <StorageBuffer <T>>;
 
-// Inspection
+// Introspection
+// TODO: we can move this to reflection.hpp
 template <typename T>
-struct is_resource_reflection : std::false_type {};
+struct is_global_resource_reflection : std::false_type {};
 
 template <typename T>
-struct is_resource_reflection <constant_buffer_reflection <T>> : std::true_type {};
+struct is_global_resource_reflection <resource_group_reflection <T>> : std::true_type {};
 
 template <typename T>
-struct is_resource_reflection <storage_buffer_reflection <T>> : std::true_type {};
+struct is_global_resource_reflection <constant_buffer_reflection <T>> : std::true_type {};
+
+template <typename T>
+struct is_global_resource_reflection <storage_buffer_reflection <T>> : std::true_type {};
 
 template <typename T, size_t D>
-struct is_resource_reflection <sampler_reflection <T, D>> : std::true_type {};
+struct is_global_resource_reflection <sampler_reflection <T, D>> : std::true_type {};
 
 template <typename T>
-constexpr bool is_resource_reflection_v = is_resource_reflection <T> ::value;
+constexpr bool is_global_resource_reflection_v = is_global_resource_reflection <T> ::value;
+
+template <typename T>
+constexpr bool is_global_resource_v = is_global_resource_reflection <typename T::reflection> ::value;
 
 // Overriding reference behavior
 template <typename T, ResourceGroup <T> &rsrc>

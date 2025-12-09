@@ -5,6 +5,7 @@
 #include "../dsl/tracer.hpp"
 #include "../util/sequence.hpp"
 
+// TODO: maybe this should just be shader stage
 enum class Stage {
 	Undefined,
 

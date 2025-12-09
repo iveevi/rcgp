@@ -11,7 +11,7 @@ template <typename T>
 struct unsized_array : std::vector <T> {
 	using std::vector <T> ::vector;
 
-	size_t bytes() const {
+	size_t size_bytes() const {
 		return sizeof(T) * this->size();
 	}
 };

@@ -4,7 +4,7 @@
 
 #include "../device.hpp"
 
-struct TraditionalGraphicsPipeline : vk::Pipeline {
+struct RasterizationPipeline : vk::Pipeline {
 	vk::PipelineLayout layout;
 
 	struct Info {
@@ -18,8 +18,8 @@ struct TraditionalGraphicsPipeline : vk::Pipeline {
 		bool depth_test = true;
 	};
 
-	TraditionalGraphicsPipeline() = default;
-	TraditionalGraphicsPipeline(vk::Pipeline pipeline, vk::PipelineLayout layout_);
+	RasterizationPipeline() = default;
+	RasterizationPipeline(vk::Pipeline pipeline, vk::PipelineLayout layout_);
 
-	static TraditionalGraphicsPipeline from(const Device &device, const vk::detail::DispatchLoaderDynamic &ldl, const Info &info);
+	static RasterizationPipeline from(const Device &device, const vk::detail::DispatchLoaderDynamic &ldl, const Info &info);
 };

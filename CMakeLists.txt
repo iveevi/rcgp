@@ -22,7 +22,7 @@ add_library(ugp STATIC
 	source/rhi/compiler.cpp
 	source/rhi/device.cpp
 	source/rhi/image.cpp
-	source/rhi/pipelines/traditional.cpp
+	source/rhi/pipelines/rasterization.cpp
 	source/rhi/session.cpp
 	source/rhi/window.cpp
 )
@@ -36,7 +36,7 @@ target_link_libraries(ugp PUBLIC
 )
 
 add_executable(prototype samples/prototype.cpp)
-add_executable(traditional samples/traditional.cpp)
+add_executable(rasterization samples/rasterization.cpp)
 
 add_executable(test
 	source/test/main.cpp
@@ -44,9 +44,9 @@ add_executable(test
 	source/test/mirror/scalar.cpp)
 
 target_precompile_headers(test PRIVATE <vulkan/vulkan.hpp>)
-target_precompile_headers(traditional REUSE_FROM test)
-target_precompile_headers(traditional REUSE_FROM test)
+target_precompile_headers(prototype REUSE_FROM test)
+target_precompile_headers(rasterization REUSE_FROM test)
 
 target_link_libraries(test PRIVATE ugp mrd)
 target_link_libraries(prototype PRIVATE ugp mrd)
-target_link_libraries(traditional PRIVATE ugp mrd)
+target_link_libraries(rasterization PRIVATE ugp mrd)

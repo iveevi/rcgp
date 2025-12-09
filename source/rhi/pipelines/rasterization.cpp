@@ -1,12 +1,12 @@
 #include <array>
 
-#include "rhi/pipelines/traditional.hpp"
+#include "rhi/pipelines/rasterization.hpp"
 
-TraditionalGraphicsPipeline::TraditionalGraphicsPipeline(vk::Pipeline pipeline, vk::PipelineLayout layout_)
+RasterizationPipeline::RasterizationPipeline(vk::Pipeline pipeline, vk::PipelineLayout layout_)
 	: vk::Pipeline(pipeline), layout(layout_)
 {}
 
-TraditionalGraphicsPipeline TraditionalGraphicsPipeline::from(const Device &device, const vk::detail::DispatchLoaderDynamic &ldl, const Info &info)
+RasterizationPipeline RasterizationPipeline::from(const Device &device, const vk::detail::DispatchLoaderDynamic &ldl, const Info &info)
 {
 	auto shader_stages = std::array {
 		vk::PipelineShaderStageCreateInfo()
@@ -96,5 +96,5 @@ TraditionalGraphicsPipeline TraditionalGraphicsPipeline::from(const Device &devi
 	auto [result, pipeline] = device.logical.createGraphicsPipeline(nullptr, pipeline_info, nullptr, ldl);
 	// (void)result; // TODO: handle failures gracefully
 
-	return TraditionalGraphicsPipeline(pipeline, pipeline_layout);
+	return RasterizationPipeline(pipeline, pipeline_layout);
 }

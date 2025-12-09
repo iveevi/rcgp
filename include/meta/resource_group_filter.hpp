@@ -57,7 +57,7 @@ struct resource_group_filter <Uniform, Resources, T, Ts...> {
 
 // Resources are appended to the resource list
 template <typename Uniform, typename Resources, typename T, size_t ... Is, typename ... Ts>
-requires is_resource_reflection_v <T>
+requires is_global_resource_reflection_v <T>
 struct resource_group_filter <Uniform, Resources, field_trace <T, Is...>, Ts...> {
 	using resources = typename Resources::template push_back_t <field_trace <T, Is...>>;
 	using next = resource_group_filter <Uniform, resources, Ts...>;
