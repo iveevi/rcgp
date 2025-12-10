@@ -50,24 +50,24 @@ void dispatch_cursor_pos(GLFWwindow *w, double xpos, double ypos)
 
 } // namespace
 
-bool Window::alive() const
-{
-	return not glfwWindowShouldClose(handle);
-}
-
 void Window::poll() const
 {
 	glfwPollEvents();
 }
 
-bool Window::is_pressed(Key key) const
-{
-	return glfwGetKey(handle, static_cast<int>(key)) == GLFW_PRESS;
-}
-
 void Window::close() const
 {
 	glfwSetWindowShouldClose(handle, true);
+}
+
+bool Window::alive() const
+{
+	return not glfwWindowShouldClose(handle);
+}
+
+bool Window::is_pressed(Key key) const
+{
+	return glfwGetKey(handle, static_cast<int>(key)) == GLFW_PRESS;
 }
 
 vk::Extent2D Window::extent() const
@@ -80,7 +80,7 @@ vk::Extent2D Window::extent() const
 	return vk::Extent2D(width, height);
 }
 
-Window::Frame Window::next_frame()
+Frame Window::next_frame()
 {
 	frame_index = (frame_index + 1) % frames_in_flight;
 	auto &frame = frames[frame_index];
@@ -177,6 +177,7 @@ Window Window::from(const Session &session, const Device &device)
 
 	result.frames.resize(result.frames_in_flight);
 	for (auto &frame : result.frames) {
+		frame.swapchain = result.swapchain;
 		frame.fence = ldev.createFence(fence_info);
 		frame.rendered = ldev.createSemaphore(semaphore_info);
 		frame.presented = ldev.createSemaphore(semaphore_info);

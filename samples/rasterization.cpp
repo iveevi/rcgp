@@ -354,7 +354,7 @@ int main()
 	auto color = attachments.reference("color", vk::ImageLayout::eColorAttachmentOptimal);
 	auto depth = attachments.reference("depth", vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
-	auto render_pass = group(device, dld).new_render_pass(
+	auto render_pass = device.new_render_pass(
 		attachments,
 		subpass(color_attachments { color },
 			depth_attachments { depth },
@@ -368,22 +368,16 @@ int main()
 		auto &image = window.images[i];
 		auto &depth = depth_images[i];
 		std::array attachments_views { image.view, depth.view };
-		// TODO: one group <Ts...> with all the methods,
-		// which are restricted based on the Ts...
-		// e.g. here we need Ts... has (device, renderpass, dld)
-		// and we can give static assertion message for the fallback
-		framebuffers[i] = group(device, render_pass, dld).new_framebuffer(
+		framebuffers[i] = device.new_framebuffer(
+			render_pass,
 			attachments_views,
-			image.extent,
-			1
+			image.extent
 		);
 	}
 
 	auto queue = Queue::from(device);
 	auto cpool = CommandPool::from(device, queue);
-	// TODO: new_cmd_buffers
-	// TODO: get rid of groups...
-	auto cmd_buffers = group(device, cpool).allocate(window.frames_in_flight);
+	auto cmd_buffers = device.new_command_buffers(cpool, window.frames_in_flight);
 
 	auto dpool_info = DescriptorPool::Info {
 		.max_sets = 1 << 10,
@@ -478,12 +472,7 @@ int main()
 		.scale = 1.5f,
 	});
 
-	auto dsets = device.logical.allocateDescriptorSets(
-		vk::DescriptorSetAllocateInfo()
-			.setDescriptorPool(dpool)
-			.setSetLayouts(pipeline.dsls),
-		dld
-	);
+	auto dsets = device.new_descriptor_sets(dpool, pipeline.dsls);
 
 	auto view_buf_info = view_buf.descriptor_info();
 	auto view_write = vk::WriteDescriptorSet()
@@ -567,9 +556,8 @@ int main()
 		if (window.is_pressed(Key::Escape))
 			window.close();
 
-		group(device, window).wait(frame);
-		auto acquired = group(device, window).acquire_image(frame);
-		if (!acquired)
+		device.wait_for_frame(frame);
+		if (!device.acquire_image_for_frame(frame))
 			continue;
 
 		auto &cmd = cmd_buffers[window.frame_index];

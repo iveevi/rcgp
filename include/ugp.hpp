@@ -35,7 +35,6 @@
 #include "rhi/descriptor_pool.hpp"
 #include "rhi/compiler.hpp"
 #include "rhi/device.hpp"
-#include "rhi/group.hpp"
 #include "rhi/queue.hpp"
 #include "rhi/render_pass.hpp"
 #include "rhi/session.hpp"

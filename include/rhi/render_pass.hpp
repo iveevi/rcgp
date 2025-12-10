@@ -3,8 +3,6 @@
 #include <vector>
 #include <map>
 
-#include "device.hpp"
-
 struct Attachments {
 	std::vector <vk::AttachmentDescription> descriptions;
 	std::map <std::string, uint32_t> mapping;
@@ -115,28 +113,4 @@ auto subpass(
 }
 
 template <typename ... Ts>
-struct RenderPass : vk::RenderPass {
-	static RenderPass from(
-		const Device &device,
-		const vk::detail::DispatchLoaderDynamic &dld,
-		const Attachments &attachments,
-		Ts ... subpasses
-	) {
-		auto rp_info = vk::RenderPassCreateInfo()
-			.setAttachments(attachments.descriptions)
-			.setSubpasses(subpasses...);
-
-		return RenderPass(device.logical.createRenderPass(rp_info, nullptr, dld));
-	}
-};
-
-template <typename ... Ts>
-auto render_pass(
-	const Device &device,
-	const vk::detail::DispatchLoaderDynamic &dld,
-	const Attachments &attachments,
-	Ts ... subpasses
-)
-{
-	return RenderPass <Ts...> ::from(device, dld, attachments, subpasses...);
-}
+struct RenderPass : vk::RenderPass {};
