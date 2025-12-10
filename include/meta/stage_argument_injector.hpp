@@ -9,22 +9,22 @@
 #include "reflection.hpp"
 #include "reconstruct_type.hpp"
 #include "resource_injector.hpp"
-#include "stage.hpp"
+#include "shader_stage.hpp"
 #include "stage_intrinsics.hpp"
 #include "static_string.hpp"
 
-template <Stage S>
+template <ShaderStage S>
 void inject_execution_model()
 {
-	if constexpr (S == Stage::Vertex)
+	if constexpr (S == ShaderStage::Vertex)
 		$tsb.context.model = ExecutionModel::eVulkanVertex;
-	else if constexpr (S == Stage::Fragment)
+	else if constexpr (S == ShaderStage::Fragment)
 		$tsb.context.model = ExecutionModel::eVulkanFragment;
 	else
 		static_assert(false, "no execution model for stage");
 }
 
-template <Stage S, typename T>
+template <ShaderStage S, typename T>
 struct stage_argument_injector {
 	static auto main(T &, const InjectionState &state) {
 		static_assert(false, ($ss("stage argument injector not implemented for ") + $ss_type(T)).view());
@@ -33,7 +33,7 @@ struct stage_argument_injector {
 };
 
 // Intrinsics never need injection
-template <Stage S, GlobalIntrinsic G, typename T>
+template <ShaderStage S, GlobalIntrinsic G, typename T>
 struct stage_argument_injector <S, read_only_intrinsic <G, T>> {
 	static auto main(read_only_intrinsic <G, T> &, const InjectionState &state) {
 		return state;
@@ -42,7 +42,7 @@ struct stage_argument_injector <S, read_only_intrinsic <G, T>> {
 
 // For subroutines, normal arguments are treated like regular arguments
 template <typename T>
-struct stage_argument_injector <Stage::Undefined, T> {
+struct stage_argument_injector <ShaderStage::Undefined, T> {
 	static auto main(T &value, const InjectionState &state) {
 		auto type = reconstruct_type <T> ();
 		auto arg = Argument(type, state.argidx);
@@ -53,7 +53,7 @@ struct stage_argument_injector <Stage::Undefined, T> {
 };
 
 // For all stages, handling resource references is basically the same
-template <Stage S, auto &rsrc>
+template <ShaderStage S, auto &rsrc>
 struct stage_argument_injector <S, reference <rsrc>> {
 	using T = std::decay_t <decltype(rsrc)>;
 
@@ -66,8 +66,8 @@ struct stage_argument_injector <S, reference <rsrc>> {
 // 	vertex stage is included for simplicity of implementation,
 // 	but users will not be allowed to write vertex shaders without
 // 	explicit references to the streams
-template <Stage S, primitive T>
-requires (S == Stage::Vertex || S == Stage::Fragment)
+template <ShaderStage S, primitive T>
+requires (S == ShaderStage::Vertex || S == ShaderStage::Fragment)
 struct stage_argument_injector <S, T> {
 	static auto main(T &value, const InjectionState &state) {
 		auto type = reconstruct_type <T> ();
@@ -80,14 +80,14 @@ struct stage_argument_injector <S, T> {
 
 // For vertex shaders streams are thread inputs
 template <reflected T, template <typename> typename L, vk::VertexInputRate R, AttributeStream <T, L, R> &rsrc>
-struct stage_argument_injector <Stage::Vertex, reference <rsrc>> {
+struct stage_argument_injector <ShaderStage::Vertex, reference <rsrc>> {
 	static auto main(reference <rsrc> &value, const InjectionState &state) {
-		return stage_argument_injector <Stage::Vertex, T> ::main(value, state);
+		return stage_argument_injector <ShaderStage::Vertex, T> ::main(value, state);
 	}
 };
 
-template <Stage S, aggregate T>
-requires (S == Stage::Vertex || S == Stage::Fragment)
+template <ShaderStage S, aggregate T>
+requires (S == ShaderStage::Vertex || S == ShaderStage::Fragment)
 struct stage_argument_injector <S, T> {
 	static auto main(T &value, const InjectionState &state) {
 		constexpr auto field_count = T::reflection::field_count;
@@ -111,14 +111,14 @@ struct stage_argument_injector <S, T> {
 };
 
 // Always ignore the implicit context
-template <Stage S, auto & ... refs>
+template <ShaderStage S, auto & ... refs>
 struct stage_argument_injector <S, implicit_context <refs...>> {
 	static auto main(auto &, const InjectionState &state) {
 		return state.next(false, false);
 	}
 };
 
-template <Stage S, size_t Index, typename ... Args>
+template <ShaderStage S, size_t Index, typename ... Args>
 void inject_arguments(std::tuple <Args...> &args, const InjectionState &state)
 {
 	auto &value = std::get <Index> (args);

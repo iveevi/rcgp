@@ -1,19 +1,23 @@
-
 #pragma once
 
-#include "stage.hpp"
+#include <functional>
 
-template <Stage S, typename R, typename ... Args>
+#include "../dsl/jems.hpp"
+#include "function_return_injection.hpp"
+#include "injection_state.hpp"
+#include "shader_stage.hpp"
+
+template <ShaderStage S, typename R, typename ... Args>
 struct signature {
 	using args = std::tuple <std::decay_t <Args> ...>;
 	using returns = R;
-	using type = stage <S, R, Args...>;
+	using type = shader_stage <S, R, Args...>;
 };
 
-template <Stage S, typename Rt, typename R, typename ... Args>
+template <ShaderStage S, typename Rt, typename R, typename ... Args>
 constexpr auto new_signature(std::function <R (Args...)>) -> signature <S, Rt, Args...>;
 
-template <Stage S, typename R, typename F>
+template <ShaderStage S, typename R, typename F>
 auto compile(F ftn)
 {
 	// TODO: require that all arguments are reflected?
@@ -39,13 +43,13 @@ auto compile(F ftn)
 	return result;
 }
 
-template <Stage, int>
+template <ShaderStage, int>
 struct _fn_operator {};
 
-template <Stage>
+template <ShaderStage>
 struct _stage_operator {};
 
-#define $stage(S) _stage_operator <Stage::S> () *
+#define $stage(S) _stage_operator <ShaderStage::S> () *
 
 #define $vertex		$stage(Vertex)
 #define $fragment	$stage(Fragment)
@@ -68,18 +72,18 @@ struct simplify_return_list <> {
 
 #define $returns(...) decltype(fn_return_injection::Writer <decltype(_return_proxy), simplify_return_list <__VA_ARGS__> ::type> {}, void())
 #define $return (_return_operator <fn_return_injection::Read <decltype(_return_proxy)> ::unfoil> ()) << 
-#define $fn (_fn_operator <Stage::Undefined, __COUNTER__ + 1> ()) << [_return_proxy = fn_return_injection::proxy_tag <__COUNTER__> ()] $context_capture
-#define $cafn(...) (_fn_operator <Stage::Undefined, __COUNTER__ + 1> ()) << [__VA_ARGS__ __VA_OPT__(,) _return_proxy = fn_return_injection::proxy_tag <__COUNTER__> ()] $context_capture
+#define $fn (_fn_operator <ShaderStage::Undefined, __COUNTER__ + 1> ()) << [_return_proxy = fn_return_injection::proxy_tag <__COUNTER__> ()] $context_capture
+#define $cafn(...) (_fn_operator <ShaderStage::Undefined, __COUNTER__ + 1> ()) << [__VA_ARGS__ __VA_OPT__(,) _return_proxy = fn_return_injection::proxy_tag <__COUNTER__> ()] $context_capture
 
-template <Stage S, int I>
+template <ShaderStage S, int I>
 auto operator<<(_fn_operator <S, I>, auto lambda)
 {
 	using R = typename fn_return_injection::Read <fn_return_injection::proxy_tag <I>> ::unfoil;
 	return compile <S, R> (lambda);
 }
 
-template <Stage S, int I>
-auto operator*(_stage_operator <S>, _fn_operator <Stage::Undefined, I>)
+template <ShaderStage S, int I>
+auto operator*(_stage_operator <S>, _fn_operator <ShaderStage::Undefined, I>)
 {
 	return _fn_operator <S, I> ();
 }

@@ -122,16 +122,16 @@ struct RenderPass : vk::RenderPass {
 		const Attachments &attachments,
 		Ts ... subpasses
 	) {
-		auto renderpass_info = vk::RenderPassCreateInfo()
+		auto rp_info = vk::RenderPassCreateInfo()
 			.setAttachments(attachments.descriptions)
 			.setSubpasses(subpasses...);
 
-		return RenderPass(device.logical.createRenderPass(renderpass_info, nullptr, dld));
+		return RenderPass(device.logical.createRenderPass(rp_info, nullptr, dld));
 	}
 };
 
 template <typename ... Ts>
-auto renderpass(
+auto render_pass(
 	const Device &device,
 	const vk::detail::DispatchLoaderDynamic &dld,
 	const Attachments &attachments,

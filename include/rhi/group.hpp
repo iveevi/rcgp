@@ -7,7 +7,7 @@
 #include "device.hpp"
 #include "window.hpp"
 #include "command_pool.hpp"
-#include "renderpass.hpp"
+#include "render_pass.hpp"
 
 struct group_device_window {
 	Device &device;
@@ -59,8 +59,8 @@ struct group_device_dld {
 	const vk::detail::DispatchLoaderDynamic &dld;
 
 	template <typename ... Ts>
-	auto new_renderpass(const Attachments &attachments, Ts ... subpasses) const {
-		return ::renderpass(device, dld, attachments, subpasses...);
+	auto new_render_pass(const Attachments &attachments, Ts ... subpasses) const {
+		return ::render_pass(device, dld, attachments, subpasses...);
 	}
 };
 
@@ -69,7 +69,7 @@ inline auto group(Device &device, const vk::detail::DispatchLoaderDynamic &dld)
 	return group_device_dld { device, dld };
 }
 
-struct group_device_renderpass {
+struct group_device_render_pass {
 	Device &device;
 	const vk::detail::DispatchLoaderDynamic &dld;
 	vk::RenderPass rp;
@@ -88,5 +88,5 @@ struct group_device_renderpass {
 
 inline auto group(Device &device, const vk::RenderPass &rp, const vk::detail::DispatchLoaderDynamic &dld)
 {
-	return group_device_renderpass { device, dld, rp };
+	return group_device_render_pass { device, dld, rp };
 }

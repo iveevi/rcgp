@@ -22,7 +22,6 @@ add_library(ugp STATIC
 	source/rhi/compiler.cpp
 	source/rhi/device.cpp
 	source/rhi/image.cpp
-	source/rhi/pipelines/rasterization.cpp
 	source/rhi/session.cpp
 	source/rhi/window.cpp
 )

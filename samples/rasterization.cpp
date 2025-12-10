@@ -86,11 +86,11 @@ struct Commands {};
 
 // AttributeStreams := sequence <reference <Stream>...>
 // GroupAllocation := sequence <reference <GRV>...>
-template <typename AttributeStreams, typename GroupAllocation>
+template <typename AttributeStreams, typename GroupAllocation, size_t Sets>
 struct AnnotatedRasterizationPipeline {
 	vk::Pipeline handle;
 	vk::PipelineLayout layout;
-	std::vector <vk::DescriptorSetLayout> dsls;
+	std::array <vk::DescriptorSetLayout, Sets> dsls;
 
 	// TODO: using VertexBuffer <ref> = ?
 	// TODO: using IndexBuffer = ?
@@ -100,12 +100,12 @@ struct AnnotatedRasterizationPipeline {
 	// TODO: bind_vertex_buffers(...) -> Commands[X, Y]
 };
 
-template <typename T, Stage ... Ss>
+template <typename T, ShaderStage ... Ss>
 struct stage_wrapper {
-	using stages = std::integer_sequence <Stage, Ss...>;
+	using stages = std::integer_sequence <ShaderStage, Ss...>;
 	using type = T;
 
-	template <Stage S>
+	template <ShaderStage S>
 	using append_stage = std::conditional_t <
 		((Ss == S) || ...),
 		stage_wrapper <T, Ss...>,
@@ -113,6 +113,7 @@ struct stage_wrapper {
 	>;
 };
 
+// TODO: move to util
 template <typename T, size_t ... Ns>
 auto concat(const std::array <T, Ns> &... arrays)
 {
@@ -200,8 +201,8 @@ auto add_stream_from_implicit_context(const sequence <Ts...> &in, const implicit
 		return out;
 }
 
-template <Stage S, auto &ref, typename ... Ts>
-auto add_grv(const sequence <Ts...> &in)
+template <ShaderStage S, auto &ref, typename ... Ts>
+auto add_gvr(const sequence <Ts...> &in)
 {
 	using base = reference <ref> ::raw_base;
 	if constexpr (!is_global_resource_v <base>) {
@@ -223,29 +224,19 @@ auto add_grv(const sequence <Ts...> &in)
 	}
 }
 
-template <Stage S, typename ... Ts, auto &b, auto &...bs>
-auto add_grv_from_implicit_context(const sequence <Ts...> &in, const implicit_context <b, bs...> &)
+template <ShaderStage S, typename ... Ts, auto &b, auto &...bs>
+auto add_gvr_from_implicit_context(const sequence <Ts...> &in, const implicit_context <b, bs...> &)
 {
-	auto out = add_grv <S, b> (in);
+	auto out = add_gvr <S, b> (in);
 	if constexpr (sizeof...(bs))
-		return add_grv_from_implicit_context <S> (out, implicit_context <bs...> ());
+		return add_gvr_from_implicit_context <S> (out, implicit_context <bs...> ());
 	else
 		return out;
 }
 
-constexpr vk::ShaderStageFlags stage_to_flag(Stage S)
-{
-	switch (S) {
-	case Stage::Vertex: return vk::ShaderStageFlagBits::eVertex;
-	case Stage::Fragment: return vk::ShaderStageFlagBits::eFragment;
-	default:
-		return vk::ShaderStageFlagBits::eAll;
-	}
-}
-
 // TODO: flesh out with an impl method with handles things recursively...
 // TODO: fallback...
-template <auto &ref, Stage ... Ss>
+template <auto &ref, ShaderStage ... Ss>
 auto reference_to_descriptor_bindings(const Device &device, const stage_wrapper <reference <ref>, Ss...> &)
 {
 	using base = typename reference <ref> ::raw_base;
@@ -277,43 +268,163 @@ auto reference_sequence_to_descriptor_bindings(const Device &device, const seque
 	};
 }
 
-
-
-template <typename ... Ts>
+template <typename ... Subpasses>
 struct RasterizationPipelineCombinator {
 	const Device &device;
-	// TODO: options...
+	const Compiler &compiler;
+	const RenderPass <Subpasses...> &render_pass;
+	// TODO: dynamic extent or fixed extent
+	const vk::Extent2D &extent;
+	bool depth_test;
 
 	template <typename VRet, typename ... As, typename FRet, typename ... Bs>
-	auto operator()(stage <Stage::Vertex, VRet, As...> &vertex,
-		 	stage <Stage::Fragment, FRet, Bs...> &fragment) {
+	auto operator()(shader_stage <ShaderStage::Vertex, VRet, As...> &vertex,
+		 	shader_stage <ShaderStage::Fragment, FRet, Bs...> &fragment) const {
 		// TODO: check between vshader output and fshader input
 		// TODO: store # of attachments required from # of fshader outputs
 		using vertex_icontext = find_implicit_context <As...> ::type;
 		using fragment_icontext = find_implicit_context <Bs...> ::type;
 
-		auto grvs0 = sequence <> ::singleton;
-		auto grvs1 = add_grv_from_implicit_context <Stage::Vertex> (grvs0, vertex_icontext());
-		auto grvs = add_grv_from_implicit_context <Stage::Fragment> (grvs1, fragment_icontext());
-
+		// Collect vertex attribute streams
 		auto streams0 = sequence <> ::singleton;
 		auto streams = add_stream_from_implicit_context(streams0, vertex_icontext());
 
-		auto alloc = sequence_to_group_allocation(grvs);
+		// Generate vertex input bindings and attributes
+		auto vbindings = sequence_to_vertex_bindings(streams);
+		auto vattributes = sequence_to_vertex_attributes(streams);
+
+		// Collect global resources
+		auto gvrs0 = sequence <> ::singleton;
+		auto gvrs1 = add_gvr_from_implicit_context <ShaderStage::Vertex> (gvrs0, vertex_icontext());
+		auto gvrs = add_gvr_from_implicit_context <ShaderStage::Fragment> (gvrs1, fragment_icontext());
+
+		auto alloc = sequence_to_group_allocation(gvrs);
 		auto gamap = new_allocation(alloc);
 		vs.apply_group_allocation_map(gamap);
 		fs.apply_group_allocation_map(gamap);
 
-		auto dsls = reference_sequence_to_descriptor_bindings(device, grvs);
+		// Compile the shaders
+		auto vshader = generators::GLSL(vs).generate();
+		fmt::println("vertex shader:\n{}", vshader);
+
+		auto fshader = generators::GLSL(fs).generate();
+		fmt::println("fragment shader:\n{}", fshader);
+	
+		auto vspv = compiler.glsl_to_spirv(vshader, EShLangVertex);
+		auto fspv = compiler.glsl_to_spirv(fshader, EShLangFragment);
+
+		auto vmodule = compiler.spirv_to_shader_module(vspv);
+		auto fmodule = compiler.spirv_to_shader_module(fspv);
+
+		// Generate the pipeline and descriptor set layouts
+		auto dsls = reference_sequence_to_descriptor_bindings(device, gvrs);
 		auto layout_info = vk::PipelineLayoutCreateInfo().setSetLayouts(dsls);
 		auto layout = device.logical.createPipelineLayout(layout_info);
 
-		return std::make_tuple(grvs, streams, dsls, layout);
+		// Building the pipeline
+		auto shader_stages = std::array {
+			vk::PipelineShaderStageCreateInfo()
+				.setStage(vk::ShaderStageFlagBits::eVertex)
+				.setModule(vmodule)
+				.setPName("main"),
+			vk::PipelineShaderStageCreateInfo()
+				.setStage(vk::ShaderStageFlagBits::eFragment)
+				.setModule(fmodule)
+				.setPName("main"),
+		};
+
+		// TODO: new_pipeline_vertex_input_state
+		auto vertex_input = vk::PipelineVertexInputStateCreateInfo()
+			.setVertexBindingDescriptions(vbindings)
+			.setVertexAttributeDescriptions(vattributes);
+
+		auto input_assembly = vk::PipelineInputAssemblyStateCreateInfo()
+			.setTopology(vk::PrimitiveTopology::eTriangleList)
+			.setPrimitiveRestartEnable(false);
+
+		auto viewport = vk::Viewport()
+			.setX(0.0f)
+			.setY(0.0f)
+			.setWidth(float(extent.width))
+			.setHeight(float(extent.height))
+			.setMinDepth(0.0f)
+			.setMaxDepth(1.0f);
+
+		auto scissor = vk::Rect2D()
+			.setOffset({ 0, 0 })
+			.setExtent(extent);
+
+		auto viewport_state = vk::PipelineViewportStateCreateInfo()
+			.setViewports(viewport)
+			.setScissors(scissor);
+
+		auto rasterization = vk::PipelineRasterizationStateCreateInfo()
+			.setDepthClampEnable(false)
+			.setRasterizerDiscardEnable(false)
+			.setPolygonMode(vk::PolygonMode::eFill)
+			.setCullMode(vk::CullModeFlagBits::eBack)
+			.setFrontFace(vk::FrontFace::eCounterClockwise)
+			.setDepthBiasEnable(false)
+			.setLineWidth(1.0f);
+
+		auto multisampling = vk::PipelineMultisampleStateCreateInfo()
+			.setRasterizationSamples(vk::SampleCountFlagBits::e1)
+			.setSampleShadingEnable(false)
+			.setMinSampleShading(1.0f);
+
+		auto color_blend_attachment = vk::PipelineColorBlendAttachmentState()
+			.setBlendEnable(false)
+			.setColorWriteMask(
+				vk::ColorComponentFlagBits::eR |
+				vk::ColorComponentFlagBits::eG |
+				vk::ColorComponentFlagBits::eB |
+				vk::ColorComponentFlagBits::eA
+			);
+
+		auto color_blend = vk::PipelineColorBlendStateCreateInfo()
+			.setAttachments(color_blend_attachment);
+
+		auto depth_stencil = vk::PipelineDepthStencilStateCreateInfo()
+			.setDepthTestEnable(depth_test)
+			.setDepthWriteEnable(depth_test)
+			.setDepthCompareOp(vk::CompareOp::eLess)
+			.setDepthBoundsTestEnable(false)
+			.setStencilTestEnable(false);
+
+		// TODO: new_graphics_pipeline(...)
+		auto pipeline_info = vk::GraphicsPipelineCreateInfo()
+			.setLayout(layout)
+			.setPInputAssemblyState(&input_assembly)
+			.setPVertexInputState(&vertex_input)
+			.setPRasterizationState(&rasterization)
+			.setPMultisampleState(&multisampling)
+			.setPColorBlendState(&color_blend)
+			.setPDepthStencilState(&depth_stencil)
+			.setPViewportState(&viewport_state)
+			.setStages(shader_stages)
+			.setRenderPass(render_pass)
+			.setSubpass(0);
+
+		auto [result, pipeline] = device.logical.createGraphicsPipeline(nullptr, pipeline_info, nullptr);
+
+		// return std::make_tuple(gvrs, streams, dsls, layout);
+		return AnnotatedRasterizationPipeline <void, void, dsls.size()> {
+			.handle = pipeline,
+			.layout = layout,
+			.dsls = dsls,
+		};
 	}
 };
 
-template <typename ... Ts>
-using rpc = RasterizationPipelineCombinator <Ts...>;
+// CTAD for aggregate initialization, deducing subpasses from the render pass.
+template <typename ... Subpasses>
+RasterizationPipelineCombinator(
+	const Device &,
+	const Compiler &,
+	const RenderPass <Subpasses...> &,
+	const vk::Extent2D &,
+	bool
+) -> RasterizationPipelineCombinator <Subpasses...>;
 
 // TODO: work group is a parameter to shaders that is an intrinsic...
 // WorkGroup <8, 8> group... group.block_idx, thread_idx and so on
@@ -375,7 +486,7 @@ int main()
 	auto color = attachments.reference("color", vk::ImageLayout::eColorAttachmentOptimal);
 	auto depth = attachments.reference("depth", vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
-	auto rp = group(device, dld).new_renderpass(
+	auto rp = group(device, dld).new_render_pass(
 		attachments,
 		subpass(color_attachments { color },
 			depth_attachments { depth },
@@ -391,7 +502,7 @@ int main()
 		std::array attachments_views { image.view, depth.view };
 		// TODO: one group <Ts...> with all the methods,
 		// which are restricted based on the Ts...
-		// e.g. here we need Ts... = (device, renderpass, dld)
+		// e.g. here we need Ts... has (device, renderpass, dld)
 		// and we can give static assertion message for the fallback
 		framebuffers[i] = group(device, rp, dld).new_framebuffer(
 			attachments_views,
@@ -402,7 +513,9 @@ int main()
 
 	auto queue = Queue::from(device);
 	auto cpool = CommandPool::from(device, queue);
-	auto cmdbuffers = group(device, cpool).allocate(window.frames_in_flight);
+	// TODO: new_cmd_buffers
+	// TODO: get rid of groups...
+	auto cmd_buffers = group(device, cpool).allocate(window.frames_in_flight);
 
 	auto dpool_info = DescriptorPool::Info {
 		.max_sets = 1 << 10,
@@ -414,41 +527,15 @@ int main()
 	auto compiler = Compiler::from(device, Compiler::Info());
 
 	// TODO: comb from compiler and other options...
-	auto comb = rpc {
-		.device = device
-	};
-
-	auto [grvs, streams, dsls, pipeline_layout] = comb(vs, fs);
-
-	auto vshader = generators::GLSL(vs).generate();
-	auto fshader = generators::GLSL(fs).generate();
-
-	fmt::println("vertex shader:\n{}", vshader);
-	fmt::println("fragment shader:\n{}", fshader);
-	
-	auto vspv = compiler.glsl_to_spirv(vshader, EShLangVertex);
-	auto fspv = compiler.glsl_to_spirv(fshader, EShLangFragment);
-
-	auto vmodule = compiler.spirv_to_shader_module(vspv);
-	auto fmodule = compiler.spirv_to_shader_module(fspv);
-
-	// TODO: automate the input assembler
-	auto binding_descs = sequence_to_vertex_bindings(streams);
-	auto attribute_descs = sequence_to_vertex_attributes(streams);
-
-	// TODO: shoudl eventually remove RasterizationPipeline
-	auto pipeline_info = RasterizationPipeline::Info {
-		.vmodule = vmodule,
-		.fmodule = fmodule,
-		.renderpass = rp,
+	auto comb = RasterizationPipelineCombinator {
+		.device = device,
+		.compiler = compiler,
+		.render_pass = rp,
 		.extent = window.extent(),
-		.bindings = binding_descs,
-		.attributes = attribute_descs,
-		.layout = pipeline_layout,
 		.depth_test = true,
 	};
 
-	auto pipeline = RasterizationPipeline::from(device, dld, pipeline_info);
+	auto pipeline = comb(vs, fs);
 
 	constexpr mrd::ModelEncodings encodings;
 
@@ -501,7 +588,7 @@ int main()
 	Transform xform;
 
 	xform.translation = glm::vec3(0, 0, -10);
-	aperature.aspect = static_cast <float> (window.extent().width) / window.extent().height;
+	aperature.aspect = float(window.extent().width) / window.extent().height;
 
 	// TODO: if we have a conditional mirror buffer with prepopulated
 	// flags, then move extra flags to the last param...
@@ -536,7 +623,7 @@ int main()
 	auto dsets = device.logical.allocateDescriptorSets(
 		vk::DescriptorSetAllocateInfo()
 			.setDescriptorPool(dpool)
-			.setSetLayouts(dsls),
+			.setSetLayouts(pipeline.dsls),
 		dld
 	);
 
@@ -627,7 +714,7 @@ int main()
 		if (!acquired)
 			continue;
 
-		auto &cmd = cmdbuffers[window.frame_index];
+		auto &cmd = cmd_buffers[window.frame_index];
 
 		cmd.reset();
 		cmd.begin(vk::CommandBufferBeginInfo());
@@ -648,7 +735,7 @@ int main()
 			.setClearValues(clear_values);
 
 		cmd.beginRenderPass(rp_begin, vk::SubpassContents::eInline);
-		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.handle);
 		cmd.bindDescriptorSets(
 			vk::PipelineBindPoint::eGraphics,
 			pipeline.layout,
