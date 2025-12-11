@@ -9,6 +9,7 @@
 template <auto &ref>
 struct vertex_buffer_for_reference {
 	static_assert(false, "not a stream");
+	// TODO: std::any as a universal acceptor?
 	using type = std::nullptr_t;
 };
 
