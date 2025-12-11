@@ -9,7 +9,7 @@ struct A {
 	$reflection(a, b, c);
 };
 
-using MA = $mirror(A, layouts::std430);
+using MA = TypeMirror <A, layouts::std430>;
 static_assert(sizeof(MA) == 12);
 static_assert(offsetof(MA, a) == 0);
 static_assert(offsetof(MA, b) == 4);
@@ -26,7 +26,7 @@ struct Vec2Tail {
 	$reflection(uv, weight);
 };
 
-using MVec2Tail = $mirror(Vec2Tail, layouts::std430);
+using MVec2Tail = TypeMirror <Vec2Tail, layouts::std430>;
 static_assert(alignof(MVec2Tail) == 8);
 static_assert(sizeof(MVec2Tail) == 16);
 static_assert(offsetof(MVec2Tail, uv) == 0);
@@ -40,7 +40,7 @@ struct Padding {
 	$reflection(x, v);
 };
 
-using MPadding = $mirror(Padding, layouts::std430);
+using MPadding = TypeMirror <Padding, layouts::std430>;
 static_assert(alignof(MPadding) == 16);
 static_assert(sizeof(MPadding) == 32);
 static_assert(offsetof(MPadding, x) == 0);
@@ -55,7 +55,7 @@ struct Nested {
 	$reflection(pos, temp);
 };
 
-using MNested = $mirror(Nested, layouts::std430);
+using MNested = TypeMirror <Nested, layouts::std430>;
 static_assert(alignof(MNested) == 16);
 static_assert(sizeof(MNested) == 16);
 static_assert(offsetof(MNested, pos) == 0);
@@ -70,7 +70,7 @@ struct Outer {
 	$reflection(id, inner, flags);
 };
 
-using MOuter = $mirror(Outer, layouts::std430);
+using MOuter = TypeMirror <Outer, layouts::std430>;
 static_assert(alignof(MOuter) == 16);
 static_assert(sizeof(MOuter) == 48);
 static_assert(offsetof(MOuter, id) == 0);
@@ -84,7 +84,7 @@ struct VectorArray {
 	$reflection(elements);
 };
 
-using MVectorArray = $mirror(VectorArray, layouts::std430);
+using MVectorArray = TypeMirror <VectorArray, layouts::std430>;
 static_assert(alignof(MVectorArray) == 16);
 static_assert(sizeof(MVectorArray) == 32);
 static_assert(alignof(decltype(MVectorArray::elements)::value_type) == 16);
@@ -99,7 +99,7 @@ struct RuntimeBuffer {
 	$reflection(count, values);
 };
 
-using MRuntimeBuffer = $mirror(RuntimeBuffer, layouts::std430);
+using MRuntimeBuffer = TypeMirror <RuntimeBuffer, layouts::std430>;
 static_assert(alignof(MRuntimeBuffer) == 16);
 static_assert(offsetof(MRuntimeBuffer, count) == 0);
 static_assert(offsetof(MRuntimeBuffer, values) == 16);

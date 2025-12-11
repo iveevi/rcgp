@@ -25,6 +25,9 @@ AttributeStream <vec3> normal;
 
 // TODO: should also have a layout; this needs to be written in the shader though
 MonoConstantBuffer <View> view;
+// TODO: we should allow standalone resource handles to act as references...
+// then we can avoid the hokey pokey of referece_base being different/specialized
+// in any case ray payloads would be standalone references
 MonoConstantBuffer <Shared> shared;
 
 auto vs = $vertex $fn($use(position), $use(normal), $use(view), $use(shared)) -> $returns(Position, vec3)
@@ -49,33 +52,59 @@ auto fs = $fragment $fn($use(light_direction), $use(shared), vec3 normal) -> $re
 template <typename X, typename Y>
 struct Commands {};
 
+// TODO: group allocation record should be a proper type...
+// template <...> struct group_allocation { get_set_for <ref> = ... };
+template <auto &ref, auto &... refs, size_t ... Is>
+constexpr auto group_allocation_set_for(const std::tuple <group_allocation_record <refs, Is>...> &)
+{
+	constexpr auto matches = std::array {
+		std::same_as <
+			reference <ref>,
+			reference <refs>
+		>...
+	};
+
+	constexpr auto index = first_on(matches);
+	if constexpr (index < 0) {
+		static_assert(false, "reference not in group allocation");
+		return 0;
+	} else {
+		return Is...[index];
+	}
+}
+
 // TODO: descriptor mirrors for each resource group...
 // for monoX this degenerates to a single descriptor write
 // for aggregates we need a proper mirror...
+
+template <auto &ref>
+struct Descriptor : vk::DescriptorSet {};
 
 // AttributeStreams := sequence <reference <Stream>...>
 // GroupAllocation := sequence <reference <GRV>...>
 template <typename AttributeStreams, typename GroupAllocation, size_t Sets>
 struct AnnotatedRasterizationPipeline {
+	vk::Device device;
 	vk::Pipeline handle;
 	vk::PipelineLayout layout;
 	std::array <vk::DescriptorSetLayout, Sets> dsls;
 
-	// TODO: using VertexBuffer <ref> = ?
-	// TODO: using IndexBuffer = ?
-
-	// TODO: new_descriptor <ref> () method
-
-	// TODO: bind_vertex_buffers(...) -> Commands[X, Y]
+	template <auto &ref>
+	auto new_descriptor(const DescriptorPool &dpool) const {
+		constexpr auto set = group_allocation_set_for <ref> (GroupAllocation());
+		auto dset = device.allocateDescriptorSets(
+			vk::DescriptorSetAllocateInfo()
+				.setDescriptorPool(dpool)
+				.setSetLayouts(dsls[set])
+		).front();
+		return Descriptor <ref> (dset);
+	}
 };
 
-// TODO: mirror buffer needs minimum buffer usage flags...
-// template flags...
-// e.g. vertex buffer, uniform buffer, storage buffer, index buffer...
-
-// Vertex buffer associated to a stream resource
-template <auto &ref>
-struct VertexBuffer {};
+// TODO: IndexBuffer <topology, index type>, then is translated
+// accordingly when fed to pipeline draw commands; but
+// topology MUST match; also need to match topology to
+// a canonical representation
 
 template <typename ... Ts>
 struct find_implicit_context {
@@ -274,9 +303,10 @@ struct RasterizationPipelineCombinator {
 
 		return AnnotatedRasterizationPipeline <
 			decltype(streams),
-			decltype(gvrs),
+			decltype(alloc),
 			dsls.size()
 		> {
+			.device = device.logical,
 			.handle = pipeline,
 			.layout = layout,
 			.dsls = dsls,
@@ -293,6 +323,44 @@ RasterizationPipelineCombinator(
 	const vk::Extent2D &,
 	bool
 ) -> RasterizationPipelineCombinator <Subpasses...>;
+
+// Specialized descriptor for this application
+struct DescriptorWrite {
+	vk::WriteDescriptorSet write;
+	vk::DescriptorBufferInfo buffer_info;
+
+	DescriptorWrite() {
+		// NOTE: dst binding can be evaluated statically...
+		write
+			.setDescriptorCount(1)
+			.setDstBinding(0)
+			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+			.setBufferInfo(buffer_info);
+	}
+
+	DescriptorWrite(const DescriptorWrite &) = delete;
+	DescriptorWrite &operator=(const DescriptorWrite &) = delete;
+
+	// TODO: requires the resource to be a buffer type with the same exact type
+	// TODO: template with MirrorBuffer...
+	auto &set_buffer(const auto &buf) {
+		buffer_info = buf.descriptor_info();
+		return *this;
+	}
+
+	auto &set_descriptor(const vk::DescriptorSet &dset) {
+		write.setDstSet(dset);
+		return *this;
+	}
+};
+
+template <auto &ref>
+struct DescriptorWritePair {
+	const Descriptor <ref> &descriptor;
+	const ResourceOf <ref> &resource;
+};
+
+// TODO: CTAD for the above...
 
 // TODO: work group is a parameter to shaders that is an intrinsic...
 // WorkGroup <8, 8> group... group.block_idx, thread_idx and so on
@@ -409,23 +477,23 @@ int main()
 	mesh.deduplicate();
 	fmt::println("bytes: {} MB", mb(mesh.size_bytes()));
 
-	auto pbuf = VertexMirrorBuffer <array <vec3>, layouts::std430> ::from(
+	auto pbuf = VertexBufferOf <position> ::from(
 		device, mesh.positions.size(),
 		vk::MemoryPropertyFlagBits::eHostVisible
 		| vk::MemoryPropertyFlagBits::eHostCoherent
 	).write(span(mesh.positions).map(
-		[](auto p) -> $mirror(vec3, layouts::std430) {
+		[](auto p) -> DynamicElementOf <position> {
 			return { p.x, p.y, p.z };
 		}
 	));
 
-	auto nbuf = VertexMirrorBuffer <array <vec3>, layouts::scalar> ::from(
+	auto nbuf = VertexBufferOf <normal> ::from(
 		device, mesh.normals.size(),
 		vk::MemoryPropertyFlagBits::eHostVisible
 		| vk::MemoryPropertyFlagBits::eHostCoherent,
 		vk::BufferUsageFlagBits::eTransferDst
 	).write(span(mesh.normals).map(
-		[](auto p) -> $mirror(vec3, layouts::scalar) {
+		[](auto p) -> DynamicElementOf <normal> {
 			return { p.x, p.y, p.z };
 		}
 	));
@@ -435,7 +503,8 @@ int main()
 		vk::MemoryPropertyFlagBits::eHostVisible
 		| vk::MemoryPropertyFlagBits::eHostCoherent
 	).write(span(mesh.primitives).map(
-		[](auto p) -> $mirror(ivec3, layouts::scalar) {
+		// TODO: -> DynamicElementOf <?> tis unclear...
+		[](auto p) -> TypeMirror <ivec3, layouts::scalar> {
 			return { p.x, p.y, p.z };
 		}
 	));
@@ -447,64 +516,86 @@ int main()
 	xform.translation = glm::vec3(0, 0, -10);
 	aperature.aspect = float(window.extent().width) / window.extent().height;
 
-	auto view_buf = UniformMirrorBuffer <View, layouts::std430> ::from(
+	// materials would be std::vector <ResourceOf <view>>
+	// TODO: use a similar strategy for pipelines and descriptors...
+	// RasterizationPipelineOf <vs, fs> ppl;
+	// or MeshShadingPipelineOf <ts, ms, fs>
+	// or ComputePipelineOf <cs>
+	// or RayTracingPipelineOf <?...>
+	//
+	// command buffers will have this problem...
+	//
+	// TODO: combinators for sequential compute pipelines...?
+	// but then to mediate with resource barriers
+	//
+	// the problem with descriptor sets is that they are technically unresolved
+	// if they dont bind everything...
+	auto view_buf = ResourceOf <view> ::from(
 		device,
 		vk::MemoryPropertyFlagBits::eHostVisible
 		| vk::MemoryPropertyFlagBits::eHostCoherent
-	).write($mirror(View) {
+	).write(MirrorOf <view> {
 		.proj = aperature.projection_matrix(),
 		.view = xform.view_matrix(),
 		.model = glm::mat4(1.0f),
 	});
 	
-	auto light_buf = UniformMirrorBuffer <vec3, layouts::std430> ::from(
+	auto light_buf = ResourceOf <light_direction> ::from(
 		device,
 		vk::MemoryPropertyFlagBits::eHostVisible
 		| vk::MemoryPropertyFlagBits::eHostCoherent
 	).write(glm::normalize(glm::vec3(1, 1, 1)));
 	
-	auto shared_buf = UniformMirrorBuffer <Shared, layouts::std430> ::from(
+	auto shared_buf = ResourceOf <shared> ::from(
 		device,
 		vk::MemoryPropertyFlagBits::eHostVisible
 		| vk::MemoryPropertyFlagBits::eHostCoherent
-	).write($mirror(Shared) {
+	).write(MirrorOf <shared> {
 		.tint = glm::vec3(1, 0.5, 0.5),
 		.scale = 1.5f,
 	});
 
-	auto dsets = device.new_descriptor_sets(dpool, pipeline.dsls);
-
-	auto view_buf_info = view_buf.descriptor_info();
-	auto view_write = vk::WriteDescriptorSet()
-		.setDstSet(dsets[0])
-		.setDstBinding(0)
-		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-		.setBufferInfo(view_buf_info);
+	// TODO: OR do bulk updates...
+	// even resource groups are just one descriptor set!
+	// so the mirror should have all the values
+	// (e.g. buffers, images, constants)
+	// and then do a bulk update with:
+	// device.write_descriptors({ view_descriptor, view_resource_handle } ...)
+	// which outputs written_descriptor...
+	// then theres only two states: Descriptor <view, default = true (bound) or false (unbound)>
+	// bulk update makes sense since its a single descriptor...
 	
-	auto shared_buf_info = shared_buf.descriptor_info();
-	auto shared_write = vk::WriteDescriptorSet()
-		.setDstSet(dsets[1])
-		.setDstBinding(0)
-		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-		.setBufferInfo(shared_buf_info);
-	
-	auto light_buf_info = light_buf.descriptor_info();
-	auto light_write = vk::WriteDescriptorSet()
-		.setDstSet(dsets[2])
-		.setDstBinding(0)
-		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-		.setBufferInfo(light_buf_info);
+	auto view_descriptor = pipeline.new_descriptor <view> (dpool);
+	auto shared_descriptor = pipeline.new_descriptor <shared> (dpool);
+	auto light_direction_descriptor = pipeline.new_descriptor <light_direction> (dpool);
 
+	auto view_write = DescriptorWrite();
+	view_write.set_buffer(view_buf);
+	view_write.set_descriptor(view_descriptor);
+	// TODO: should become
+	auto view_write_pair = DescriptorWritePair <view> {
+		view_descriptor,
+		view_buf
+	};
+	
+	auto shared_write = DescriptorWrite();
+	shared_write.set_buffer(shared_buf);
+	shared_write.set_descriptor(shared_descriptor);
+	
+	auto light_write = DescriptorWrite();
+	light_write.set_buffer(light_buf);
+	light_write.set_descriptor(light_direction_descriptor);
+
+	// TODO: methods...
 	device.logical.updateDescriptorSets(
-		{ view_write, shared_write, light_write },
+		{ view_write.write, shared_write.write, light_write.write },
 		nullptr, dld
 	);
 
 	window.on_drag(GLFW_MOUSE_BUTTON_LEFT, [&](double, double, double dx, double dy) {
-		// Rotate camera in place (viewport tumble): yaw around world up, pitch around camera right.
-		const float rot_speed = 0.005f; // radians per pixel
-		auto yaw = glm::angleAxis(-float(dx * rot_speed), glm::vec3(0.0f, 1.0f, 0.0f));
-		auto pitch = glm::angleAxis(float(dy * rot_speed), xform.right());
+		const float speed = 0.005f;
+		auto yaw = glm::angleAxis(-float(dx * speed), glm::vec3(0.0f, 1.0f, 0.0f));
+		auto pitch = glm::angleAxis(float(dy * speed), xform.right());
 		xform.rotation = glm::normalize(pitch * yaw * xform.rotation);
 	});
 
@@ -545,7 +636,7 @@ int main()
 	
 		aperature.aspect = static_cast <float> (extent.width) / extent.height;
 
-		view_buf.write($mirror(View) {
+		view_buf.write(TypeMirror <View> {
 			.proj = aperature.projection_matrix(),
 			.view = xform.view_matrix(),
 			.model = model,
@@ -585,7 +676,7 @@ int main()
 		cmd.bindDescriptorSets(
 			vk::PipelineBindPoint::eGraphics,
 			pipeline.layout,
-			0, dsets, {}
+			0, { view_descriptor, shared_descriptor, light_direction_descriptor }, {}
 		);
 		cmd.bindVertexBuffers(0, { pbuf.handle, nbuf.handle }, { 0, 0 });
 		cmd.bindIndexBuffer(ibuf.handle, 0, vk::IndexType::eUint32);

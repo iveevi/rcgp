@@ -7,7 +7,7 @@
 template <reflected T, template <typename> typename L, vk::VertexInputRate R>
 auto binding_description_for_attribute_stream(const AttributeStream <T, L, R> &, size_t binding)
 {
-	using M = data_mirror <T, L> ::type;
+	using M = TypeMirror <T, L>;
 	return vk::VertexInputBindingDescription()
 		.setBinding(binding)
 		.setStride(sizeof(M))

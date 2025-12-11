@@ -2,6 +2,8 @@
 
 #include "meta/attribute_description.hpp"
 #include "meta/binding_description.hpp"
+#include "meta/collect_gvrs.hpp"
+#include "meta/collect_streams.hpp"
 #include "meta/context.hpp"
 #include "meta/dynamic.hpp"
 #include "meta/function_construction.hpp"
@@ -12,6 +14,7 @@
 #include "meta/mirror_buffer.hpp"
 #include "meta/reconstruct_type.hpp"
 #include "meta/reference.hpp"
+#include "meta/reference_introspection.hpp"
 #include "meta/reflection.hpp"
 #include "meta/reflection_builder.hpp"
 #include "meta/resource_group_filter.hpp"
@@ -25,8 +28,6 @@
 #include "meta/this_injection.hpp"
 #include "meta/type_hash.hpp"
 #include "meta/type_string_extensions.hpp"
-#include "meta/collect_gvrs.hpp"
-#include "meta/collect_streams.hpp"
 
 #include "util/span.hpp"
 

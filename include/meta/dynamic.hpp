@@ -1,19 +1,9 @@
 #pragma once
 
-#include "reflection.hpp"
+#include "../util/array.hpp"
 #include "expand_reflection.hpp"
+#include "reflection.hpp"
 #include "static_access_chain.hpp"
-
-template <size_t N>
-constexpr int64_t first_on(const std::array <bool, N> &x)
-{
-	for (size_t i = 0; i < N; i++) {
-		if (x[i])
-			return i;
-	}
-
-	return -1;
-}
 
 template <typename T>
 requires is_dynamic_reflection_v <T>

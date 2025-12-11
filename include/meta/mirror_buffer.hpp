@@ -3,13 +3,20 @@
 #include "mirror.hpp"
 #include "../rhi/buffer.hpp"
 
+template <reflected T, template <typename> typename L>
+using dynamic_element_of_mirror = decltype([] {
+	TypeMirror <T, L> data;
+	auto [dyn, offset] = dynamic_part <T> (data);
+	return typename std::decay_t <decltype(dyn)> ::value_type();
+} ());
+
 template <reflected T, template <typename> typename L, vk::BufferUsageFlagBits F>
 struct MirrorBuffer : Buffer {};
 
 template <reflected T, template <typename> typename L, vk::BufferUsageFlagBits F>
 requires (is_static_v <T>)
 struct MirrorBuffer <T, L, F> : Buffer {
-	using value_type = data_mirror <T, L> ::type;
+	using value_type = TypeMirror <T, L>;
 
 	value_type new_value() const {
 		return value_type();
@@ -41,12 +48,8 @@ struct MirrorBuffer <T, L, F> : Buffer {
 template <reflected T, template <typename> typename L, vk::BufferUsageFlagBits F>
 requires (is_dynamic_v <T>)
 struct MirrorBuffer <T, L, F> : Buffer {
-	using value_type = data_mirror <T, L> ::type;
-	using element_type = decltype([] {
-		value_type data;
-		auto [dyn, offset] = dynamic_part <T> (data);
-		return typename std::decay_t <decltype(dyn)> ::value_type();
-	} ());
+	using value_type = TypeMirror <T, L>;
+	using element_type = dynamic_element_of_mirror <T, L>;
 	
 	value_type new_value() const {
 		return value_type();
