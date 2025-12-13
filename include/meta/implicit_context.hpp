@@ -16,17 +16,23 @@ struct is_implicit_context <implicit_context <refs...>> : std::true_type {};
 template <typename T>
 constexpr bool is_implicit_context_v = is_implicit_context <T> ::value;
 
+template <typename ... Ts>
+struct find_implicit_context {
+	static constexpr auto contexts = std::array { is_implicit_context_v <Ts>... };
+	static constexpr auto idx = first_on(contexts);
+	using type = Ts...[idx];
+};
+
 template <auto & ... refs>
 auto new_implicit_context_impl(implicit_context <refs...>) -> implicit_context <refs...>;
 
 template <typename T, typename ... Args, auto &... refs>
 auto new_implicit_context_impl(implicit_context <refs...> context, T *, Args *... args)
 {
-	if constexpr (is_reference <T> ::value) {
+	if constexpr (is_reference <T> ::value)
 		return new_implicit_context_impl <Args...> (implicit_context <refs ..., T::handle> (), args...);
-	} else {
+	else
 		return new_implicit_context_impl <Args...> (context, args...);
-	}
 }
 
 template <typename ... Args>

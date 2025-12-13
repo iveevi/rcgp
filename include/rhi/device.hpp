@@ -10,6 +10,9 @@ struct CommandPool;
 struct DescriptorPool;
 struct Frame;
 
+template <auto &ref, bool resolved>
+struct DescriptorWritePair;
+
 struct Device {
 	vk::Device logical;
 	vk::PhysicalDevice physical;
@@ -42,6 +45,9 @@ struct Device {
 
 		return RenderPass <Ts...> (logical.createRenderPass(rp_info));
 	}
+
+	template <auto &...refs, bool ... rs>
+	[[nodiscard]] auto update_descriptors(DescriptorWritePair <refs, rs> ... dwpairs);
 
 	void wait_for_frame(const Frame &frame, uint64_t timeout = UINT64_MAX) const;
 	bool acquire_image_for_frame(Frame &frame, uint64_t timeout = UINT64_MAX) const;

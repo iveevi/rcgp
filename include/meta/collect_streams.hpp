@@ -1,6 +1,6 @@
 #pragma once
 
-#include "context.hpp"
+#include "implicit_context.hpp"
 #include "resources.hpp"
 
 template <auto &ref, typename ... Ts>

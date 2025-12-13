@@ -1,6 +1,6 @@
 #pragma once
 
-#include "context.hpp"
+#include "implicit_context.hpp"
 #include "reference.hpp"
 #include "resources.hpp"
 #include "shader_stage.hpp"

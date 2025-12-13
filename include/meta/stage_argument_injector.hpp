@@ -2,7 +2,7 @@
 
 #include "../dsl/instructions.hpp"
 #include "../dsl/jems.hpp"
-#include "context.hpp"
+#include "implicit_context.hpp"
 #include "injection_state.hpp"
 #include "injector.hpp"
 #include "reference.hpp"
