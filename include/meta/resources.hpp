@@ -78,8 +78,7 @@ using Sampler1D = Sampler <float, 1>;
 using Sampler2D = Sampler <float, 2>;
 using Sampler3D = Sampler <float, 3>;
 
-// NOTE: ray payload will be a resource block!
-template <typename T>
+template <reflected T>
 struct RayPayload : T {};
 
 // Introspection

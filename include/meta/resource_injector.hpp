@@ -27,7 +27,6 @@ struct resource_injector {
 	}
 };
 
-// TODO: these can be combined using RType::reflection and resource_intrinsic <reflection>
 template <reflected T, template <typename> typename L, UniformBuffer <T, L> &rsrc>
 struct resource_injector <UniformBuffer <T, L>, rsrc> {
 	static auto main(reference <rsrc> &value, const InjectionState &state) {

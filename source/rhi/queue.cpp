@@ -1,0 +1,37 @@
+#include "rhi/queue.hpp"
+
+void Queue::submit(const vk::ArrayProxy <vk::CommandBuffer> &cmds,
+		  const vk::ArrayProxy <vk::Semaphore> &wait,
+	      	  const vk::ArrayProxy <vk::Semaphore> &signal,
+	      	  const vk::PipelineStageFlags &wait_stage,
+	      	  const vk::Fence &fence) const
+{
+	auto info = vk::SubmitInfo()
+		.setCommandBuffers(cmds)
+		.setWaitSemaphores(wait)
+		.setSignalSemaphores(signal)
+		.setWaitDstStageMask(wait_stage);
+
+	vk::Queue::submit(info, fence);
+}
+
+vk::Result Queue::present(const vk::SwapchainKHR &swapchain,
+		     uint32_t index,
+		     const vk::ArrayProxy <vk::Semaphore> &semaphores) const
+{
+	auto info = vk::PresentInfoKHR()
+		.setSwapchains(swapchain)
+		.setImageIndices(index)
+		.setWaitSemaphores(semaphores);
+
+	return presentKHR(info);
+}
+
+Queue Queue::from(const Device &device)
+{
+	// TODO: queue info struct with family flags..
+	Queue result(device.logical.getQueue(0, 0));
+	result.family_index = 0;
+	result.queue_index = 0;
+	return result;
+}

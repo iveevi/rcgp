@@ -19,10 +19,15 @@ include_directories(include ext/glslang ext/glm ext/mrd)
 
 add_library(ugp STATIC
 	source/rhi/buffer.cpp
+	source/rhi/command_pool.cpp
 	source/rhi/compiler.cpp
 	source/rhi/device.cpp
+	source/rhi/descriptor_pool.cpp
 	source/rhi/image.cpp
 	source/rhi/session.cpp
+	source/rhi/glfw.cpp
+	source/rhi/queue.cpp
+	source/rhi/render_pass.cpp
 	source/rhi/window.cpp
 )
 
