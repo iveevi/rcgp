@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../util/array.hpp"
+#include "reference.hpp"
 #include "reflection.hpp"
 #include "resources.hpp"
 #include "symbolic_format.hpp"
@@ -28,5 +29,8 @@ auto sequence_to_vertex_attributes_impl(const sequence <reference <refs>...> &, 
 template <auto &... refs>
 auto sequence_to_vertex_attributes(const sequence <reference <refs>...> &in)
 {
-	return sequence_to_vertex_attributes_impl(in, std::make_index_sequence <sizeof...(refs)> ());
+	if constexpr (sizeof...(refs) == 0)
+		return std::array <vk::VertexInputAttributeDescription, 0> ();
+	else
+		return sequence_to_vertex_attributes_impl(in, std::make_index_sequence <sizeof...(refs)> ());
 }

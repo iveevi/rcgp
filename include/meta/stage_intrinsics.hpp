@@ -40,13 +40,6 @@ struct Position {
 	}
 };
 
-enum Topology {
-	Point,
-	Line,
-	Triangle,
-	Patch,
-};
-
 // Optional result of the vertex shader
 template <primitive T, RateProperties P>
 struct Interpolant : jems::handle {

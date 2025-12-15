@@ -1,11 +1,16 @@
 #pragma once
 
+#include <array>
 #include <functional>
 
+#include "../util/array.hpp"
 #include "reference.hpp"
 
 template <auto & ... refs>
-struct implicit_context {};
+struct implicit_context {
+	template <auto &ref>
+	using append = implicit_context <refs..., ref>;
+};
 
 template <typename T>
 struct is_implicit_context : std::false_type {};
@@ -23,22 +28,27 @@ struct find_implicit_context {
 	using type = Ts...[idx];
 };
 
-template <auto & ... refs>
-auto new_implicit_context_impl(implicit_context <refs...>) -> implicit_context <refs...>;
+template <typename Ctx, typename ... Args>
+struct filter_into_context {
+	using type = Ctx;
+};
 
-template <typename T, typename ... Args, auto &... refs>
-auto new_implicit_context_impl(implicit_context <refs...> context, T *, Args *... args)
-{
-	if constexpr (is_reference <T> ::value)
-		return new_implicit_context_impl <Args...> (implicit_context <refs ..., T::handle> (), args...);
-	else
-		return new_implicit_context_impl <Args...> (context, args...);
-}
+template <auto &... refs, auto &ref, typename ... Args>
+struct filter_into_context <implicit_context <refs...>, reference <ref>, Args...> {
+	using next = typename implicit_context <refs...> ::template append <ref>;
+	using type = typename filter_into_context <next, Args...> ::type;
+};
+
+template <typename Ctx, typename Arg, typename ... Args>
+struct filter_into_context <Ctx, Arg, Args...> {
+	using type = typename filter_into_context <Ctx, Args...> ::type;
+};
 
 template <typename ... Args>
 auto new_implicit_context(std::function <void (Args ...)>)
 {
-	return new_implicit_context_impl <Args...> (implicit_context <> (), (Args *) nullptr...);
+	using type = typename filter_into_context <implicit_context <>, Args...> ::type;
+	return type();
 }
 
 #define $context_capture(...) (decltype(new_implicit_context(std::function([](__VA_ARGS__) {}))) _ref_context __VA_OPT__(,) __VA_ARGS__)

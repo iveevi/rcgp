@@ -2,29 +2,47 @@
 
 #include "../dsl/jems.hpp"
 #include "../dsl/primitives.hpp"
-#include "reference.hpp"
 #include "reflection.hpp"
 #include "reflection_builder.hpp"
 #include "layout/all.hpp"
 
+// Corresponds to vertex buffes
 // TODO: shoudl be more restrictive than reflected... at least must be static
 template <reflected T,  template <typename> typename L = layouts::scalar, vk::VertexInputRate R = vk::VertexInputRate::eVertex>
-struct AttributeStream {
+struct AttributeStream : T {
 	using reflection = attribute_stream_reflection <T, R>;
 	DEFINE_REFLECTION_STAMP();
 };
 
-// TODO: should not allow attribute streams in resource groups... they should be standalone?
+// Corresponds to index buffers
+enum class Topology {
+	eTriangleList,
+	eTriangleFan,
+};
+
+template <Topology T, typename I>
+struct IndexBuffer {
+	static_assert(std::same_as <I, uint32_t>
+		&& std::same_as <I, uint16_t>);
+};
+
+// TODO: should not allow index/vertex buffers here
 template <reflected T>
-struct ResourceGroup {
+struct ResourceGroup : T {
 	using reflection = resource_group_reflection <T>;
+	DEFINE_REFLECTION_STAMP();
+};
+
+template <reflected T>
+struct PushConstant : T {
+	using reflection = push_constant_reflection <T>;
 	DEFINE_REFLECTION_STAMP();
 };
 
 // TODO: these need layouts...
 template <reflected T>
-struct ConstantBuffer : T {
-	using reflection = constant_buffer_reflection <T>;
+struct UniformBuffer : T {
+	using reflection = uniform_buffer_reflection <T>;
 	DEFINE_REFLECTION_STAMP();
 };
 
@@ -37,6 +55,12 @@ struct StorageBuffer : T {
 
 template <reflected T>
 using ArrayBuffer = StorageBuffer <array <T>>;
+
+template <reflected T, template <typename> typename L = layouts::std430>
+struct BufferReference {
+	// TODO: jems handle corresponding to
+	// device_address := uint64_t underneath
+};
 
 template <native_scalar T, size_t D>
 struct Sampler : jems::handle {
@@ -60,7 +84,7 @@ struct RayPayload : T {};
 
 // Aliases for single resource blocks
 template <reflected T>
-using MonoConstantBuffer = ResourceGroup <ConstantBuffer <T>>;
+using MonoConstantBuffer = ResourceGroup <UniformBuffer <T>>;
 
 template <reflected T>
 using MonoStorageBuffer = ResourceGroup <StorageBuffer <T>>;
@@ -74,7 +98,7 @@ template <typename T>
 struct is_global_resource_reflection <resource_group_reflection <T>> : std::true_type {};
 
 template <typename T>
-struct is_global_resource_reflection <constant_buffer_reflection <T>> : std::true_type {};
+struct is_global_resource_reflection <uniform_buffer_reflection <T>> : std::true_type {};
 
 template <typename T>
 struct is_global_resource_reflection <storage_buffer_reflection <T>> : std::true_type {};
@@ -101,14 +125,3 @@ constexpr bool is_attribute_stream_reflection_v = is_attribute_stream_reflection
 template <typename T>
 constexpr bool is_attribute_stream_v =
 	has_reflection <T> () && is_attribute_stream_reflection_v <typename T::reflection>;
-
-// Overriding reference behavior
-template <typename T, ResourceGroup <T> &rsrc>
-struct reference_base <rsrc> {
-	using type = T;
-};
-
-template <reflected T, template <typename> typename L, vk::VertexInputRate R, AttributeStream <T, L, R> &rsrc>
-struct reference_base <rsrc> {
-	using type = T;
-};

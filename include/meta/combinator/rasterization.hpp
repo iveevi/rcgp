@@ -51,7 +51,7 @@ template <auto &ref, ShaderStage ... Ss>
 auto reference_to_dsl_and_pcr(const Device &device, const stage_wrapper <reference <ref>, Ss...> &)
 {
 	// TODO: refactor to reference_to_descriptor_set_layout
-	using base = typename reference <ref> ::raw_base;
+	using base = typename reference <ref> ::base;
 	using R = expand_reflection_t <base>;
 
 	// TODO: collect all dslbs and pc ranges recursively
@@ -75,9 +75,13 @@ template <typename ... Ts>
 auto reference_sequence_to_dsl_and_pcr(const Device &device, const sequence <Ts...> &)
 {
 	// TODO: separate arrays for dsl and pc ranges
-	return std::array {
-		reference_to_dsl_and_pcr(device, Ts())...
-	};
+	if constexpr (sizeof...(Ts) == 0) {
+		return std::array <vk::DescriptorSetLayout, 0> ();
+	} else {
+		return std::array {
+			reference_to_dsl_and_pcr(device, Ts())...
+		};
+	}
 }
 
 template <typename ... Subpasses>

@@ -321,7 +321,7 @@ struct GLSL {
 						// TODO: xconstant must be resolved
 						if (grsrc.kind == GlobalResource::eXConstant)
 							modifier = "uniform";
-						else if (grsrc.kind == GlobalResource::eConstantBuffer)
+						else if (grsrc.kind == GlobalResource::eUniformBuffer)
 							modifier = "uniform";
 						else if (grsrc.kind == GlobalResource::eStorageBuffer)
 							modifier = "buffer";

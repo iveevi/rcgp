@@ -5,6 +5,7 @@
 #include "meta/collect_gvrs.hpp"
 #include "meta/collect_streams.hpp"
 #include "meta/combinator/rasterization.hpp"
+#include "meta/commands.hpp"
 #include "meta/descriptor.hpp"
 #include "meta/dynamic.hpp"
 #include "meta/function_construction.hpp"

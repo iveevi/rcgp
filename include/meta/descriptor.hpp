@@ -9,7 +9,7 @@ struct DescriptorOf : vk::DescriptorSet {};
 template <auto &ref, bool resolved>
 struct DescriptorWritePair {
 	const DescriptorOf <ref, resolved> &descriptor;
-	const ResourceOf <ref> &resource;
+	const ResourceMirrorOf <ref> &resource;
 
         // Number of write items required, can be
 	// determined without the pipeline

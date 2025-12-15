@@ -15,10 +15,10 @@ struct resource_intrinsic {
 };
 
 template <typename T>
-struct resource_intrinsic <constant_buffer_reflection <T>> {
+struct resource_intrinsic <uniform_buffer_reflection <T>> {
 	static auto intrinsic(uint32_t binding) {
 		auto type = reconstruct_type <T> ();
-		auto grsrc = jems::global_resource(type, GlobalResource::eConstantBuffer, std::nullopt, binding);
+		auto grsrc = jems::global_resource(type, GlobalResource::eUniformBuffer, std::nullopt, binding);
 		return grsrc;
 	}
 };

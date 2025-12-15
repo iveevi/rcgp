@@ -118,7 +118,7 @@ struct Assembly {
 		switch (x.kind) {
 		case GlobalResource::eXConstant: kind = "xconstant"; break;
 		case GlobalResource::ePushConstant: kind = "push_constant"; break;
-		case GlobalResource::eConstantBuffer: kind = "constantm_buffer"; break;
+		case GlobalResource::eUniformBuffer: kind = "constant_buffer"; break;
 		case GlobalResource::eStorageBuffer: kind = "storage_buffer"; break;
 		case GlobalResource::eSampler: kind = "sampler"; break;
 		default:

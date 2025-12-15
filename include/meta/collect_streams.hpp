@@ -6,7 +6,7 @@
 template <auto &ref, typename ... Ts>
 auto add_stream(const sequence <Ts...> &in)
 {
-	using base = reference <ref> ::raw_base;
+	using base = reference <ref> ::base;
 	if constexpr (!is_attribute_stream_v <base>) {
 		return in;
 	} else {
@@ -16,6 +16,13 @@ auto add_stream(const sequence <Ts...> &in)
 		else
 			return sequence <Ts..., reference <ref>> ::singleton;
 	}
+}
+
+template <typename ... Ts>
+auto add_stream_from_implicit_context(const sequence <Ts...> &in, const implicit_context <> &)
+{
+	// No implicit captures to project into streams; return input unchanged.
+	return in;
 }
 
 template <typename ... Ts, auto &b, auto &... bs>

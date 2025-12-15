@@ -42,7 +42,10 @@ template <typename T>
 struct resource_group_reflection {};
 
 template <typename T>
-struct constant_buffer_reflection {};
+struct push_constant_reflection {};
+
+template <typename T>
+struct uniform_buffer_reflection {};
 
 template <typename T>
 struct storage_buffer_reflection {};

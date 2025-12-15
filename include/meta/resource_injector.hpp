@@ -23,10 +23,10 @@ struct resource_injector {
 	}
 };
 
-template <reflected T, ConstantBuffer <T> &rsrc>
-struct resource_injector <ConstantBuffer <T>, rsrc> {
+template <reflected T, UniformBuffer <T> &rsrc>
+struct resource_injector <UniformBuffer <T>, rsrc> {
 	static auto main(reference <rsrc> &value, const InjectionState &state) {
-		auto grsrc = resource_intrinsic <constant_buffer_reflection <T>> ::intrinsic(0);
+		auto grsrc = resource_intrinsic <uniform_buffer_reflection <T>> ::intrinsic(0);
 		$tsb.context.add_global_resource <rsrc> (grsrc);
 		injector <T> ::main(value, grsrc);
 		return state.next(false, false);

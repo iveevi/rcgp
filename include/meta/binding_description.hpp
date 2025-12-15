@@ -1,8 +1,9 @@
 #pragma once
 
+#include "mirror.hpp"
+#include "reference.hpp"
 #include "reflection.hpp"
 #include "resources.hpp"
-#include "mirror.hpp"
 
 template <reflected T, template <typename> typename L, vk::VertexInputRate R>
 auto binding_description_for_attribute_stream(const AttributeStream <T, L, R> &, size_t binding)
@@ -25,5 +26,8 @@ auto sequence_to_vertex_bindings_impl(const sequence <reference <refs>...> &, co
 template <auto &... refs>
 auto sequence_to_vertex_bindings(const sequence <reference <refs>...> &in)
 {
-	return sequence_to_vertex_bindings_impl(in, std::make_index_sequence <sizeof...(refs)> ());
+	if constexpr (sizeof...(refs) == 0)
+		return std::array <vk::VertexInputBindingDescription, 0> ();
+	else
+		return sequence_to_vertex_bindings_impl(in, std::make_index_sequence <sizeof...(refs)> ());
 }

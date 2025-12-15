@@ -1,7 +1,9 @@
 #pragma once
 
-#include "mirror.hpp"
 #include "../rhi/buffer.hpp"
+#include "dynamic.hpp"
+#include "mirror.hpp"
+#include "resources.hpp"
 
 template <reflected T, template <typename> typename L>
 using dynamic_element_of_mirror = decltype([] {
@@ -16,6 +18,7 @@ struct MirrorBuffer : Buffer {};
 template <reflected T, template <typename> typename L, vk::BufferUsageFlagBits F>
 requires (is_static_v <T>)
 struct MirrorBuffer <T, L, F> : Buffer {
+	using symbolic_type = T;
 	using value_type = TypeMirror <T, L>;
 
 	value_type new_value() const {
@@ -48,6 +51,7 @@ struct MirrorBuffer <T, L, F> : Buffer {
 template <reflected T, template <typename> typename L, vk::BufferUsageFlagBits F>
 requires (is_dynamic_v <T>)
 struct MirrorBuffer <T, L, F> : Buffer {
+	using symbolic_type = T;
 	using value_type = TypeMirror <T, L>;
 	using element_type = dynamic_element_of_mirror <T, L>;
 	
@@ -89,3 +93,19 @@ using IndexMirrorBuffer = MirrorBuffer <T, L, vk::BufferUsageFlagBits::eIndexBuf
 
 template <reflected T, template <typename> typename L>
 using UniformMirrorBuffer = MirrorBuffer <T, L, vk::BufferUsageFlagBits::eUniformBuffer>;
+
+// Now we can add some specializations for resource translation
+template <>
+struct resource_translator <IndexBuffer <Topology::eTriangleList, uint32_t>> {
+	// TODO: probably applies to other topologies
+	using type = IndexMirrorBuffer <array <ivec3>, layouts::scalar>;
+	using value_type = type::value_type;
+	using element_type = type::element_type;
+};
+
+template <reflected T>
+struct resource_translator <UniformBuffer <T>> {
+	using type = UniformMirrorBuffer <T, layouts::std430>;
+	using value_type = type::value_type;
+	using element_type = std::nullptr_t;
+};

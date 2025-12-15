@@ -2,6 +2,7 @@
 
 #include "../dsl/primitives.hpp"
 #include "mirror_buffer.hpp"
+#include "reference.hpp"
 #include "reflection.hpp"
 #include "resources.hpp"
 
@@ -33,74 +34,32 @@ struct VertexBufferOf  <ref> : VertexMirrorBuffer <array <T>, L> {
 };
 
 // Reference to resource handle
-template <auto &ref>
-struct resource_for_reference {
-	static_assert(false, "not a resource group");
-	using type = std::nullptr_t;
-};
-
-template <typename T>
-struct resource_for_reference_impl {
-	static_assert(false, ($ss("resource for reference (impl) not implemented for type ") + $ss_type(T)).view());
-	using type = std::nullptr_t;
-};
-
-// TODO: aggregates become corresponding mirrors...
-
+// TODO: specialization for aggregate
 template <reflected T>
-struct resource_for_reference_impl <ConstantBuffer <T>> {
-	// TODO: buffers need layouts...
-	using type = UniformMirrorBuffer <T, layouts::std430>;
-};
-
-template <reflected T, ResourceGroup <T> &ref>
-struct resource_for_reference <ref> {
-	// TODO: avoid this impl stuff; static cast?
-	using type = resource_for_reference_impl <T> ::type; 
-};
-
-// TODO: lower to raw_base of reference...
-template <auto &ref>
-using ResourceOf = resource_for_reference <ref> ::type;
-
-// Reference to type mirror of contents (if its a buffer or stream)
-template <reflected T>
-struct type_mirror_for_resource {
-	static_assert(false, ($ss("type mirror not implemented for resource of type ") + $ss_type(T)).view());
-	using type = std::nullptr_t;
-	using element = std::nullptr_t;
+struct resource_translator <ResourceGroup <T>> {
+	using defer = resource_translator <T>;
+	using type = defer::type;
+	using value_type = defer::value_type;
+	using element_type = defer::element_type;
 };
 
 template <reflected T, template <typename> typename L, vk::VertexInputRate R>
-struct type_mirror_for_resource <AttributeStream <T, L, R>> {
-	using type = TypeMirror <array <T>, L>;
-	using element = TypeMirror <T, L>;
+struct resource_translator <AttributeStream <T, L, R>> {
+	using buffer = VertexMirrorBuffer <array <T>, L>;
+	using type [[deprecated(
+		"advised to use VertexBufferOf <>"
+	)]] = decltype([]{
+		return buffer();
+	} ());
+	using value_type = buffer::value_type;
+	using element_type = buffer::element_type;
 };
 
-template <reflected T>
-struct type_mirror_for_resource <ConstantBuffer <T>> {
-	using type = TypeMirror <T, layouts::std430>;
-	using element = std::nullptr_t;
-};
+template <auto &rsrc>
+using ResourceMirrorOf = ResourceMirror <reference_base_t <rsrc>>;
 
-template <reflected T>
-struct type_mirror_for_resource <ResourceGroup <T>> {
-	using type = type_mirror_for_resource <T> ::type;
-	using element = type_mirror_for_resource <T> ::element;
-};
+template <auto &rsrc>
+using DataTypeOf = DataType <reference_base_t <rsrc>>;
 
-template <auto &ref>
-using MirrorOf = type_mirror_for_resource <
-	// TODO: reference_base_t
-	std::remove_reference_t <decltype(ref)>
-> ::type;
-
-// Reference to dynamic element of type mirror of contents (if its a buffer or streams)
-template <auto &ref>
-using DynamicElementOf = decltype([] {
-	using T = std::remove_reference_t <decltype(ref)>;
-	using E = typename type_mirror_for_resource <T> ::element;
-	if constexpr (std::same_as <E, std::nullptr_t>)
-		static_assert(false, "mirror is not dynamic");
-	return E();
-} ());
+template <auto &rsrc>
+using DynamicDataTypeOf = DynamicDataType <reference_base_t <rsrc>>;
