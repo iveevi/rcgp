@@ -41,10 +41,10 @@ struct resource_group_reflection {};
 template <typename T>
 struct push_constant_reflection {};
 
-template <typename T>
+template <typename T, template <typename> typename L>
 struct uniform_buffer_reflection {};
 
-template <typename T>
+template <typename T, template <typename> typename L>
 struct storage_buffer_reflection {};
 
 template <typename T, size_t D>

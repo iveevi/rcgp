@@ -94,6 +94,9 @@ using IndexMirrorBuffer = MirrorBuffer <T, L, vk::BufferUsageFlagBits::eIndexBuf
 template <reflected T, template <typename> typename L>
 using UniformMirrorBuffer = MirrorBuffer <T, L, vk::BufferUsageFlagBits::eUniformBuffer>;
 
+template <reflected T, template <typename> typename L>
+using StorageMirrorBuffer = MirrorBuffer <T, L, vk::BufferUsageFlagBits::eStorageBuffer>;
+
 // Now we can add some specializations for resource translation
 template <>
 struct resource_translator <IndexBuffer <Topology::eTriangleList, uint32_t>> {
@@ -103,9 +106,16 @@ struct resource_translator <IndexBuffer <Topology::eTriangleList, uint32_t>> {
 	using element_type = type::element_type;
 };
 
-template <reflected T>
-struct resource_translator <UniformBuffer <T>> {
-	using type = UniformMirrorBuffer <T, layouts::std430>;
+template <reflected T, template <typename> typename L>
+struct resource_translator <UniformBuffer <T, L>> {
+	using type = UniformMirrorBuffer <T, L>;
+	using value_type = type::value_type;
+	using element_type = std::nullptr_t;
+};
+
+template <reflected T, template <typename> typename L>
+struct resource_translator <StorageBuffer <T, L>> {
+	using type = StorageMirrorBuffer <T, L>;
 	using value_type = type::value_type;
 	using element_type = std::nullptr_t;
 };

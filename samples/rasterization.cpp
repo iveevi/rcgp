@@ -23,11 +23,7 @@ struct Shared {
 AttributeStream <vec3, layouts::std430> position;
 AttributeStream <vec3> normal;
 
-// TODO: should also have a layout; this needs to be written in the shader though
-UniformBuffer <View> view;
-// TODO: we should allow standalone resource handles to act as references...
-// then we can avoid the hokey pokey of referece_base being different/specialized
-// in any case ray payloads would be standalone references
+UniformBuffer <View, layouts::scalar> view;
 UniformBuffer <Shared> shared;
 
 auto vs = $vertex $fn($use(position), $use(normal), $use(view), $use(shared)) -> $returns(Position, vec3)
@@ -287,7 +283,7 @@ int main()
 	
 		aperature.aspect = static_cast <float> (extent.width) / extent.height;
 
-		view_buf.write(TypeMirror <View> {
+		view_buf.write(DataTypeOf <view> {
 			.proj = aperature.projection_matrix(),
 			.view = xform.view_matrix(),
 			.model = model,

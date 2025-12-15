@@ -32,6 +32,16 @@ struct GLSL {
 		// TODO: generate thread inputs and resources, etc
 		// here itself...
 	}
+
+	std::string layout_string(GlobalResource::Layout layout) const {
+		switch (layout) {
+		case GlobalResource::Layout::eScalar: return "scalar, ";
+		case GlobalResource::Layout::eStd430: return "std430, ";
+		case GlobalResource::Layout::eUnknown:
+		default:
+			return "";
+		}
+	}
 	
 	struct generate_reference {
 		GLSL &parent;
@@ -247,6 +257,8 @@ struct GLSL {
 		if (block.context.model != ExecutionModel::eAgnostic) {
 			result = "#version 460\n";
 
+			result += "#extension GL_EXT_scalar_block_layout : require\n\n";
+
 			result += "\n";
 
 			// TODO: generate type definitions
@@ -328,8 +340,8 @@ struct GLSL {
 
 						auto group = grsrc.group.value_or(-1);
 						auto index = grsrc.index.value_or(-1);
-						result += fmt::format("layout (set = {}, binding = {}) {} R{}{} {{\n",
-			    				group, index, modifier, group, index);
+						result += fmt::format("layout ({}set = {}, binding = {}) {} R{}{} {{\n",
+							layout_string(grsrc.layout), group, index, modifier, group, index);
 						result += fmt::format("    {} r{}_i{};\n", type.main(grsrc.type), group, index);
 						result += "};\n\n";
 					}

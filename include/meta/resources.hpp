@@ -40,21 +40,21 @@ struct PushConstant : T {
 };
 
 // TODO: these need layouts...
-template <reflected T>
+template <reflected T, template <typename> typename L = layouts::std430>
 struct UniformBuffer : T {
-	using reflection = uniform_buffer_reflection <T>;
+	using reflection = uniform_buffer_reflection <T, L>;
 	DEFINE_REFLECTION_STAMP();
 };
 
 // TODO: Read/write flags and aliases...
-template <reflected T>
+template <reflected T, template <typename> typename L = layouts::std430>
 struct StorageBuffer : T {
-	using reflection = storage_buffer_reflection <T>;
+	using reflection = storage_buffer_reflection <T, L>;
 	DEFINE_REFLECTION_STAMP();
 };
 
-template <reflected T>
-using ArrayBuffer = StorageBuffer <array <T>>;
+template <reflected T, template <typename> typename L = layouts::std430>
+using ArrayBuffer = StorageBuffer <array <T>, L>;
 
 template <reflected T, template <typename> typename L = layouts::std430>
 struct BufferReference {
@@ -90,11 +90,11 @@ struct is_global_resource_reflection : std::false_type {};
 template <typename T>
 struct is_global_resource_reflection <resource_group_reflection <T>> : std::true_type {};
 
-template <typename T>
-struct is_global_resource_reflection <uniform_buffer_reflection <T>> : std::true_type {};
+template <typename T, template <typename> typename L>
+struct is_global_resource_reflection <uniform_buffer_reflection <T, L>> : std::true_type {};
 
-template <typename T>
-struct is_global_resource_reflection <storage_buffer_reflection <T>> : std::true_type {};
+template <typename T, template <typename> typename L>
+struct is_global_resource_reflection <storage_buffer_reflection <T, L>> : std::true_type {};
 
 template <typename T, size_t D>
 struct is_global_resource_reflection <sampler_reflection <T, D>> : std::true_type {};

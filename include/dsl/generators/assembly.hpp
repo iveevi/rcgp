@@ -113,6 +113,16 @@ struct Assembly {
 			stringify(x.type), x.argi);
 	}
 
+	std::string stringify(GlobalResource::Layout layout) {
+		switch (layout) {
+		case GlobalResource::Layout::eScalar: return "scalar";
+		case GlobalResource::Layout::eStd430: return "std430";
+		case GlobalResource::Layout::eUnknown:
+		default:
+			return "?";
+		}
+	}
+
 	std::string stringify(GlobalResource x, Reference ref) {
 		std::string kind = "?";
 		switch (x.kind) {
@@ -128,8 +138,8 @@ struct Assembly {
 			return val ? fmt::format("{}", val.value()) : "nil";
 		};
 
-		return $assign fmt::format("{}({}, {}:{})", kind,
-			stringify(x.type), opint(x.group), opint(x.index));
+		return $assign fmt::format("{}({}, {}:{}, {})", kind,
+			stringify(x.type), opint(x.group), opint(x.index), stringify(x.layout));
 	}
 	
 	std::string stringify(ThreadInput x, Reference ref) {

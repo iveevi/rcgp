@@ -28,20 +28,20 @@ struct resource_injector {
 };
 
 // TODO: these can be combined using RType::reflection and resource_intrinsic <reflection>
-template <reflected T, UniformBuffer <T> &rsrc>
-struct resource_injector <UniformBuffer <T>, rsrc> {
+template <reflected T, template <typename> typename L, UniformBuffer <T, L> &rsrc>
+struct resource_injector <UniformBuffer <T, L>, rsrc> {
 	static auto main(reference <rsrc> &value, const InjectionState &state) {
-		auto grsrc = resource_intrinsic <uniform_buffer_reflection <T>> ::intrinsic(0);
+		auto grsrc = resource_intrinsic <uniform_buffer_reflection <T, L>> ::intrinsic(0);
 		$tsb.context.add_global_resource <rsrc> (grsrc);
 		injector <T> ::main(value, grsrc);
 		return state.next(false, false);
 	}
 };
 
-template <reflected T, StorageBuffer <T> &rsrc>
-struct resource_injector <StorageBuffer <T>, rsrc> {
+template <reflected T, template <typename> typename L, StorageBuffer <T, L> &rsrc>
+struct resource_injector <StorageBuffer <T, L>, rsrc> {
 	static auto main(reference <rsrc> &value, const InjectionState &state) {
-		auto grsrc = resource_intrinsic <storage_buffer_reflection <T>> ::intrinsic(0);
+		auto grsrc = resource_intrinsic <storage_buffer_reflection <T, L>> ::intrinsic(0);
 		$tsb.context.add_global_resource <rsrc> (grsrc);
 		injector <T> ::main(value, grsrc);
 		return state.next(false, false);

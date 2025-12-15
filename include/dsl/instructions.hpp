@@ -108,6 +108,12 @@ struct GlobalResource {
 		eSampler,
 	} kind;
 
+	enum class Layout {
+		eUnknown,
+		eScalar,
+		eStd430,
+	} layout;
+
 	// group := descriptor set index
 	std::optional <uint32_t> group;
 	// index := descriptor binding
