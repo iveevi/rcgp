@@ -14,18 +14,6 @@ struct AttributeStream : T {
 	DEFINE_REFLECTION_STAMP();
 };
 
-// Corresponds to index buffers
-enum class Topology {
-	eTriangleList,
-	eTriangleFan,
-};
-
-template <Topology T, typename I>
-struct IndexBuffer {
-	static_assert(std::same_as <I, uint32_t>
-		&& std::same_as <I, uint16_t>);
-};
-
 // TODO: should not allow index/vertex buffers here
 template <reflected T>
 struct ResourceGroup : T {

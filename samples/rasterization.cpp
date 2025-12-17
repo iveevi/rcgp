@@ -5,6 +5,14 @@
 #include "util/aperature.hpp"
 #include "util/transform.hpp"
 
+constexpr mrd::MeshEncodings mesh_encodings;
+constexpr mrd::ModelEncodings model_encodings {
+	.meshes = mesh_encodings,
+};
+
+using Model = mrd::Model <model_encodings>;
+using Mesh = mrd::Mesh <mesh_encodings>;
+
 struct View {
 	mat4 proj;
 	mat4 view;
@@ -18,7 +26,7 @@ AttributeStream <vec3> normal;
 
 UniformBuffer <View> view;
 
-auto vs = $vertex $fn($use(position), $use(normal), $use(view)) -> $returns(Position, Smooth <vec3>)
+auto vs = $vertex $fn($ref(position), $ref(normal), $ref(view)) -> $returns(Position, Smooth <vec3>)
 {
 	auto mvp = view.proj * view.view * view.model;
 	auto nmat = transpose(inverse(mat3(view.model)));
@@ -30,12 +38,67 @@ auto vs = $vertex $fn($use(position), $use(normal), $use(view)) -> $returns(Posi
 // TODO: push constants
 UniformBuffer <vec3> light;
 
-auto fs = $fragment $fn($use(light), vec3 world_normal) -> $returns(vec4)
+auto fs = $fragment $fn($ref(light), vec3 world_normal) -> $returns(vec4)
 {
 	auto normal = normalize(world_normal);
 	auto shade = max(dot(light, normal), 0.0f);
 	$return vec4(vec3(1, 0.5, 0.5) * shade, 1.0f);
 };
+
+using TriangleBuffer = IndexBuffer <Topology::eTriangleList, uint32_t>;
+
+struct MeshHandle {
+	size_t draw_count;
+	VertexBufferOf <position> positions;
+	VertexBufferOf <normal> normals;
+	TriangleBuffer triangles;
+
+	static auto from(const Device &device, const Mesh &mesh) {
+		MeshHandle result;
+
+		result.draw_count = 3 * mesh.primitives.size();
+
+		result.positions = VertexBufferOf <position> ::from(
+			device, mesh.positions.size(),
+			vk::MemoryPropertyFlagBits::eHostVisible
+			| vk::MemoryPropertyFlagBits::eHostCoherent
+		).write(span(mesh.positions).map(
+			[](auto p) -> DynamicDataTypeOf <position> {
+				return { p.x, p.y, p.z };
+			}
+		));
+	
+		result.normals = VertexBufferOf <normal> ::from(
+			device, mesh.normals.size(),
+			vk::MemoryPropertyFlagBits::eHostVisible
+			| vk::MemoryPropertyFlagBits::eHostCoherent
+		).write(span(mesh.normals).map(
+			[](auto p) -> DynamicDataTypeOf <normal> {
+				return { p.x, p.y, p.z };
+			}
+		));
+
+		result.triangles = TriangleBuffer::from(
+			device, mesh.primitives.size(),
+			vk::MemoryPropertyFlagBits::eHostVisible
+			| vk::MemoryPropertyFlagBits::eHostCoherent
+		).write(span(mesh.primitives).map(
+			[](auto p) -> DynamicDataType <TriangleBuffer> {
+				return { p.x, p.y, p.z };
+			}
+		));
+
+		return result;
+	}
+};
+
+auto draw_mesh(const MeshHandle &handles)
+{
+	return nullptr
+		| bind_vertex_buffers(handles.positions, handles.normals)
+		| bind_index_buffer(handles.triangles)
+		| draw_indexed(handles.draw_count);
+}
 
 int main(int argc, char *argv[])
 {
@@ -145,50 +208,11 @@ int main(int argc, char *argv[])
 
 	auto pipeline = combinator(vs, fs);
 
-	constexpr mrd::ModelEncodings encodings;
-
-	using Model = mrd::Model <encodings>;
-
-	using Mesh = mrd::Mesh <encodings.meshes>;
-
 	auto model = Model::load(argv[1]);
 	auto &mesh = model.meshes[0];
-	// mesh.deduplicate();
 	mesh.recalculate_normals();
-	// auto mesh = Mesh::uv_sphere();
-	// auto mesh = Mesh::box();
 
-	auto pbuf = VertexBufferOf <position> ::from(
-		device, mesh.positions.size(),
-		vk::MemoryPropertyFlagBits::eHostVisible
-		| vk::MemoryPropertyFlagBits::eHostCoherent
-	).write(span(mesh.positions).map(
-		[](auto p) -> DynamicDataTypeOf <position> {
-			return { p.x, p.y, p.z };
-		}
-	));
-
-	auto nbuf = VertexBufferOf <normal> ::from(
-		device, mesh.normals.size(),
-		vk::MemoryPropertyFlagBits::eHostVisible
-		| vk::MemoryPropertyFlagBits::eHostCoherent
-	).write(span(mesh.normals).map(
-		[](auto p) -> DynamicDataTypeOf <normal> {
-			return { p.x, p.y, p.z };
-		}
-	));
-
-	using IBuffer = IndexBuffer <Topology::eTriangleList, uint32_t>;
-
-	auto ibuf = ResourceMirror <IBuffer> ::from(
-		device, mesh.primitives.size(),
-		vk::MemoryPropertyFlagBits::eHostVisible
-		| vk::MemoryPropertyFlagBits::eHostCoherent
-	).write(span(mesh.primitives).map(
-		[](auto p) -> DynamicDataType <IBuffer> {
-			return { p.x, p.y, p.z };
-		}
-	));
+	auto handle = MeshHandle::from(device, mesh);
 
 	// Camera
 	Aperature aperature;
@@ -213,12 +237,12 @@ int main(int argc, char *argv[])
 		| vk::MemoryPropertyFlagBits::eHostCoherent
 	).write(glm::vec3(0, 1, 0));
 	
-	auto view_descriptor = pipeline.new_descriptor <view> (dpool);
-	auto light_descriptor = pipeline.new_descriptor <light> (dpool);
+	auto raw_view_ds = pipeline.new_descriptor <view> (dpool);
+	auto raw_light_ds = pipeline.new_descriptor <light> (dpool);
 
 	auto [view_ds, light_ds] = device.update_descriptors(
-		DescriptorWritePair { view_descriptor, view_buf },
-		DescriptorWritePair { light_descriptor, light_buf }
+		DescriptorWritePair { raw_view_ds, view_buf },
+		DescriptorWritePair { raw_light_ds, light_buf }
 	);
 
 	window.on_drag(MouseButton::Left, [&](double, double, double dx, double dy) {
@@ -287,19 +311,16 @@ int main(int argc, char *argv[])
 			vk::ClearDepthStencilValue(1.0f, 0),
 		};
 
-		auto a = begin_render_pass(render_pass, framebuffers[frame.image_index], render_area, clear_values);
-		auto b = bind_pipeline(pipeline);
-		auto c = bind_descriptors(view_ds, light_ds);
-		auto d = bind_vertex_buffers(pbuf, nbuf);
-		auto e = bind_index_buffer(ibuf);
-		auto f = draw_indexed(3 * mesh.primitives.size());
-		auto g = unbind_pipeline();
-		auto h = end_render_pass();
-
-		auto commands = seq(a, b, c, d, e, f, g, h);
-
-		// TODO: would be nice to allocate actual handles to neutral cmds...
 		auto &cmd = cmd_buffers[window.frame_index];
+		auto &framebuffer = framebuffers[frame.image_index];
+
+		auto commands = nullptr
+			| begin_render_pass(render_pass, framebuffer, render_area, clear_values)
+			| bind_pipeline(pipeline)
+			| bind_descriptors(view_ds, light_ds)
+			| draw_mesh(handle)
+			| unbind_pipeline()
+			| end_render_pass();
 
 		queue.submit(commands(cmd),
 	        	frame.presented,

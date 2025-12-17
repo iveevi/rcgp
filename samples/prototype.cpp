@@ -57,7 +57,7 @@ int main()
 	auto device = Device::from(session, dld, device_info);
 
 	// TODO: ensure in compile that ALL resources are bound by reference
-	auto vs = $vertex $fn($use(camera), $use(transforms), Vertex vertex) -> $returns(RasterForward)
+	auto vs = $vertex $fn($ref(camera), $ref(transforms), Vertex vertex) -> $returns(RasterForward)
 	{
 		mat4 xform = transforms[vertex.instance];
 		vec4 ppos = xform * vec4(vertex.position, 1);

@@ -116,6 +116,18 @@ auto operator|(const Commands <A, B> &lhs, const Commands <C, D> &rhs)
 	return seq(lhs, rhs);
 }
 
+template <typename A, typename B>
+auto operator|(const Commands <A, B> &x, const std::nullptr_t &)
+{
+	return x;
+}
+
+template <typename A, typename B>
+auto operator|(const std::nullptr_t &, const Commands <A, B> &x)
+{
+	return x;
+}
+
 inline auto begin_render_pass(const vk::RenderPass &render_pass,
 		       const vk::Framebuffer &framebuffer,
 		       const vk::Rect2D &render_area,
@@ -221,13 +233,13 @@ auto bind_vertex_buffers(const VertexBufferOf <refs> &... buffers)
 	> { binder };
 }
 
-// TODO: take in an index mirror buffer...
 // and add a state tag that encodes this... ProvidedIndexBuffer <T>
-inline auto bind_index_buffer(const Buffer &buffer)
+template <Topology T, typename I>
+inline auto bind_index_buffer(const IndexBuffer <T, I> &ibuffer)
 {
 	// TODO: templates for inferring the index type
 	auto binder = [=](const vk::CommandBuffer &cmd, CommandsTraceAux &) {
-		cmd.bindIndexBuffer(buffer.handle, 0, vk::IndexType::eUint32);
+		cmd.bindIndexBuffer(ibuffer.handle, 0, vk::IndexType::eUint32);
 	};
 
 	return Commands <

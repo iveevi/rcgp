@@ -23,7 +23,8 @@ struct is_reference : std::false_type {};
 template <auto &rsrc>
 struct is_reference <reference <rsrc>> : std::true_type {};
 
-#define $use(name)	reference <name> name
+#define $ref(name)	reference <name> name
+#define $use(name)	$ref(name)
 
 // Accessing through a reference forwards to its underlying resource
 template <size_t I, size_t ... Is, auto &rsrc>

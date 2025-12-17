@@ -48,7 +48,7 @@ struct GBuffer {
 ParameterBlock <Camera> camera;
 ParameterBlock <Model> model;
 
-auto gbuffer_vs = $vertex $fn($use(camera), $use(model), Vertex vertex) -> $returns(RasterForward)
+auto gbuffer_vs = $vertex $fn($ref(camera), $ref(model), Vertex vertex) -> $returns(RasterForward)
 {
 	auto ppos = model.xform * vec4(vertex.position, 1.0);
 	auto pnorm = model.xform * vec4(vertex.normal, 0.0);
@@ -61,7 +61,7 @@ auto gbuffer_vs = $vertex $fn($use(camera), $use(model), Vertex vertex) -> $retu
 	};
 };
 
-auto gbuffer_fs = $fragment $fn($use(model), RasterForward rfwd) -> $returns(GBuffer) {
+auto gbuffer_fs = $fragment $fn($ref(model), RasterForward rfwd) -> $returns(GBuffer) {
 	$return GBuffer {
 		.position = rfwd.position,
 		.normal = rfwd.normal,
@@ -112,7 +112,7 @@ struct Phong {
 
 // TODO: template by material...
 // TODO: forward shading modularity
-auto shading_fs = $fragment $fn($use(shading_parameters), SubpassInput <GBuffer> gbuf) -> $returns(vec4)
+auto shading_fs = $fragment $fn($ref(shading_parameters), SubpassInput <GBuffer> gbuf) -> $returns(vec4)
 {
 	auto material = shading_parameters.materials[gbuf.material];
 	auto [d, s, r] = material.sample(gbuf.uv);

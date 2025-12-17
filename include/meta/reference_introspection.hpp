@@ -16,6 +16,7 @@ template <reflected T, template <typename> typename L, vk::VertexInputRate R, At
 struct VertexBufferOf  <ref> : VertexMirrorBuffer <array <T>, L> {
 	using typename VertexMirrorBuffer <array <T>, L> ::MirrorBuffer;
 
+	VertexBufferOf() = default;
 	VertexBufferOf(const VertexMirrorBuffer <array <T>, L> &other)
 		: VertexMirrorBuffer <array <T>, L> (other) {}
 
