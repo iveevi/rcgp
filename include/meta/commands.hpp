@@ -3,6 +3,7 @@
 #include <functional>
 
 #include "pipeline/rasterization.hpp"
+#include "vertex_buffer_of.hpp"
 
 // Primary command buffer state
 // ----------------------------

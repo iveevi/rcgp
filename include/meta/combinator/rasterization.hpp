@@ -50,24 +50,24 @@ auto sequence_to_group_allocation(const sequence <Ts...> &)
 template <auto &ref, ShaderStage ... Ss>
 auto reference_to_dsl_and_pcr(const Device &device, const stage_wrapper <reference <ref>, Ss...> &)
 {
-	// TODO: refactor to reference_to_descriptor_set_layout
 	using base = typename reference <ref> ::base;
 	using R = expand_reflection_t <base>;
 
-	// TODO: collect all dslbs and pc ranges recursively
-	// TODO: if its a resource group then we need to filter it...
+	vk::DescriptorType dtype = vk::DescriptorType::eUniformBuffer;
+	if constexpr (is_sampler_v <base>)
+		dtype = vk::DescriptorType::eCombinedImageSampler;
+
 	auto dslbs = std::array {
 		vk::DescriptorSetLayoutBinding()
 			.setBinding(0)
 			.setDescriptorCount(1)
-			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+			.setDescriptorType(dtype)
 			.setStageFlags((stage_to_flag(Ss) | ...))
 	};
 
 	auto dsl_info = vk::DescriptorSetLayoutCreateInfo()
 		.setBindings(dslbs);
 
-	// TODO: return the dsl and pc ranges separately
 	return device.logical.createDescriptorSetLayout(dsl_info);
 }
 

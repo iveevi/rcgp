@@ -1,22 +1,29 @@
-#include "rhi/session.hpp"
-
 #include <vector>
 
 #include <fmt/printf.h>
 #include <fmt/color.h>
+
+#include "rhi/session.hpp"
+#include "rhi/glfw.hpp"
 
 VKAPI_ATTR VKAPI_CALL vk::Bool32 validation_callback
 (
 	vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
 	vk::DebugUtilsMessageTypeFlagsEXT types,
 	const vk::DebugUtilsMessengerCallbackDataEXT *data,
-	void *_
+	void *user_data
 )
 {
+	const auto *session = static_cast <const Session *> (user_data);
+	const bool trap_on_error = session ? session->trap_on_error : false;
+
 	auto fg = fmt::fg(fmt::color::gray);
+	bool trap = false;
+
 	switch (severity) {
 	case vk::DebugUtilsMessageSeverityFlagBitsEXT::eError:
 		fg = fmt::fg(fmt::color::red);
+		trap = trap_on_error;
 		break;
 	case vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning:
 		fg = fmt::fg(fmt::color::yellow);
@@ -32,12 +39,18 @@ VKAPI_ATTR VKAPI_CALL vk::Bool32 validation_callback
 	auto message = fmt::format(fmt::emphasis::faint, "{}", data->pMessage);
 
 	fmt::println(stderr, "{} {}", header, message);
+	if (trap)
+		__builtin_trap();
+
 	return false;
 }
 
 std::tuple <Session, vk::detail::DispatchLoaderDynamic> Session::from(const Info &info)
 {
-	Session session;
+	auto product = std::tuple <Session, vk::detail::DispatchLoaderDynamic> {};
+	auto &[session, dld] = product;
+
+	session.trap_on_error = info.trap_on_error;
 
 	glfw::boot();
 
@@ -45,7 +58,6 @@ std::tuple <Session, vk::detail::DispatchLoaderDynamic> Session::from(const Info
 	auto vkGetInstanceProcAddr = dl.getProcAddress
 		<PFN_vkGetInstanceProcAddr> ("vkGetInstanceProcAddr");
 
-	vk::detail::DispatchLoaderDynamic dld;
 	dld.init(vkGetInstanceProcAddr);
 
 	auto layers = std::vector <const char *> {};
@@ -75,7 +87,8 @@ std::tuple <Session, vk::detail::DispatchLoaderDynamic> Session::from(const Info
 	auto debug_info = vk::DebugUtilsMessengerCreateInfoEXT()
 		.setMessageType(debug_type_flags)
 		.setMessageSeverity(debug_severity_flags)
-		.setPfnUserCallback(validation_callback);
+		.setPfnUserCallback(validation_callback)
+		.setPUserData(&session);
 
 	auto app_info = vk::ApplicationInfo()
 		.setApplicationVersion(VK_MAKE_VERSION(1, 0, 0))
@@ -99,5 +112,5 @@ std::tuple <Session, vk::detail::DispatchLoaderDynamic> Session::from(const Info
 	if (info.validation)
 		session.debugger = session.handle.createDebugUtilsMessengerEXT(debug_info, nullptr, dld);
 
-	return std::make_tuple(session, dld);
+	return product;
 }

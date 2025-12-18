@@ -5,6 +5,7 @@
 #include "../../rhi/descriptor_pool.hpp"
 #include "../descriptor.hpp"
 #include "../layout/all.hpp"
+#include "../mirror_buffer.hpp"
 
 enum class Topology {
 	eTriangleList,

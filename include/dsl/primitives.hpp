@@ -64,8 +64,8 @@ struct swizzle_component {
 	operator R() const {
 		static_assert(std::is_base_of_v <jems::handle, T>);
 		auto x = reinterpret_cast <const T *> (this);
-		auto c = jems::swizzle(S, x->ref);
-		return R(x->ref);
+		auto c = jems::swizzle(S, *x);
+		return R::reinterpret(c);
 	}
 
 	// TODO: assign operator, ect...

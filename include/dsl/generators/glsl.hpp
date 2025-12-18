@@ -150,14 +150,15 @@ struct GLSL {
 			switch (builtin.code) {
 			case BuiltinIntrinsic::eCross: out = "cross"; break;
 			case BuiltinIntrinsic::eDFdx: out = "dFdx"; break;
-			case BuiltinIntrinsic::eDFdy: out = "dFdy"; break;
 			case BuiltinIntrinsic::eDFdxFine: out = "dFdxFine"; break;
+			case BuiltinIntrinsic::eDFdy: out = "dFdy"; break;
 			case BuiltinIntrinsic::eDFdyFine: out = "dFdyFine"; break;
 			case BuiltinIntrinsic::eDot: out = "dot"; break;
+			case BuiltinIntrinsic::eInverse: out = "inverse"; break;
 			case BuiltinIntrinsic::eMax: out = "max"; break;
 			case BuiltinIntrinsic::eNormalize: out = "normalize"; break;
+			case BuiltinIntrinsic::eSample: out = "texture"; break;
 			case BuiltinIntrinsic::eTranspose: out = "transpose"; break;
-			case BuiltinIntrinsic::eInverse: out = "inverse"; break;
 			default:
 				break;
 			}
@@ -332,7 +333,10 @@ struct GLSL {
 				for (auto &ref : refs) {
 					auto &grsrc = ref->as <GlobalResource> ();
 					if (grsrc.kind == GlobalResource::eSampler) {
-						fatal("not implemented");
+						auto group = grsrc.group.value_or(-1);
+						auto index = grsrc.index.value_or(-1);
+						result += fmt::format("layout (set = {}, binding = {}) uniform sampler2D r{}_i{};\n\n",
+							group, index, group, index);
 					} else {
 						std::string modifier;
 						switch (grsrc.kind) {

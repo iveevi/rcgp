@@ -55,16 +55,25 @@ struct Sampler : jems::handle {
 	using reflection = sampler_reflection <T, D>;
 	DEFINE_REFLECTION_STAMP();
 
-	vector <T, D> sample(vector <T, D> x, $location) const
+	auto sample(vector <T, D> x, $location) const
 		requires native_float_scalar <T>
 	{
-		return  jems::builtin_intrinsic_loc(loc, BuiltinIntrinsic::eSample, ref, x);
+		return vector <T, 4> ::reinterpret(jems::builtin_intrinsic_loc(loc, BuiltinIntrinsic::eSample, *this, x));
 	}
 };
 
 using Sampler1D = Sampler <float, 1>;
 using Sampler2D = Sampler <float, 2>;
 using Sampler3D = Sampler <float, 3>;
+
+template <typename T>
+struct is_sampler : std::false_type {};
+
+template <typename T, size_t D>
+struct is_sampler <Sampler <T, D>> : std::true_type {};
+
+template <typename T>
+constexpr bool is_sampler_v = is_sampler <T> ::value;
 
 template <reflected T>
 struct RayPayload : T {};

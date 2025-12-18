@@ -151,18 +151,18 @@ struct BuiltinIntrinsic {
 		eCos,
 		eCross,
 		eDFdx,
-		eDFdy,
 		eDFdxFine,
+		eDFdy,
 		eDFdyFine,
 		eDot,
+		eInverse,
 		eMax,
 		eMin,
 		eNormalize,
-		eTranspose,
-		eInverse,
 		eSample,
 		eSin,
 		eTan,
+		eTranspose,
 	} code;
 
 	std::vector <Reference> args;

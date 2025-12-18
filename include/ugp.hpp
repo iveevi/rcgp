@@ -17,6 +17,8 @@
 #include "meta/mirror_buffer.hpp"
 #include "meta/pipeline/rasterization.hpp"
 #include "meta/reconstruct_type.hpp"
+#include "meta/resource_translations.hpp"
+#include "meta/vertex_buffer_of.hpp"
 #include "meta/reference.hpp"
 #include "meta/reference_introspection.hpp"
 #include "meta/reflection.hpp"

@@ -52,7 +52,7 @@ struct resource_injector <Sampler <T, D>, rsrc> {
 	static auto main(reference <rsrc> &value, const InjectionState &state) {
 		auto grsrc =  resource_intrinsic <sampler_reflection <T, D>> ::intrinsic(0);
 		$tsb.context.add_global_resource <rsrc> (grsrc);
-		value.ref = grsrc;
+		value.override_reference(grsrc);
 		return state.next(false, false);
 	}
 };

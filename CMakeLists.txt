@@ -11,6 +11,7 @@ add_compile_options(-ftime-trace)
 
 set(ALLOW_EXTERNAL_SPIRV_TOOLS TRUE)
 set(MRD_GLM_PATH "${CMAKE_CURRENT_LIST_DIR}/ext/glm")
+set(MRD_STB_PATH "${CMAKE_CURRENT_LIST_DIR}/ext/stb")
 
 add_subdirectory(ext/glslang EXCLUDE_FROM_ALL)
 add_subdirectory(ext/mrd EXCLUDE_FROM_ALL)
