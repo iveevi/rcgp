@@ -150,8 +150,8 @@ inline auto begin_render_pass(const vk::RenderPass &render_pass,
 	> { binder };
 }
 
-template <Topology T, typename AttributeStreams, typename GlobalResources, size_t Sets>
-auto bind_pipeline(const AnnotatedRasterizationPipeline <T, AttributeStreams, GlobalResources, Sets> &pipeline)
+template <Topology T, typename AttributeStreams, typename GroupAllocation, typename GlobalResources, size_t Sets>
+auto bind_pipeline(const AnnotatedRasterizationPipeline <T, AttributeStreams, GroupAllocation, GlobalResources, Sets> &pipeline)
 {
 	// TODO: write bind point and layout in an interm state (CommandBufferAux &)?
 	auto binder = [=](const vk::CommandBuffer &cmd, CommandsTraceAux &aux) {
@@ -203,6 +203,25 @@ auto bind_descriptors(const DescriptorOf <refs, true> &... descriptors)
 	};
 
 	// TODO: fetch the pipeline type associated to the descriptor pipeline id
+	return Commands <
+		CommandState <CommandFlag::eRasterizationPipeline>,
+		CommandState <CommandFlag::eRasterizationPipeline>
+	> { binder };
+}
+
+template <auto &ref, Topology T, typename AttributeStreams, typename GroupAllocation, typename GlobalResources, size_t Sets>
+auto push_constants(const AnnotatedRasterizationPipeline <T, AttributeStreams, GroupAllocation, GlobalResources, Sets> &,
+		    const ResourceMirrorOf <ref> &constants)
+{
+	static_assert(is_push_constant_v <reference_base_t <ref>>);
+
+	constexpr auto stage_flags = stage_flags_for_v <ref, GlobalResources>;
+	static_assert(stage_flags != vk::ShaderStageFlags(), "push constant not used by any stage");
+
+	auto binder = [&, stage_flags](const vk::CommandBuffer &cmd, CommandsTraceAux &aux) {
+		cmd.pushConstants(aux.layout, stage_flags, 0, sizeof(constants.value), &constants.value);
+	};
+
 	return Commands <
 		CommandState <CommandFlag::eRasterizationPipeline>,
 		CommandState <CommandFlag::eRasterizationPipeline>

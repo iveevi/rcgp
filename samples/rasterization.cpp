@@ -30,23 +30,23 @@ static TextureGPU upload_texture(
 	const Texture &tex
 )
 {
-	// create staging buffer
 	const auto bytes = tex.data.size() * sizeof(tex.data[0]);
+
 	auto staging = Buffer::from(
 		device,
 		bytes,
 		vk::BufferUsageFlagBits::eTransferSrc,
-		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
+		vk::MemoryPropertyFlagBits::eHostVisible
+		| vk::MemoryPropertyFlagBits::eHostCoherent
 	);
 
 	staging.write(tex.data.data(), bytes, 0);
 
-	// GPU image
 	auto img_info = Image::Info {
 		.extent = vk::Extent2D(tex.info.size.x, tex.info.size.y),
-		// .format = vk::Format::eR32G32B32A32Sfloat,
 		.format = vk::Format::eR8G8B8A8Unorm,
-		.usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
+		.usage = vk::ImageUsageFlagBits::eTransferDst
+		| vk::ImageUsageFlagBits::eSampled,
 		.properties = vk::MemoryPropertyFlagBits::eDeviceLocal,
 		.tiling = vk::ImageTiling::eOptimal,
 		.aspect = vk::ImageAspectFlagBits::eColor,
@@ -136,8 +136,7 @@ auto vs = $vertex $fn($ref(position), $ref(normal), $ref(texcoord), $ref(view))
 	$return std::tuple(pp, wn, texcoord);
 };
 
-// TODO: push constants
-UniformBuffer <vec3> light;
+PushConstant <vec3> light;
 
 auto fs = $fragment $fn($ref(light), $ref(albedo_tex), vec3 world_normal, vec2 uv) -> $returns(vec4)
 {
@@ -145,8 +144,8 @@ auto fs = $fragment $fn($ref(light), $ref(albedo_tex), vec3 world_normal, vec2 u
 	auto shade = max(dot(light, normal), 0.0f);
 	vec4 texel = albedo_tex.sample(uv);
 	// $return vec4(texel.xyz * shade, 1.0f);
-	// $return vec4(vec3(texel) * shade, 1.0f);
-	$return vec4(vec3(texel), 1.0f);
+	$return vec4(vec3(texel) * shade, 1.0f);
+	// $return vec4(vec3(texel), 1.0f);
 };
 
 using TriangleBuffer = IndexBuffer <Topology::eTriangleList, uint32_t>;
@@ -188,17 +187,15 @@ struct MeshHandle {
 			}
 		));
 
-		if constexpr (mesh_encodings.uvs != mrd::R2::Disable) {
-			result.uvs = VertexBufferOf <texcoord> ::from(
-				device, mesh.uvs.size(),
-				vk::MemoryPropertyFlagBits::eHostVisible
-				| vk::MemoryPropertyFlagBits::eHostCoherent
-			).write(span(mesh.uvs).map(
-				[](auto p) -> DynamicDataTypeOf <texcoord> {
-					return { p.x, p.y };
-				}
-			));
-		}
+		result.uvs = VertexBufferOf <texcoord> ::from(
+			device, mesh.uvs.size(),
+			vk::MemoryPropertyFlagBits::eHostVisible
+			| vk::MemoryPropertyFlagBits::eHostCoherent
+		).write(span(mesh.uvs).map(
+			[](auto p) -> DynamicDataTypeOf <texcoord> {
+				return { p.x, p.y };
+			}
+		));
 
 		result.triangles = TriangleBuffer::from(
 			device, mesh.primitives.size(),
@@ -221,6 +218,11 @@ auto draw_mesh(const MeshHandle &handles)
 		| bind_index_buffer(handles.triangles)
 		| draw_indexed(handles.draw_count);
 }
+
+struct Material {
+	ResourceMirrorOf <albedo_tex> albedo_data;
+	DescriptorOf <albedo_tex> albedo_descriptor;
+};
 
 int main(int argc, char *argv[])
 {
@@ -348,13 +350,9 @@ int main(int argc, char *argv[])
 	xform.translation = glm::vec3(0, 0, -10);
 	aperature.aspect = float(window.extent().width) / window.extent().height;
 
-	auto light_buf = ResourceMirrorOf <light> ::from(
-		device,
-		vk::MemoryPropertyFlagBits::eHostVisible
-		| vk::MemoryPropertyFlagBits::eHostCoherent
-	).write(glm::vec3(0, 1, 0));
+	ResourceMirrorOf <light> light_pc;
+	light_pc.write(glm::vec3(0, 1, 0));
 	
-	// Upload albedo textures per material (fallback to material color or magenta) and descriptor sets
 	auto make_color_texture = [](glm::vec4 color) {
 		Texture tex;
 		tex.info.size = { 1, 1 };
@@ -365,15 +363,13 @@ int main(int argc, char *argv[])
 	const glm::vec4 fallback_color { 1.0f, 0.0f, 1.0f, 1.0f };
 
 	std::vector <TextureGPU> material_gpu_textures;
-	std::vector <ResourceMirrorOf <albedo_tex>> material_albedo_mirrors;
-	std::vector <DescriptorOf <albedo_tex>> material_albedo_ds;
+	std::vector <Material> materials;
 
 	if (model.materials.empty())
 		model.materials.push_back(mrd::Material{});
 
 	material_gpu_textures.reserve(model.materials.size());
-	material_albedo_mirrors.reserve(model.materials.size());
-	material_albedo_ds.reserve(model.materials.size());
+	materials.reserve(model.materials.size());
 
 	for (const auto &mat : model.materials) {
 		Texture src;
@@ -394,25 +390,20 @@ int main(int argc, char *argv[])
 
 		material_gpu_textures.push_back(upload_texture(device, queue, cpool, src));
 
-		ResourceMirrorOf <albedo_tex> mirror;
+		Material material;
+		
+		auto &mirror = material.albedo_data;
 		mirror.sampler = material_gpu_textures.back().sampler;
 		mirror.view = material_gpu_textures.back().image.view;
 		mirror.layout = vk::ImageLayout::eShaderReadOnlyOptimal;
-		material_albedo_mirrors.push_back(mirror);
 
 		auto raw_albedo_ds = pipeline.new_descriptor <albedo_tex> (dpool);
-		auto ds = device.update_descriptors(
-			DescriptorWritePair { raw_albedo_ds, material_albedo_mirrors.back() }
+		material.albedo_descriptor = device.update_descriptors(
+			DescriptorWritePair { raw_albedo_ds, mirror }
 		);
 
-		material_albedo_ds.push_back(ds);
+		materials.push_back(material);
 	}
-
-	auto raw_light_ds = pipeline.new_descriptor <light> (dpool);
-
-	auto light_ds = device.update_descriptors(
-		DescriptorWritePair { raw_light_ds, light_buf }
-	);
 
 	for (auto &handle : handles) {
 		handle.view_buf = ResourceMirrorOf <view> ::from(
@@ -498,18 +489,15 @@ int main(int argc, char *argv[])
 
 		auto commands = nullptr
 			| begin_render_pass(render_pass, framebuffer, render_area, clear_values)
-			| bind_pipeline(pipeline);
+			| bind_pipeline(pipeline)
+			| push_constants <light> (pipeline, light_pc);
 
 		for (size_t i = 0; i < handles.size(); ++i) {
+			auto material = model.mesh_material_indices[i];
 			commands = commands
 				| bind_descriptors(
 					handles[i].view_ds,
-					light_ds,
-					material_albedo_ds[
-						i < model.mesh_material_indices.size()
-							? std::min <size_t> (model.mesh_material_indices[i], material_albedo_ds.size() - 1)
-							: 0
-					]
+					materials[material].albedo_descriptor
 				)
 				| draw_mesh(handles[i]);
 		}

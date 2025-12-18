@@ -118,6 +118,8 @@ struct GlobalResource {
 	std::optional <uint32_t> group;
 	// index := descriptor binding
 	std::optional <uint32_t> index;
+	// push constants use this to disambiguate multiple blocks
+	std::optional <uint32_t> push_constant_index;
 };
 
 enum class GlobalIntrinsic {

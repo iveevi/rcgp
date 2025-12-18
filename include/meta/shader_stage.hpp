@@ -24,5 +24,11 @@ constexpr vk::ShaderStageFlags stage_to_flag(ShaderStage S)
 	}
 }
 
+template <ShaderStage ... Ss>
+consteval vk::ShaderStageFlags stage_flags_of()
+{
+	return (vk::ShaderStageFlags) (stage_to_flag(Ss) | ... | vk::ShaderStageFlags());
+}
+
 template <ShaderStage S, typename R, typename ... Args>
 struct shader_stage : Block {};

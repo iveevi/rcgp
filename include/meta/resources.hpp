@@ -21,9 +21,9 @@ struct ResourceGroup : T {
 	DEFINE_REFLECTION_STAMP();
 };
 
-template <reflected T>
+template <reflected T, template <typename> typename L = layouts::std430>
 struct PushConstant : T {
-	using reflection = push_constant_reflection <T>;
+	using reflection = push_constant_reflection <T, L>;
 	DEFINE_REFLECTION_STAMP();
 };
 
@@ -83,6 +83,9 @@ struct RayPayload : T {};
 template <typename T>
 struct is_global_resource_reflection : std::false_type {};
 
+template <typename T, template <typename> typename L>
+struct is_global_resource_reflection <push_constant_reflection <T, L>> : std::true_type {};
+
 template <typename T>
 struct is_global_resource_reflection <resource_group_reflection <T>> : std::true_type {};
 
@@ -100,6 +103,16 @@ constexpr bool is_global_resource_reflection_v = is_global_resource_reflection <
 
 template <typename T>
 constexpr bool is_global_resource_v = is_global_resource_reflection <typename T::reflection> ::value;
+
+template <typename T>
+struct is_push_constant_reflection : std::false_type {};
+
+template <typename T, template <typename> typename L>
+struct is_push_constant_reflection <push_constant_reflection <T, L>> : std::true_type {};
+
+template <typename T>
+constexpr bool is_push_constant_v =
+	has_reflection <T> () && is_push_constant_reflection <typename T::reflection> ::value;
 
 // Attribute stream detection
 template <typename T>

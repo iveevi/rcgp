@@ -37,6 +37,16 @@ struct resource_injector <UniformBuffer <T, L>, rsrc> {
 	}
 };
 
+template <reflected T, template <typename> typename L, PushConstant <T, L> &rsrc>
+struct resource_injector <PushConstant <T, L>, rsrc> {
+	static auto main(reference <rsrc> &value, const InjectionState &state) {
+		auto grsrc = resource_intrinsic <push_constant_reflection <T, L>> ::intrinsic(0);
+		$tsb.context.add_global_resource <rsrc> (grsrc);
+		injector <T> ::main(value, grsrc);
+		return state.next(false, false);
+	}
+};
+
 template <reflected T, template <typename> typename L, StorageBuffer <T, L> &rsrc>
 struct resource_injector <StorageBuffer <T, L>, rsrc> {
 	static auto main(reference <rsrc> &value, const InjectionState &state) {

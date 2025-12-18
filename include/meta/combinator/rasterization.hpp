@@ -6,6 +6,7 @@
 #include "../collect_streams.hpp"
 #include "../implicit_context.hpp"
 #include "../group_allocation.hpp"
+#include "../reference_introspection.hpp"
 #include "../pipeline/rasterization.hpp"
 #include "../shader_stage.hpp"
 
@@ -45,10 +46,55 @@ auto sequence_to_group_allocation(const sequence <Ts...> &)
 	);
 }
 
+// Filter helpers for separating descriptor-backed resources from push constants
+template <typename Seq>
+struct descriptor_resource_filter;
+
+template <>
+struct descriptor_resource_filter <sequence <>> {
+	using type = sequence <>;
+};
+
+template <auto &ref, ShaderStage ...Ss, typename ...Rest>
+struct descriptor_resource_filter <sequence <stage_wrapper <reference <ref>, Ss...>, Rest...>> {
+	using base = typename reference <ref> ::base;
+	using tail = typename descriptor_resource_filter <sequence <Rest...>> ::type;
+	using type = std::conditional_t <
+		is_push_constant_v <base>,
+		tail,
+		typename tail::template push_front_t <stage_wrapper <reference <ref>, Ss...>>
+	>;
+};
+
+template <typename Seq>
+using descriptor_resources_t = typename descriptor_resource_filter <Seq> ::type;
+
+template <typename Seq>
+struct push_constant_filter;
+
+template <>
+struct push_constant_filter <sequence <>> {
+	using type = sequence <>;
+};
+
+template <auto &ref, ShaderStage ...Ss, typename ...Rest>
+struct push_constant_filter <sequence <stage_wrapper <reference <ref>, Ss...>, Rest...>> {
+	using base = typename reference <ref> ::base;
+	using tail = typename push_constant_filter <sequence <Rest...>> ::type;
+	using type = std::conditional_t <
+		is_push_constant_v <base>,
+		typename tail::template push_front_t <stage_wrapper <reference <ref>, Ss...>>,
+		tail
+	>;
+};
+
+template <typename Seq>
+using push_constant_resources_t = typename push_constant_filter <Seq> ::type;
+
 // TODO: flesh out with an impl method with handles things recursively...
 // TODO: fallback...
 template <auto &ref, ShaderStage ... Ss>
-auto reference_to_dsl_and_pcr(const Device &device, const stage_wrapper <reference <ref>, Ss...> &)
+auto reference_to_dsl(const Device &device, const stage_wrapper <reference <ref>, Ss...> &)
 {
 	using base = typename reference <ref> ::base;
 	using R = expand_reflection_t <base>;
@@ -72,14 +118,40 @@ auto reference_to_dsl_and_pcr(const Device &device, const stage_wrapper <referen
 }
 
 template <typename ... Ts>
-auto reference_sequence_to_dsl_and_pcr(const Device &device, const sequence <Ts...> &)
+auto reference_sequence_to_dsl(const Device &device, const sequence <Ts...> &)
 {
 	// TODO: separate arrays for dsl and pc ranges
 	if constexpr (sizeof...(Ts) == 0) {
 		return std::array <vk::DescriptorSetLayout, 0> ();
 	} else {
 		return std::array {
-			reference_to_dsl_and_pcr(device, Ts())...
+			reference_to_dsl(device, Ts())...
+		};
+	}
+}
+
+template <auto &ref, ShaderStage ... Ss>
+auto reference_to_pcr(const stage_wrapper <reference <ref>, Ss...> &)
+{
+	using data_t = DataTypeOf <ref>;
+
+	static constexpr auto flags = stage_flags_of <Ss...> ();
+
+	auto range = vk::PushConstantRange()
+		.setOffset(0)
+		.setSize(sizeof(data_t))
+		.setStageFlags(flags);
+	return range;
+}
+
+template <typename ... Ts>
+auto reference_sequence_to_pcrs(const sequence <Ts...> &)
+{
+	if constexpr (sizeof...(Ts) == 0) {
+		return std::array <vk::PushConstantRange, 0> ();
+	} else {
+		return std::array {
+			reference_to_pcr(Ts())...
 		};
 	}
 }
@@ -135,7 +207,12 @@ struct RasterizationCombinator {
 		auto gvrs1 = add_gvr_from_implicit_context <ShaderStage::Vertex> (gvrs0, vertex_icontext());
 		auto gvrs = add_gvr_from_implicit_context <ShaderStage::Fragment> (gvrs1, fragment_icontext());
 
-		auto alloc = sequence_to_group_allocation(gvrs);
+		auto descriptor_gvrs = descriptor_resources_t <decltype(gvrs)> ::singleton;
+		auto push_constant_gvrs = push_constant_resources_t <decltype(gvrs)> ::singleton;
+
+		static_assert(push_constant_gvrs.size <= 1, "multiple push constant blocks are not supported");
+
+		auto alloc = sequence_to_group_allocation(descriptor_gvrs);
 		auto gamap = new_allocation(alloc);
 		vertex.apply_group_allocation_map(gamap);
 		fragment.apply_group_allocation_map(gamap);
@@ -154,8 +231,12 @@ struct RasterizationCombinator {
 		auto fmodule = compiler.spirv_to_shader_module(fspv);
 
 		// Generate the pipeline and descriptor set layouts
-		auto dsls = reference_sequence_to_dsl_and_pcr(device, gvrs);
+		auto dsls = reference_sequence_to_dsl(device, descriptor_gvrs);
+		auto pcrs = reference_sequence_to_pcrs(push_constant_gvrs);
+
 		auto layout_info = vk::PipelineLayoutCreateInfo().setSetLayouts(dsls);
+		if constexpr (push_constant_gvrs.size > 0)
+			layout_info.setPushConstantRanges(pcrs);
 		auto layout = device.logical.createPipelineLayout(layout_info);
 
 		// Building the pipeline
@@ -247,6 +328,7 @@ struct RasterizationCombinator {
 			T,
 			decltype(streams),
 			decltype(alloc),
+			decltype(gvrs),
 			dsls.size()
 		> {
 			.device = device.logical,

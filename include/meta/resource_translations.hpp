@@ -26,6 +26,24 @@ struct resource_translator <AttributeStream <T, L, R>> {
 	using element_type = buffer::element_type;
 };
 
+template <reflected T, template <typename> typename L>
+struct resource_translator <PushConstant <T, L>> {
+	struct PushConstantMirror {
+		using value_type = TypeMirror <T, L>;
+
+		value_type value {};
+
+		auto &write(const value_type &v) {
+			value = v;
+			return *this;
+		}
+	};
+
+	using type = PushConstantMirror;
+	using value_type = typename type::value_type;
+	using element_type = std::nullptr_t;
+};
+
 template <native_scalar T, size_t D>
 struct resource_translator <Sampler <T, D>> {
 	struct SamplerMirror {

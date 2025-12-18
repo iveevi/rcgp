@@ -47,6 +47,15 @@ struct resource_intrinsic <storage_buffer_reflection <T, L>> {
 	}
 };
 
+template <typename T, template <typename> typename L>
+struct resource_intrinsic <push_constant_reflection <T, L>> {
+	static auto intrinsic(uint32_t binding) {
+		auto type = reconstruct_type <T> ();
+		auto grsrc = jems::global_resource(type, GlobalResource::ePushConstant, layout_of <L> (), std::nullopt, binding);
+		return grsrc;
+	}
+};
+
 template <typename T, size_t D>
 struct resource_intrinsic <sampler_reflection <T, D>> {
 	static auto intrinsic(uint32_t binding) {

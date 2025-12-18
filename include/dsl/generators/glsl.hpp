@@ -61,7 +61,11 @@ struct GLSL {
 		}
 
 		std::string impl(GlobalResource grsrc) {
-			// TODO: different if its a push constant
+			if (grsrc.kind == GlobalResource::ePushConstant) {
+				auto idx = grsrc.push_constant_index.value_or(0);
+				return fmt::format("pc{}", idx);
+			}
+
 			return fmt::format("r{}_i{}",
 		      		grsrc.group.value_or(-1),
 		      		grsrc.index.value_or(-1));
@@ -329,6 +333,8 @@ struct GLSL {
 			if (block.context.thread_outputs.size())
 				result += "\n";
 
+			uint32_t pcounter = 0;
+
 			for (auto &[_, refs] : block.context.global_resources) {
 				for (auto &ref : refs) {
 					auto &grsrc = ref->as <GlobalResource> ();
@@ -337,12 +343,19 @@ struct GLSL {
 						auto index = grsrc.index.value_or(-1);
 						result += fmt::format("layout (set = {}, binding = {}) uniform sampler2D r{}_i{};\n\n",
 							group, index, group, index);
+					} else if (grsrc.kind == GlobalResource::ePushConstant) {
+						auto idx = grsrc.push_constant_index.value_or(pcounter++);
+						grsrc.push_constant_index = idx;
+
+						result += fmt::format("layout ({}push_constant) uniform PC{} {{\n",
+							layout_string(grsrc.layout), idx);
+						result += fmt::format("    {} pc{};\n", type.main(grsrc.type), idx);
+						result += "};\n\n";
 					} else {
 						std::string modifier;
 						switch (grsrc.kind) {
 						case GlobalResource::eUniformBuffer: modifier = "uniform"; break;
 						case GlobalResource::eStorageBuffer: modifier = "buffer"; break;
-						case GlobalResource::ePushConstant:
 						default:
 							fatal("unsupported global resource kind");
 						}

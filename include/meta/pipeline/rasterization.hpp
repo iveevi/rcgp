@@ -3,6 +3,7 @@
 #include <type_traits>
 
 #include "../../rhi/descriptor_pool.hpp"
+#include "../collect_gvrs.hpp"
 #include "../descriptor.hpp"
 #include "../layout/all.hpp"
 #include "../mirror_buffer.hpp"
@@ -54,15 +55,40 @@ struct resource_translator <IndexBuffer <T, I>> {
 	using element_type = typename type::element_type;
 };
 
+// Compile-time stage flag lookup for a given resource reference within a sequence
+template <auto &ref, typename Seq>
+struct stage_flags_for_seq;
+
+template <auto &ref>
+struct stage_flags_for_seq <ref, sequence <>> {
+	static constexpr vk::ShaderStageFlags value = {};
+};
+
+template <auto &ref, auto &other, ShaderStage ...Ss, typename ...Rest>
+struct stage_flags_for_seq <
+	ref,
+	sequence <stage_wrapper <reference <other>, Ss...>, Rest...>
+> {
+	static constexpr vk::ShaderStageFlags value =
+		std::same_as <reference <other>, reference <ref>>
+			? stage_flags_of <Ss...> ()
+			: stage_flags_for_seq <ref, sequence <Rest...>> ::value;
+};
+
+template <auto &ref, typename Seq>
+constexpr vk::ShaderStageFlags stage_flags_for_v = stage_flags_for_seq <ref, Seq> ::value;
+
 // AttributeStreams := sequence <reference <Stream>...>
 // GroupAllocation := sequence <reference <GRV>...>
 // TODO: Sets should be inferred from GroupAllocation::size... or something
-template <Topology T, typename AttributeStreams, typename GroupAllocation, size_t Sets>
+template <Topology T, typename AttributeStreams, typename GroupAllocation, typename GlobalResources, size_t Sets>
 struct AnnotatedRasterizationPipeline {
 	vk::Device device;
 	vk::Pipeline handle;
 	vk::PipelineLayout layout;
 	std::array <vk::DescriptorSetLayout, Sets> dsls;
+
+	using global_resources = GlobalResources;
 
 	template <auto &ref>
 	auto new_descriptor(const DescriptorPool &dpool) const {

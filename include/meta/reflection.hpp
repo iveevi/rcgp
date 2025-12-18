@@ -38,7 +38,7 @@ struct function_reflection {};
 template <typename T>
 struct resource_group_reflection {};
 
-template <typename T>
+template <typename T, template <typename> typename L>
 struct push_constant_reflection {};
 
 template <typename T, template <typename> typename L>
