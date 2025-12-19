@@ -45,7 +45,7 @@ struct reconstructor_t <array_reflection <T, N>> {
 
 template <typename Original, typename ... Args>
 struct reconstructor_t <aggregate_reflection <Original, Args...>> {
-	static bool collect(AggregateType &aggregate, jems::handle handle) {
+		static bool collect(AggregateType &aggregate, jems::handle handle) {
 		aggregate.push_back(Reference(handle));
 		return true;
 	}

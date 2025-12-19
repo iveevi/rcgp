@@ -1,26 +1,5 @@
 #include "rhi/image.hpp"
 
-vk::ImageMemoryBarrier Image::memory_barrier(vk::ImageLayout new_layout, vk::AccessFlags src_access, vk::AccessFlags dst_access, vk::ImageAspectFlags aspect)
-{
-	vk::ImageMemoryBarrier barrier;
-	auto aspect_mask = aspect ? aspect : info.aspect;
-	barrier.setImage(handle)
-		.setOldLayout(layout)
-		.setNewLayout(new_layout)
-		.setSrcAccessMask(src_access)
-		.setDstAccessMask(dst_access)
-		.setSubresourceRange(
-			vk::ImageSubresourceRange()
-				.setAspectMask(aspect_mask)
-				.setBaseArrayLayer(0)
-				.setBaseMipLevel(0)
-				.setLayerCount(1)
-				.setLevelCount(1)
-		);
-	layout = new_layout;
-	return barrier;
-}
-
 void Image::destroy()
 {
 	if (view) {

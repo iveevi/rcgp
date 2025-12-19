@@ -91,18 +91,18 @@ std::tuple <Session, vk::detail::DispatchLoaderDynamic> Session::from(const Info
 		.setPUserData(&session);
 
 	auto app_info = vk::ApplicationInfo()
-		.setApplicationVersion(VK_MAKE_VERSION(1, 0, 0))
 		.setApiVersion(VK_API_VERSION_1_4)
-		.setEngineVersion(VK_MAKE_VERSION(1, 0, 0))
-		.setPApplicationName("ugp")
-		.setPEngineName("ugp");
+		.setApplicationVersion(info.application_version)
+		.setPApplicationName(info.application_name.c_str())
+		.setEngineVersion(info.engine_version)
+		.setPEngineName(info.engine_name.c_str());
 
 	auto instance_info = vk::InstanceCreateInfo()
 		.setPApplicationInfo(&app_info)
 		.setPEnabledLayerNames(layers)
 		.setPEnabledExtensionNames(extensions);
 
-	if (info.validation && info.validation_bootstrap)
+	if (info.validation && info.validate_instance)
 		instance_info.setPNext(&debug_info);
 
 	session.handle = vk::createInstance(instance_info, nullptr, dld);

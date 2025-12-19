@@ -85,9 +85,13 @@ Device Device::from(const Session &session, vk::detail::DispatchLoaderDynamic &d
 		.setQueuePriorities(priority)
 		.setQueueCount(1);
 
+	auto features13 = vk::PhysicalDeviceVulkan13Features()
+		.setSynchronization2(true);
+
 	auto device_info = vk::DeviceCreateInfo()
 		.setQueueCreateInfos(device_queues_info)
-		.setPEnabledExtensionNames(info.extensions);
+		.setPEnabledExtensionNames(info.extensions)
+		.setPNext(&features13);
 
 	device.logical = device.physical.createDevice(device_info);
 

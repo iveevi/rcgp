@@ -40,6 +40,8 @@ struct PendingGlobalResource {};
 // TODO: concept for auxiliary states
 
 // Ts are all auxiliary states
+// TODO: some way to calculate the minimal state flags for barriers...
+// at runtime (when flushing commands), would need to track the dependencies correctly...
 template <CommandFlag S, typename ... Ts>
 struct CommandState {
 	static_assert(!((S == CommandFlag::eNeutral) && (sizeof...(Ts) > 0)),
@@ -219,7 +221,7 @@ auto push_constants(const AnnotatedRasterizationPipeline <T, AttributeStreams, G
 	static_assert(stage_flags != vk::ShaderStageFlags(), "push constant not used by any stage");
 
 	auto binder = [&, stage_flags](const vk::CommandBuffer &cmd, CommandsTraceAux &aux) {
-		cmd.pushConstants(aux.layout, stage_flags, 0, sizeof(constants.value), &constants.value);
+		cmd.pushConstants(aux.layout, stage_flags, 0, sizeof(constants), &constants);
 	};
 
 	return Commands <

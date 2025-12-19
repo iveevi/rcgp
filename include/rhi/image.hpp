@@ -22,13 +22,6 @@ struct Image {
 	vk::ImageLayout layout = vk::ImageLayout::eUndefined;
 	Info info;
 
-	vk::ImageMemoryBarrier memory_barrier(
-		vk::ImageLayout new_layout,
-		vk::AccessFlags src_access = {},
-		vk::AccessFlags dst_access = {},
-		vk::ImageAspectFlags aspect = {}
-	);
-
 	void destroy();
 
 	static Image from(const Device &device, const Info &info);

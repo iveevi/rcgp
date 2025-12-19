@@ -133,14 +133,16 @@ auto reference_sequence_to_dsl(const Device &device, const sequence <Ts...> &)
 template <auto &ref, ShaderStage ... Ss>
 auto reference_to_pcr(const stage_wrapper <reference <ref>, Ss...> &)
 {
-	using data_t = DataTypeOf <ref>;
+	using data_t = ResourceMirrorOf <ref>;
 
 	static constexpr auto flags = stage_flags_of <Ss...> ();
 
+	// TODO: need to allocate push constant ranges...
 	auto range = vk::PushConstantRange()
 		.setOffset(0)
 		.setSize(sizeof(data_t))
 		.setStageFlags(flags);
+
 	return range;
 }
 
@@ -160,7 +162,7 @@ consteval vk::PrimitiveTopology translate_topology(Topology T)
 {
 	switch (T) {
 	case Topology::eTriangleList: return vk::PrimitiveTopology::eTriangleList;
-	case Topology::eTriangleFan:  return vk::PrimitiveTopology::eTriangleFan;
+	case Topology::eTriangleFan: return vk::PrimitiveTopology::eTriangleFan;
 	}
 
 	return vk::PrimitiveTopology::eTriangleList;

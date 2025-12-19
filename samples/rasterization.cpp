@@ -5,111 +5,12 @@
 #include "util/aperature.hpp"
 #include "util/transform.hpp"
 
-constexpr mrd::MeshEncodings mesh_encodings;
+constexpr auto mesh_encodings = mrd::MeshEncodings();
 using Model = mrd::Model <mesh_encodings>;
 using Mesh = Model::mesh_t;
 
-constexpr auto albedo_encoding = mrd::TextureEncoding::RGBA_UNorm8;
-using Texture = mrd::Texture <albedo_encoding>;
-
-struct TextureGPU {
-	Image image;
-	vk::Sampler sampler;
-
-	void destroy(const Device &device) {
-		if (sampler) device.logical.destroySampler(sampler);
-		image.destroy();
-	}
-};
-
-// TODO: use this newline convention
-static TextureGPU upload_texture(
-	const Device &device,
-	const Queue &queue,
-	const CommandPool &cpool,
-	const Texture &tex
-)
-{
-	const auto bytes = tex.data.size() * sizeof(tex.data[0]);
-
-	auto staging = Buffer::from(
-		device,
-		bytes,
-		vk::BufferUsageFlagBits::eTransferSrc,
-		vk::MemoryPropertyFlagBits::eHostVisible
-		| vk::MemoryPropertyFlagBits::eHostCoherent
-	);
-
-	staging.write(tex.data.data(), bytes, 0);
-
-	auto img_info = Image::Info {
-		.extent = vk::Extent2D(tex.info.size.x, tex.info.size.y),
-		.format = vk::Format::eR8G8B8A8Unorm,
-		.usage = vk::ImageUsageFlagBits::eTransferDst
-		| vk::ImageUsageFlagBits::eSampled,
-		.properties = vk::MemoryPropertyFlagBits::eDeviceLocal,
-		.tiling = vk::ImageTiling::eOptimal,
-		.aspect = vk::ImageAspectFlagBits::eColor,
-	};
-
-	auto image = Image::from(device, img_info);
-
-	// one-shot command buffer
-	auto cmd = device.new_command_buffers(cpool, 1).front();
-	cmd.begin(vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
-
-	auto barrier1 = image.memory_barrier(
-		vk::ImageLayout::eTransferDstOptimal,
-		{}, vk::AccessFlagBits::eTransferWrite
-	);
-	cmd.pipelineBarrier(
-		vk::PipelineStageFlagBits::eTopOfPipe,
-		vk::PipelineStageFlagBits::eTransfer,
-		{}, nullptr, nullptr, barrier1
-	);
-
-	auto copy = vk::BufferImageCopy()
-		.setImageSubresource(
-			vk::ImageSubresourceLayers()
-				.setAspectMask(vk::ImageAspectFlagBits::eColor)
-				.setMipLevel(0)
-				.setBaseArrayLayer(0)
-				.setLayerCount(1)
-		)
-		.setImageExtent(vk::Extent3D(tex.info.size.x, tex.info.size.y, 1));
-	cmd.copyBufferToImage(staging.handle, image.handle, vk::ImageLayout::eTransferDstOptimal, copy);
-
-	auto barrier2 = image.memory_barrier(
-		vk::ImageLayout::eShaderReadOnlyOptimal,
-		vk::AccessFlagBits::eTransferWrite,
-		vk::AccessFlagBits::eShaderRead
-	);
-	cmd.pipelineBarrier(
-		vk::PipelineStageFlagBits::eTransfer,
-		vk::PipelineStageFlagBits::eFragmentShader,
-		{}, nullptr, nullptr, barrier2
-	);
-
-	cmd.end();
-	queue.submit(cmd, {}, {}, vk::PipelineStageFlagBits::eTopOfPipe, nullptr);
-	queue.waitIdle();
-
-	staging.destroy();
-
-	auto sinfo = vk::SamplerCreateInfo()
-		.setMagFilter(vk::Filter::eLinear)
-		.setMinFilter(vk::Filter::eLinear)
-		.setAddressModeU(vk::SamplerAddressMode::eRepeat)
-		.setAddressModeV(vk::SamplerAddressMode::eRepeat)
-		.setAddressModeW(vk::SamplerAddressMode::eRepeat)
-		.setAnisotropyEnable(false)
-		.setUnnormalizedCoordinates(false);
-
-	TextureGPU gpu;
-	gpu.image = image;
-	gpu.sampler = device.logical.createSampler(sinfo);
-	return gpu;
-}
+constexpr auto texture_encoding = mrd::TextureEncoding::RGBA_UNorm8;
+using Texture = mrd::Texture <texture_encoding>;
 
 struct View {
 	mat4 proj;
@@ -138,7 +39,8 @@ auto vs = $vertex $fn($ref(position), $ref(normal), $ref(texcoord), $ref(view))
 
 PushConstant <vec3> light;
 
-auto fs = $fragment $fn($ref(light), $ref(albedo_tex), vec3 world_normal, vec2 uv) -> $returns(vec4)
+auto fs = $fragment $fn($ref(light), $ref(albedo_tex), vec3 world_normal, vec2 uv)
+	-> $returns(vec4)
 {
 	auto normal = normalize(world_normal);
 	auto shade = max(dot(light, normal), 0.0f);
@@ -224,6 +126,118 @@ struct Material {
 	DescriptorOf <albedo_tex> albedo_descriptor;
 };
 
+ResourceMirrorOf <albedo_tex> upload_texture(
+	const Device &device,
+	const Queue &queue,
+	const CommandPool &cpool,
+	const Texture &tex
+)
+{
+	const auto bytes = tex.data.size() * sizeof(tex.data[0]);
+
+	auto staging = Buffer::from(
+		device,
+		bytes,
+		vk::BufferUsageFlagBits::eTransferSrc,
+		vk::MemoryPropertyFlagBits::eHostVisible
+		| vk::MemoryPropertyFlagBits::eHostCoherent
+	);
+
+	staging.write(tex.data.data(), bytes, 0);
+
+	auto img_info = Image::Info {
+		.extent = vk::Extent2D(tex.info.size.x, tex.info.size.y),
+		.format = vk::Format::eR8G8B8A8Unorm,
+		.usage = vk::ImageUsageFlagBits::eTransferDst
+		| vk::ImageUsageFlagBits::eSampled,
+		.properties = vk::MemoryPropertyFlagBits::eDeviceLocal,
+		.tiling = vk::ImageTiling::eOptimal,
+		.aspect = vk::ImageAspectFlagBits::eColor,
+	};
+
+	auto image = Image::from(device, img_info);
+
+	// one-shot command buffer
+	auto cmd = device.new_command_buffers(cpool, 1).front();
+	cmd.begin(vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+
+	auto barrier1 = vk::ImageMemoryBarrier2()
+		.setImage(image.handle)
+		.setOldLayout(image.layout)
+		.setNewLayout(vk::ImageLayout::eTransferDstOptimal)
+		.setSrcStageMask(vk::PipelineStageFlagBits2::eTopOfPipe)
+		.setDstStageMask(vk::PipelineStageFlagBits2::eTransfer)
+		.setSrcAccessMask({})
+		.setDstAccessMask(vk::AccessFlagBits2::eTransferWrite)
+		.setSubresourceRange(
+			vk::ImageSubresourceRange()
+				.setAspectMask(img_info.aspect)
+				.setBaseArrayLayer(0)
+				.setBaseMipLevel(0)
+				.setLayerCount(1)
+				.setLevelCount(1)
+		);
+	cmd.pipelineBarrier2(
+		vk::DependencyInfo()
+			.setImageMemoryBarriers(barrier1)
+	);
+	image.layout = vk::ImageLayout::eTransferDstOptimal;
+
+	auto copy = vk::BufferImageCopy()
+		.setImageSubresource(
+			vk::ImageSubresourceLayers()
+				.setAspectMask(vk::ImageAspectFlagBits::eColor)
+				.setMipLevel(0)
+				.setBaseArrayLayer(0)
+				.setLayerCount(1)
+		)
+		.setImageExtent(vk::Extent3D(tex.info.size.x, tex.info.size.y, 1));
+	cmd.copyBufferToImage(staging.handle, image.handle, vk::ImageLayout::eTransferDstOptimal, copy);
+
+	auto barrier2 = vk::ImageMemoryBarrier2()
+		.setImage(image.handle)
+		.setOldLayout(image.layout)
+		.setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+		.setSrcStageMask(vk::PipelineStageFlagBits2::eTransfer)
+		.setDstStageMask(vk::PipelineStageFlagBits2::eFragmentShader)
+		.setSrcAccessMask(vk::AccessFlagBits2::eTransferWrite)
+		.setDstAccessMask(vk::AccessFlagBits2::eShaderRead)
+		.setSubresourceRange(
+			vk::ImageSubresourceRange()
+				.setAspectMask(img_info.aspect)
+				.setBaseArrayLayer(0)
+				.setBaseMipLevel(0)
+				.setLayerCount(1)
+				.setLevelCount(1)
+		);
+	cmd.pipelineBarrier2(
+		vk::DependencyInfo()
+			.setImageMemoryBarriers(barrier2)
+	);
+	image.layout = vk::ImageLayout::eShaderReadOnlyOptimal;
+
+	cmd.end();
+	queue.submit(cmd, {}, {}, vk::PipelineStageFlagBits::eTopOfPipe, nullptr);
+	queue.waitIdle();
+
+	staging.destroy();
+
+	auto sinfo = vk::SamplerCreateInfo()
+		.setMagFilter(vk::Filter::eLinear)
+		.setMinFilter(vk::Filter::eLinear)
+		.setAddressModeU(vk::SamplerAddressMode::eRepeat)
+		.setAddressModeV(vk::SamplerAddressMode::eRepeat)
+		.setAddressModeW(vk::SamplerAddressMode::eRepeat)
+		.setAnisotropyEnable(false)
+		.setUnnormalizedCoordinates(false);
+
+	ResourceMirrorOf <albedo_tex> mirror;
+	mirror.view = image.view;
+	mirror.sampler = device.logical.createSampler(sinfo);
+	mirror.layout = vk::ImageLayout::eShaderReadOnlyOptimal;
+	return mirror;
+}
+
 int main(int argc, char *argv[])
 {
 	if (argc < 2) {
@@ -232,7 +246,9 @@ int main(int argc, char *argv[])
 	}
 
 	auto session_info = Session::Info {
-		.validation_bootstrap = false,
+		.application_name = "rasterization",
+		.engine_name = "ugp",
+		.validate_instance = false,
 	};
 
 	auto [session, dld] = Session::from(session_info);
@@ -350,8 +366,7 @@ int main(int argc, char *argv[])
 	xform.translation = glm::vec3(0, 0, -10);
 	aperature.aspect = float(window.extent().width) / window.extent().height;
 
-	ResourceMirrorOf <light> light_pc;
-	light_pc.write(glm::vec3(0, 1, 0));
+	ResourceMirrorOf <light> light_pc { 0.0f, 1.0f, 0.0f };
 	
 	auto make_color_texture = [](glm::vec4 color) {
 		Texture tex;
@@ -362,20 +377,18 @@ int main(int argc, char *argv[])
 
 	const glm::vec4 fallback_color { 1.0f, 0.0f, 1.0f, 1.0f };
 
-	std::vector <TextureGPU> material_gpu_textures;
 	std::vector <Material> materials;
 
 	if (model.materials.empty())
 		model.materials.push_back(mrd::Material{});
 
-	material_gpu_textures.reserve(model.materials.size());
 	materials.reserve(model.materials.size());
 
 	for (const auto &mat : model.materials) {
 		Texture src;
 
 		if (mat.albedo.has_texture()) {
-			static std::optional <mrd::TextureCache <albedo_encoding>> albedo_cache;
+			static std::optional <mrd::TextureCache <texture_encoding>> albedo_cache;
 			if (!albedo_cache) albedo_cache.emplace();
 			auto loaded = Texture::load(mat.albedo.path, *albedo_cache);
 			if (loaded) {
@@ -388,18 +401,14 @@ int main(int argc, char *argv[])
 			src = make_color_texture(mat.albedo.value);
 		}
 
-		material_gpu_textures.push_back(upload_texture(device, queue, cpool, src));
-
 		Material material;
 		
-		auto &mirror = material.albedo_data;
-		mirror.sampler = material_gpu_textures.back().sampler;
-		mirror.view = material_gpu_textures.back().image.view;
-		mirror.layout = vk::ImageLayout::eShaderReadOnlyOptimal;
-
-		auto raw_albedo_ds = pipeline.new_descriptor <albedo_tex> (dpool);
+		material.albedo_data = upload_texture(device, queue, cpool, src);
 		material.albedo_descriptor = device.update_descriptors(
-			DescriptorWritePair { raw_albedo_ds, mirror }
+			DescriptorWritePair {
+				pipeline.new_descriptor <albedo_tex> (dpool),
+				material.albedo_data
+			}
 		);
 
 		materials.push_back(material);
@@ -506,8 +515,8 @@ int main(int argc, char *argv[])
 			| unbind_pipeline()
 			| end_render_pass();
 
-		cmd = final_commands(cmd);
-		queue.submit(cmd,
+		queue.submit(
+			final_commands(cmd),
 			frame.presented,
 			frame.rendered,
 			vk::PipelineStageFlagBits::eColorAttachmentOutput,
@@ -520,8 +529,4 @@ int main(int argc, char *argv[])
 			frame.rendered
 		);
 	}
-
-	device.logical.waitIdle();
-	for (auto &g : material_gpu_textures)
-		g.destroy(device);
 }

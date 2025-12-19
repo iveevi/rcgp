@@ -14,62 +14,50 @@ struct resource_translator <ResourceGroup <T>> {
 	using element_type = defer::element_type;
 };
 
+// TODO: needs to be changed
+struct SamplerMirror {
+	vk::Sampler sampler {};
+	vk::ImageView view {};
+	vk::ImageLayout layout = vk::ImageLayout::eShaderReadOnlyOptimal;
+
+	vk::DescriptorImageInfo descriptor_info() const {
+		return vk::DescriptorImageInfo()
+			.setSampler(sampler)
+			.setImageView(view)
+			.setImageLayout(layout);
+	}
+
+	static SamplerMirror from(
+		const Device &device,
+		const vk::SamplerCreateInfo &sinfo,
+		const Image &image,
+		vk::ImageLayout layout = vk::ImageLayout::eShaderReadOnlyOptimal
+	) {
+		SamplerMirror sm;
+		sm.sampler = device.logical.createSampler(sinfo);
+		sm.view = image.view;
+		sm.layout = layout;
+		return sm;
+	}
+};
+
 template <reflected T, template <typename> typename L, vk::VertexInputRate R>
 struct resource_translator <AttributeStream <T, L, R>> {
 	using buffer = VertexMirrorBuffer <array <T>, L>;
-	using type [[deprecated(
-		"advised to use VertexBufferOf <>"
-	)]] = decltype([]{
-		return buffer();
-	} ());
+	using type = buffer;
 	using value_type = buffer::value_type;
 	using element_type = buffer::element_type;
 };
 
 template <reflected T, template <typename> typename L>
 struct resource_translator <PushConstant <T, L>> {
-	struct PushConstantMirror {
-		using value_type = TypeMirror <T, L>;
-
-		value_type value {};
-
-		auto &write(const value_type &v) {
-			value = v;
-			return *this;
-		}
-	};
-
-	using type = PushConstantMirror;
-	using value_type = typename type::value_type;
-	using element_type = std::nullptr_t;
+	using type = TypeMirror <T, L>;
+	using value_type = type;
+	using element_type = type;
 };
 
 template <native_scalar T, size_t D>
 struct resource_translator <Sampler <T, D>> {
-	struct SamplerMirror {
-		vk::Sampler sampler {};
-		vk::ImageView view {};
-		vk::ImageLayout layout = vk::ImageLayout::eShaderReadOnlyOptimal;
-
-		vk::DescriptorImageInfo descriptor_info() const {
-			return vk::DescriptorImageInfo()
-				.setSampler(sampler)
-				.setImageView(view)
-				.setImageLayout(layout);
-		}
-
-		static SamplerMirror from(const Device &device,
-					  const vk::SamplerCreateInfo &sinfo,
-					  const Image &image,
-					  vk::ImageLayout layout = vk::ImageLayout::eShaderReadOnlyOptimal) {
-			SamplerMirror sm;
-			sm.sampler = device.logical.createSampler(sinfo);
-			sm.view = image.view;
-			sm.layout = layout;
-			return sm;
-		}
-	};
-
 	using type = SamplerMirror;
 	using value_type = type;
 	using element_type = std::nullptr_t;

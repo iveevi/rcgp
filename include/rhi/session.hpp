@@ -18,8 +18,12 @@ struct Session {
 
 	// Session construction
 	struct Info {
+		const std::string &application_name;
+		uint32_t application_version = VK_MAKE_VERSION(0, 1, 0);
+		const std::string &engine_name;
+		uint32_t engine_version = VK_MAKE_VERSION(0, 1, 0);
 		bool validation = true;
-		bool validation_bootstrap = true;
+		bool validate_instance = true;
 		bool trap_on_error = true;
 	};
 
