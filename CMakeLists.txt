@@ -7,16 +7,10 @@ set(CMAKE_LINKER_TYPE MOLD)
 
 find_package(Vulkan REQUIRED)
 
-add_compile_options(-ftime-trace)
-
 set(ALLOW_EXTERNAL_SPIRV_TOOLS TRUE)
-set(MRD_GLM_PATH "${CMAKE_CURRENT_LIST_DIR}/ext/glm")
-set(MRD_STB_PATH "${CMAKE_CURRENT_LIST_DIR}/ext/stb")
-
 add_subdirectory(ext/glslang EXCLUDE_FROM_ALL)
-add_subdirectory(ext/mrd EXCLUDE_FROM_ALL)
 
-include_directories(include ext/glslang ext/glm ext/mrd)
+include_directories(include ext/glslang ext/glm)
 
 add_library(ugp STATIC
 	source/rhi/buffer.cpp
@@ -40,15 +34,11 @@ target_link_libraries(ugp PUBLIC
 	glslang::glslang-default-resource-limits
 )
 
-add_executable(rasterization samples/rasterization.cpp)
-
-add_executable(test
+add_executable(test EXCLUDE_FROM_ALL
 	source/test/main.cpp
 	source/test/mirror/std430.cpp
-	source/test/mirror/scalar.cpp)
+	source/test/mirror/scalar.cpp
+)
 
 target_precompile_headers(test PRIVATE <vulkan/vulkan.hpp>)
-target_precompile_headers(rasterization REUSE_FROM test)
-
 target_link_libraries(test PRIVATE ugp mrd)
-target_link_libraries(rasterization PRIVATE ugp mrd)

@@ -4,12 +4,3 @@
 [submodule "ext/glslang"]
 	path = ext/glslang
 	url = https://github.com/KhronosGroup/glslang.git
-[submodule "ext/mrd"]
-	path = ext/mrd
-	url = https://github.com/iveevi/mrd.git
-[submodule "ext/Catch2"]
-	path = ext/Catch2
-	url = https://github.com/catchorg/Catch2.git
-[submodule "ext/stb"]
-	path = ext/stb
-	url = https://github.com/nothings/stb.git
