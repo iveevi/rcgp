@@ -45,3 +45,15 @@ void Block::apply_group_allocation_map(const group_allocation_map &map)
 			ref->as <GlobalResource> ().group = group;
 	}
 }
+
+void Block::apply_push_constant_allocation_map(const push_constant_allocation_map &map)
+{
+	for (auto &[addr, layout] : map) {
+		auto &refs = context.global_resources[addr];
+		for (auto &ref : refs) {
+			auto &grsrc = ref->as <GlobalResource> ();
+			grsrc.push_constant_index = layout.index;
+			grsrc.push_constant_offset = layout.offset;
+		}
+	}
+}

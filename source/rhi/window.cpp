@@ -115,7 +115,6 @@ Window Window::from(const Session &session, const Device &device)
 
 	Window result;
 
-	glfwInit();
 	result.handle = glfwCreateWindow(1024, 1024, "ugp", nullptr, nullptr);
 
 	glfwSetWindowUserPointer(result.handle, &result);

@@ -39,11 +39,11 @@
 #include "rhi/buffer.hpp"
 #include "rhi/command_pool.hpp"
 #include "rhi/descriptor_pool.hpp"
-#include "rhi/compiler.hpp"
 #include "rhi/device.hpp"
 #include "rhi/queue.hpp"
 #include "rhi/render_pass.hpp"
 #include "rhi/session.hpp"
+#include "rhi/shader_compiler.hpp"
 #include "rhi/window.hpp"
 
 #include "dsl/generators/assembly.hpp"

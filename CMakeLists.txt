@@ -25,7 +25,7 @@ add_library(rcgp STATIC
 	source/dsl/instructions.cpp
 	source/rhi/buffer.cpp
 	source/rhi/command_pool.cpp
-	source/rhi/compiler.cpp
+	source/rhi/shader_compiler.cpp
 	source/rhi/device.cpp
 	source/rhi/descriptor_pool.cpp
 	source/rhi/image.cpp

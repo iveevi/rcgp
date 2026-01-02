@@ -1,4 +1,4 @@
-#include "rhi/compiler.hpp"
+#include "rhi/shader_compiler.hpp"
 
 #include <fmt/printf.h>
 
@@ -6,7 +6,7 @@
 #include <glslang/Public/ShaderLang.h>
 #include <glslang/SPIRV/GlslangToSpv.h>
 
-std::vector <uint32_t> Compiler::glsl_to_spirv(const std::string &glsl, const EShLanguage &stage) const
+std::vector <uint32_t> ShaderCompiler::glsl_to_spirv(const std::string &glsl, const EShLanguage &stage) const
 {
 	const char *cstr[] = { glsl.c_str() };
 
@@ -48,7 +48,7 @@ std::vector <uint32_t> Compiler::glsl_to_spirv(const std::string &glsl, const ES
 	return spirv;
 }
 
-vk::ShaderModule Compiler::spirv_to_shader_module(const std::vector <uint32_t> &spirv) const
+vk::ShaderModule ShaderCompiler::spirv_to_shader_module(const std::vector <uint32_t> &spirv) const
 {
 	vk::ShaderModuleCreateInfo info;
 	info.setCodeSize(spirv.size() * sizeof(uint32_t));
@@ -57,7 +57,7 @@ vk::ShaderModule Compiler::spirv_to_shader_module(const std::vector <uint32_t> &
 	return device.createShaderModule(info);
 }
 
-Compiler Compiler::from(const Device &device, const Options &info)
+ShaderCompiler ShaderCompiler::from(const Device &device, const Options &options)
 {
-	return Compiler(device.logical);
+	return ShaderCompiler(device.logical);
 }

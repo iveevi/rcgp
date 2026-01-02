@@ -11,4 +11,4 @@ template <auto &rsrc>
 using DataTypeOf = DataType <reference_base_t <rsrc>>;
 
 template <auto &rsrc>
-using DynamicDataTypeOf = DynamicDataType <reference_base_t <rsrc>>;
+using DynamicElementTypeOf = DynamicElementType <reference_base_t <rsrc>>;

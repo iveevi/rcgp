@@ -122,6 +122,8 @@ struct GlobalResource {
 	std::optional <uint32_t> index;
 	// push constants use this to disambiguate multiple blocks
 	std::optional <uint32_t> push_constant_index;
+	// push constants use this to determine offset within the shared block
+	std::optional <uint32_t> push_constant_offset;
 };
 
 enum class GlobalIntrinsic {
@@ -253,6 +255,13 @@ enum class ExecutionModel {
 
 using group_allocation_map = std::map <void *, size_t>;
 
+struct PushConstantAllocation {
+	uint32_t index;
+	uint32_t offset;
+};
+
+using push_constant_allocation_map = std::map <void *, PushConstantAllocation>;
+
 struct Block : std::vector <Reference> {
 	struct Context {
 		ExecutionModel model = ExecutionModel::eAgnostic;
@@ -305,6 +314,7 @@ struct Block : std::vector <Reference> {
 	} context;
 	
 	void apply_group_allocation_map(const group_allocation_map &map);
+	void apply_push_constant_allocation_map(const push_constant_allocation_map &map);
 
 	template <typename T>
 	Reference add(const T &sub, Debug aux);

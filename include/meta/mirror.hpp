@@ -35,7 +35,7 @@ using DataType = decltype([] {
 } ());
 
 template <typename T>
-using DynamicDataType = decltype([] {
+using DynamicElementType = decltype([] {
 	using RME = resource_translator <T> ::element_type;
 	static_assert(not std::same_as <RME, std::nullptr_t>,
 	       ($ss("no dynamic element for resource of type ") + $ss_type(T)).view());

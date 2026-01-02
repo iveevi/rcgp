@@ -8,7 +8,7 @@
 
 #include "device.hpp"
 
-struct Compiler {
+struct ShaderCompiler {
 	const vk::Device &device;
 
 	std::vector <uint32_t> glsl_to_spirv(const std::string &glsl, const EShLanguage &stage) const;
@@ -20,5 +20,5 @@ struct Compiler {
 		// TODO: pipeline state/cache?
 	};
 
-	static Compiler from(const Device &device, const Options &info);
+	static ShaderCompiler from(const Device &device, const Options &info);
 };

@@ -351,10 +351,11 @@ struct GLSL {
 					} else if (grsrc.kind == GlobalResource::ePushConstant) {
 						auto idx = grsrc.push_constant_index.value_or(pcounter++);
 						grsrc.push_constant_index = idx;
+						auto offset = grsrc.push_constant_offset.value_or(0);
 
 						result += fmt::format("layout ({}push_constant) uniform PC{} {{\n",
 							layout_string(grsrc.layout), idx);
-						result += fmt::format("    {} pc{};\n", type.main(grsrc.type), idx);
+						result += fmt::format("    layout (offset = {}) {} pc{};\n", offset, type.main(grsrc.type), idx);
 						result += "};\n\n";
 					} else {
 						std::string modifier;

@@ -1,7 +1,8 @@
 #pragma once
 
+#include "../../dsl/instructions.hpp"
 #include "../../dsl/generators/glsl.hpp"
-#include "../../rhi/compiler.hpp"
+#include "../../rhi/shader_compiler.hpp"
 #include "../collect_gvrs.hpp"
 #include "../collect_streams.hpp"
 #include "../implicit_context.hpp"
@@ -131,17 +132,14 @@ auto reference_sequence_to_dsl(const Device &device, const sequence <Ts...> &)
 }
 
 template <auto &ref, ShaderStage ... Ss>
-auto reference_to_pcr(const stage_wrapper <reference <ref>, Ss...> &)
+auto reference_to_pcr(const stage_wrapper <reference <ref>, Ss...> &, uint32_t offset)
 {
-	using data_t = ResourceTypeOf <ref>;
+	using info = push_constant_info <stage_wrapper <reference <ref>, Ss...>>;
 
-	static constexpr auto flags = stage_flags_of <Ss...> ();
-
-	// TODO: need to allocate push constant ranges...
 	auto range = vk::PushConstantRange()
-		.setOffset(0)
-		.setSize(sizeof(data_t))
-		.setStageFlags(flags);
+		.setOffset(offset)
+		.setSize(info::size)
+		.setStageFlags(info::stage_flags);
 
 	return range;
 }
@@ -152,10 +150,40 @@ auto reference_sequence_to_pcrs(const sequence <Ts...> &)
 	if constexpr (sizeof...(Ts) == 0) {
 		return std::array <vk::PushConstantRange, 0> ();
 	} else {
-		return std::array {
-			reference_to_pcr(Ts())...
+		std::array <vk::PushConstantRange, sizeof...(Ts)> ranges {};
+		uint32_t offset = 0;
+		size_t index = 0;
+
+		auto add = [&](auto tag) {
+			using info = push_constant_info <decltype(tag)>;
+			offset = align_up_u32(offset, info::alignment);
+			ranges[index++] = reference_to_pcr(tag, offset);
+			offset += info::size;
 		};
+
+		(add(Ts()), ...);
+		return ranges;
 	}
+}
+
+template <typename ... Ts>
+auto reference_sequence_to_pclm(const sequence <Ts...> &)
+{
+	push_constant_allocation_map map;
+	if constexpr (sizeof...(Ts) > 0) {
+		uint32_t offset = 0;
+		uint32_t index = 0;
+
+		auto add = [&](auto tag) {
+			using info = push_constant_info <decltype(tag)>;
+			offset = align_up_u32(offset, info::alignment);
+			map.emplace(info::addr, PushConstantAllocation { index++, offset });
+			offset += info::size;
+		};
+
+		(add(Ts()), ...);
+	}
+	return map;
 }
 
 consteval vk::PrimitiveTopology translate_topology(Topology T)
@@ -184,7 +212,7 @@ template <Topology T, typename ... Subpasses>
 struct RasterizationCombinator {
 	const marker <T> &topology;
 	const Device &device;
-	const Compiler &compiler;
+	const ShaderCompiler &compiler;
 	const RenderPass <Subpasses...> &render_pass;
 	RasterizationOptions options;
 
@@ -212,12 +240,16 @@ struct RasterizationCombinator {
 		auto descriptor_gvrs = descriptor_resources_t <decltype(gvrs)> ::singleton;
 		auto push_constant_gvrs = push_constant_resources_t <decltype(gvrs)> ::singleton;
 
-		static_assert(push_constant_gvrs.size <= 1, "multiple push constant blocks are not supported");
+		// static_assert(push_constant_gvrs.size <= 1, "multiple push constant blocks are not supported");
 
 		auto alloc = sequence_to_group_allocation(descriptor_gvrs);
 		auto gamap = new_allocation(alloc);
 		vertex.apply_group_allocation_map(gamap);
 		fragment.apply_group_allocation_map(gamap);
+
+		auto pcmap = reference_sequence_to_pclm(push_constant_gvrs);
+		vertex.apply_push_constant_allocation_map(pcmap);
+		fragment.apply_push_constant_allocation_map(pcmap);
 
 		// Compile the shaders
 		auto vshader = generators::GLSL(vertex).generate();

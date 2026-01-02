@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <type_traits>
 
 #include "../../rhi/descriptor_pool.hpp"
@@ -78,6 +79,51 @@ struct stage_flags_for_seq <
 template <auto &ref, typename Seq>
 constexpr vk::ShaderStageFlags stage_flags_for_v = stage_flags_for_seq <ref, Seq> ::value;
 
+constexpr uint32_t align_up_u32(uint32_t value, uint32_t alignment)
+{
+	return (value + alignment - 1) / alignment * alignment;
+}
+
+template <typename SW>
+struct push_constant_info;
+
+template <auto &ref, ShaderStage ...Ss>
+struct push_constant_info <stage_wrapper <reference <ref>, Ss...>> {
+	using data_t = ResourceTypeOf <ref>;
+	static constexpr uint32_t size = sizeof(data_t);
+	static constexpr uint32_t alignment = std::max<uint32_t>(4u, alignof(data_t));
+	static constexpr vk::ShaderStageFlags stage_flags = stage_flags_of <Ss...> ();
+	static constexpr void *addr = (void *) &ref;
+
+	static_assert(size % 4u == 0u, "push constant size must be a multiple of 4 bytes");
+};
+
+template <auto &ref, uint32_t Offset, typename Seq>
+struct push_constant_offset_accum;
+
+template <auto &ref, uint32_t Offset>
+struct push_constant_offset_accum <ref, Offset, sequence <>> {
+	static constexpr bool found = false;
+	static constexpr uint32_t value = 0;
+};
+
+template <auto &ref, uint32_t Offset, typename Head, typename ... Rest>
+struct push_constant_offset_accum <ref, Offset, sequence <Head, Rest...>> {
+	static constexpr uint32_t aligned = align_up_u32(Offset, push_constant_info <Head> ::alignment);
+	static constexpr bool matches = std::same_as <typename Head::type, reference <ref>>;
+	static constexpr uint32_t next_offset = aligned + push_constant_info <Head> ::size;
+	static constexpr bool found = matches || push_constant_offset_accum <ref, next_offset, sequence <Rest...>> ::found;
+	static constexpr uint32_t value = matches
+		? aligned
+		: push_constant_offset_accum <ref, next_offset, sequence <Rest...>> ::value;
+};
+
+template <auto &ref, typename Seq>
+constexpr bool push_constant_offset_found_v = push_constant_offset_accum <ref, 0, Seq> ::found;
+
+template <auto &ref, typename Seq>
+constexpr uint32_t push_constant_offset_for_v = push_constant_offset_accum <ref, 0, Seq> ::value;
+
 // AttributeStreams := sequence <reference <Stream>...>
 // GroupAllocation := sequence <reference <GRV>...>
 // TODO: Sets should be inferred from GroupAllocation::size... or something
@@ -98,6 +144,7 @@ struct AnnotatedRasterizationPipeline {
 				.setDescriptorPool(dpool)
 				.setSetLayouts(dsls[set])
 		).front();
+		// TODO: pass set as well...
 		return DescriptorOf <ref, false> (dset);
 	}
 };
