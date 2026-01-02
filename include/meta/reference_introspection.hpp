@@ -5,7 +5,7 @@
 
 // Reference to resource handle
 template <auto &rsrc>
-using ResourceMirrorOf = ResourceMirror <reference_base_t <rsrc>>;
+using ResourceTypeOf = ResourceType <reference_base_t <rsrc>>;
 
 template <auto &rsrc>
 using DataTypeOf = DataType <reference_base_t <rsrc>>;

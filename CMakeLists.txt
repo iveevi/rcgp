@@ -6,11 +6,20 @@ set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_LINKER_TYPE MOLD)
 
 find_package(Vulkan REQUIRED)
+find_package(glslang REQUIRED)
 
-set(ALLOW_EXTERNAL_SPIRV_TOOLS TRUE)
-add_subdirectory(ext/glslang EXCLUDE_FROM_ALL)
+# GLM external import
+if (NOT DEFINED RCGP_GLM_PATH)
+	message(FATAL_ERROR "RCGP_GLM_PATH must point to the directory containing glm headers")
+endif()
 
-include_directories(include ext/glslang ext/glm)
+set(RCGP_GLM_PATH_RELATIVE "${RCGP_GLM_PATH}")
+cmake_path(RELATIVE_PATH RCGP_GLM_PATH_RELATIVE
+	BASE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}")
+
+message(STATUS "RCGP GLM path provided ${RCGP_GLM_PATH}")
+include_directories("${RCGP_GLM_PATH_RELATIVE}")
+include_directories(include)
 
 add_library(rcgp STATIC
 	source/dsl/instructions.cpp

@@ -24,7 +24,7 @@ struct resource_translator {
 };
 
 template <typename T>
-using ResourceMirror = resource_translator <T> ::type;
+using ResourceType = resource_translator <T> ::type;
 
 template <typename T>
 using DataType = decltype([] {

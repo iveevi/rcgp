@@ -133,7 +133,7 @@ auto reference_sequence_to_dsl(const Device &device, const sequence <Ts...> &)
 template <auto &ref, ShaderStage ... Ss>
 auto reference_to_pcr(const stage_wrapper <reference <ref>, Ss...> &)
 {
-	using data_t = ResourceMirrorOf <ref>;
+	using data_t = ResourceTypeOf <ref>;
 
 	static constexpr auto flags = stage_flags_of <Ss...> ();
 
