@@ -33,12 +33,3 @@ vk::Result Queue::present(
 
 	return presentKHR(info);
 }
-
-Queue Queue::from(const Device &device)
-{
-	// TODO: queue info struct with family flags..
-	Queue result(device.logical.getQueue(0, 0));
-	result.family_index = 0;
-	result.queue_index = 0;
-	return result;
-}

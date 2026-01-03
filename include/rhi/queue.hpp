@@ -2,8 +2,6 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "device.hpp"
-
 struct Queue : vk::Queue {
 	uint32_t family_index;
 	uint32_t queue_index;
@@ -22,6 +20,4 @@ struct Queue : vk::Queue {
 		uint32_t index,
 		const vk::ArrayProxy <vk::Semaphore> &semaphores
 	) const;
-
-	static Queue from(const Device &device);
 };

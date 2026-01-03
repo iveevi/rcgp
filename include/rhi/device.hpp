@@ -4,6 +4,7 @@
 
 #include "session.hpp"
 #include "render_pass.hpp"
+#include "queue.hpp"
 
 // Forward declarations
 struct CommandPool;
@@ -18,6 +19,7 @@ struct Device {
 	vk::PhysicalDevice physical;
 	vk::PhysicalDeviceMemoryProperties properties;
 	vk::detail::DispatchLoaderDynamic loader;
+	std::map <const char *, Queue> queues;
 
 	auto find_memory_type(uint32_t filter, vk::MemoryPropertyFlags flags) const -> uint32_t;
 
@@ -62,6 +64,7 @@ struct Device {
 
 	struct Options {
 		std::vector <const char *> extensions;
+		std::map <const char *, vk::QueueFlags> queues;
 	};
 
 	static Device from(

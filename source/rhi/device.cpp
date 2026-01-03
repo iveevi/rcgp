@@ -1,3 +1,6 @@
+#include <ranges>
+#include <set>
+
 #include "rhi/command_pool.hpp"
 #include "rhi/descriptor_pool.hpp"
 #include "rhi/device.hpp"
@@ -61,7 +64,7 @@ bool Device::acquire_image_for_frame(Frame &frame, uint64_t timeout) const
 Device Device::from(
 	const Session &session,
 	vk::detail::DispatchLoaderDynamic &dld,
-	const Options &info
+	const Options &options
 )
 {
 	Device device;
@@ -69,24 +72,73 @@ Device Device::from(
 	device.physical = session.handle.enumeratePhysicalDevices().front();
 	device.properties = device.physical.getMemoryProperties();
 
-	auto priority = 1.0f;
+	auto queue_families = device.physical.getQueueFamilyProperties();
 
-	auto device_queues_info = vk::DeviceQueueCreateInfo()
-		.setQueueFamilyIndex(0)
-		.setQueuePriorities(priority)
-		.setQueueCount(1);
+	info("queue families:");
+	for (const auto &[i, family] : std::views::enumerate(queue_families)) {
+		fmt::println("{}: {} of {}", i, family.queueCount, vk::to_string(family.queueFlags));
+	}
+
+	auto queue_allocation = std::set <int32_t> ();
+	auto queue_family_index = [&](const vk::QueueFlags &flags) -> int32_t {
+		// Prefer exact match
+		for (const auto &[i, family] : std::views::enumerate(queue_families)) {
+			if (family.queueFlags == flags)
+				return i;
+		}
+		
+		// Otherwise, prefer first non-allocated one
+		int32_t first_applicable = -1;
+		for (const auto &[i, family] : std::views::enumerate(queue_families)) {
+			if (family.queueFlags & flags) {
+				if (first_applicable < 0)
+					first_applicable = i;
+				
+				if (not queue_allocation.contains(i))
+					return i;
+			}
+		}
+
+		// Otherwise, prefer the first applicable
+		return first_applicable;
+	};
+
+	const auto priority = 1.0f;
+	auto queue_create_infos = std::vector <vk::DeviceQueueCreateInfo> ();
+	queue_create_infos.reserve(options.queues.size());
+
+	for (auto &[key, flags] : options.queues) {
+		auto idx = queue_family_index(flags);
+		if (idx == -1) {
+			error("failed to find a suitable queue for '{}'", key);
+			continue;
+		}
+
+		queue_create_infos.emplace_back(
+			vk::DeviceQueueCreateInfo()
+				.setQueueFamilyIndex(idx)
+				.setQueuePriorities(priority)
+				.setQueueCount(1)
+		);
+
+		device.queues.emplace(key, Queue(nullptr, idx, 0));
+	}
 
 	auto features13 = vk::PhysicalDeviceVulkan13Features()
 		.setSynchronization2(true);
 
 	auto device_info = vk::DeviceCreateInfo()
-		.setQueueCreateInfos(device_queues_info)
-		.setPEnabledExtensionNames(info.extensions)
+		.setQueueCreateInfos(queue_create_infos)
+		.setPEnabledExtensionNames(options.extensions)
 		.setPNext(&features13);
 
 	device.logical = device.physical.createDevice(device_info);
 
 	dld.init(device.logical);
+
+	// Populate the queue handles
+	for (auto &[_, queue] : device.queues)
+		static_cast <vk::Queue &> (queue) = device.logical.getQueue(queue.family_index, 0);
 
 	return device;
 }
