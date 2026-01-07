@@ -6,7 +6,7 @@
 #include "macro_swizzle.hpp"
 #include "scalar.hpp"
 
-template <Swizzle::Code S, typename T, typename R>
+template <SwizzleCode S, typename T, typename R>
 struct swizzle_component {
 	operator R() const {
 		static_assert(std::is_base_of_v <jems::handle, T>);

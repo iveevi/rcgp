@@ -82,8 +82,8 @@ std::string Assembly::stringify(Operation x, Reference ref)
 {
 	std::string op = "?";
 	switch (x.code) {
-	case Operation::eAdd: op = "add"; break;
-	case Operation::eMultiply: op = "mul"; break;
+	case OperationCode::eAdd: op = "add"; break;
+	case OperationCode::eMultiply: op = "mul"; break;
 	default:
 		break;
 	}
@@ -116,12 +116,12 @@ std::string Assembly::stringify(Argument x, Reference ref)
 		stringify(x.type), x.argi);
 }
 
-std::string Assembly::stringify(GlobalResource::Layout layout)
+std::string Assembly::stringify(GlobalResourceLayout layout)
 {
 	switch (layout) {
-	case GlobalResource::Layout::eScalar: return "scalar";
-	case GlobalResource::Layout::eStd430: return "std430";
-	case GlobalResource::Layout::eUnknown:
+	case GlobalResourceLayout::eScalar: return "scalar";
+	case GlobalResourceLayout::eStd430: return "std430";
+	case GlobalResourceLayout::eUnknown:
 	default:
 		return "?";
 	}
@@ -131,10 +131,10 @@ std::string Assembly::stringify(GlobalResource x, Reference ref)
 {
 	std::string kind = "?";
 	switch (x.kind) {
-	case GlobalResource::ePushConstant: kind = "push_constant"; break;
-	case GlobalResource::eUniformBuffer: kind = "constant_buffer"; break;
-	case GlobalResource::eStorageBuffer: kind = "storage_buffer"; break;
-	case GlobalResource::eSampler: kind = "sampler"; break;
+	case GlobalResourceKind::ePushConstant: kind = "push_constant"; break;
+	case GlobalResourceKind::eUniformBuffer: kind = "constant_buffer"; break;
+	case GlobalResourceKind::eStorageBuffer: kind = "storage_buffer"; break;
+	case GlobalResourceKind::eSampler: kind = "sampler"; break;
 	default:
 		break;
 	}
@@ -202,15 +202,15 @@ std::string Assembly::stringify(BuiltinIntrinsic x, Reference ref)
 {
 	std::string ftn = "?";
 	switch (x.code) {
-	case BuiltinIntrinsic::eCross: ftn = "cross"; break;
-	case BuiltinIntrinsic::eDFdx: ftn = "dFdx"; break;
-	case BuiltinIntrinsic::eDFdy: ftn = "dFdy"; break;
-	case BuiltinIntrinsic::eDFdxFine: ftn = "dFdxFine"; break;
-	case BuiltinIntrinsic::eDFdyFine: ftn = "dFdyFine"; break;
-	case BuiltinIntrinsic::eSample: ftn = "sample"; break;
-	case BuiltinIntrinsic::eDot: ftn = "dot"; break;
-	case BuiltinIntrinsic::eNormalize: ftn = "normalize"; break;
-	case BuiltinIntrinsic::eMax: ftn = "max"; break;
+	case BuiltinIntrinsicCode::eCross: ftn = "cross"; break;
+	case BuiltinIntrinsicCode::eDFdx: ftn = "dFdx"; break;
+	case BuiltinIntrinsicCode::eDFdy: ftn = "dFdy"; break;
+	case BuiltinIntrinsicCode::eDFdxFine: ftn = "dFdxFine"; break;
+	case BuiltinIntrinsicCode::eDFdyFine: ftn = "dFdyFine"; break;
+	case BuiltinIntrinsicCode::eSample: ftn = "sample"; break;
+	case BuiltinIntrinsicCode::eDot: ftn = "dot"; break;
+	case BuiltinIntrinsicCode::eNormalize: ftn = "normalize"; break;
+	case BuiltinIntrinsicCode::eMax: ftn = "max"; break;
 	default:
 		break;
 	}

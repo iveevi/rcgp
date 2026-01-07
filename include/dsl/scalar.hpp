@@ -23,7 +23,7 @@ public:
 		: handle(jems::constant_loc(loc, value)) {}
 
 	friend scalar operator-(const scalar &v) {
-		return scalar(jems::operation(Operation::eMultiply, scalar <T> (-1), v));
+		return scalar(jems::operation(OperationCode::eMultiply, scalar <T> (-1), v));
 	}
 
 	static auto reinterpret(const jems::handle &h) {

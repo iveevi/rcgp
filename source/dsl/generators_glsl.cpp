@@ -11,12 +11,12 @@ GLSL::GLSL(const Block &block_)
 {
 }
 
-std::string GLSL::layout_string(GlobalResource::Layout layout) const
+std::string GLSL::layout_string(GlobalResourceLayout layout) const
 {
 	switch (layout) {
-	case GlobalResource::Layout::eScalar: return "scalar, ";
-	case GlobalResource::Layout::eStd430: return "std430, ";
-	case GlobalResource::Layout::eUnknown:
+	case GlobalResourceLayout::eScalar: return "scalar, ";
+	case GlobalResourceLayout::eStd430: return "std430, ";
+	case GlobalResourceLayout::eUnknown:
 	default:
 		return "";
 	}
@@ -34,7 +34,7 @@ std::string GLSL::generate_reference::impl(GlobalIntrinsic gi)
 
 std::string GLSL::generate_reference::impl(GlobalResource grsrc)
 {
-	if (grsrc.kind == GlobalResource::ePushConstant) {
+	if (grsrc.kind == GlobalResourceKind::ePushConstant) {
 		auto idx = grsrc.push_constant_index.value_or(0);
 		return fmt::format("pc{}", idx);
 	}
@@ -74,10 +74,10 @@ std::string GLSL::generate_expression::impl(Operation operation)
 {
 	std::string op = "?";
 	switch (operation.code) {
-	case Operation::eAdd: op = "+"; break;
-	case Operation::eSubtract: op = "-"; break;
-	case Operation::eMultiply: op = "*"; break;
-	case Operation::eDivide: op = "/"; break;
+	case OperationCode::eAdd: op = "+"; break;
+	case OperationCode::eSubtract: op = "-"; break;
+	case OperationCode::eMultiply: op = "*"; break;
+	case OperationCode::eDivide: op = "/"; break;
 	default:
 		break;
 	}
@@ -136,17 +136,17 @@ std::string GLSL::generate_expression::impl(const BuiltinIntrinsic &builtin)
 	std::string out = "?";
 
 	switch (builtin.code) {
-	case BuiltinIntrinsic::eCross: out = "cross"; break;
-	case BuiltinIntrinsic::eDFdx: out = "dFdx"; break;
-	case BuiltinIntrinsic::eDFdxFine: out = "dFdxFine"; break;
-	case BuiltinIntrinsic::eDFdy: out = "dFdy"; break;
-	case BuiltinIntrinsic::eDFdyFine: out = "dFdyFine"; break;
-	case BuiltinIntrinsic::eDot: out = "dot"; break;
-	case BuiltinIntrinsic::eInverse: out = "inverse"; break;
-	case BuiltinIntrinsic::eMax: out = "max"; break;
-	case BuiltinIntrinsic::eNormalize: out = "normalize"; break;
-	case BuiltinIntrinsic::eSample: out = "texture"; break;
-	case BuiltinIntrinsic::eTranspose: out = "transpose"; break;
+	case BuiltinIntrinsicCode::eCross: out = "cross"; break;
+	case BuiltinIntrinsicCode::eDFdx: out = "dFdx"; break;
+	case BuiltinIntrinsicCode::eDFdxFine: out = "dFdxFine"; break;
+	case BuiltinIntrinsicCode::eDFdy: out = "dFdy"; break;
+	case BuiltinIntrinsicCode::eDFdyFine: out = "dFdyFine"; break;
+	case BuiltinIntrinsicCode::eDot: out = "dot"; break;
+	case BuiltinIntrinsicCode::eInverse: out = "inverse"; break;
+	case BuiltinIntrinsicCode::eMax: out = "max"; break;
+	case BuiltinIntrinsicCode::eNormalize: out = "normalize"; break;
+	case BuiltinIntrinsicCode::eSample: out = "texture"; break;
+	case BuiltinIntrinsicCode::eTranspose: out = "transpose"; break;
 	default:
 		break;
 	}
@@ -307,12 +307,12 @@ std::string GLSL::generate(size_t tabs)
 		for (auto &[_, refs] : block.context.global_resources) {
 			for (auto &ref : refs) {
 				auto &grsrc = ref->as <GlobalResource> ();
-				if (grsrc.kind == GlobalResource::eSampler) {
+				if (grsrc.kind == GlobalResourceKind::eSampler) {
 					auto group = grsrc.group.value_or(-1);
 					auto index = grsrc.index.value_or(-1);
 					result += fmt::format("layout (set = {}, binding = {}) uniform sampler2D r{}_i{};\n\n",
 						group, index, group, index);
-				} else if (grsrc.kind == GlobalResource::ePushConstant) {
+				} else if (grsrc.kind == GlobalResourceKind::ePushConstant) {
 					auto idx = grsrc.push_constant_index.value_or(pcounter++);
 					grsrc.push_constant_index = idx;
 					auto offset = grsrc.push_constant_offset.value_or(0);
@@ -324,8 +324,8 @@ std::string GLSL::generate(size_t tabs)
 				} else {
 					std::string modifier;
 					switch (grsrc.kind) {
-					case GlobalResource::eUniformBuffer: modifier = "uniform"; break;
-					case GlobalResource::eStorageBuffer: modifier = "buffer"; break;
+					case GlobalResourceKind::eUniformBuffer: modifier = "uniform"; break;
+					case GlobalResourceKind::eStorageBuffer: modifier = "buffer"; break;
 					default:
 						fatal("unsupported global resource kind");
 					}

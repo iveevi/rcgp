@@ -1,6 +1,6 @@
 #include "dsl/instructions.hpp"
 
-std::string swizzle_string(Swizzle::Code code)
+std::string swizzle_string(SwizzleCode code)
 {
 	static constexpr char letters[] = "xyzw";
 
@@ -55,5 +55,40 @@ void Block::apply_push_constant_allocation_map(const push_constant_allocation_ma
 			grsrc.push_constant_index = layout.index;
 			grsrc.push_constant_offset = layout.offset;
 		}
+	}
+}
+
+void Block::Context::add_argument(Argument arg)
+{
+	if (arguments.size() > arg.argi) {
+		// already registered
+		__builtin_trap();
+	} else {
+		arguments.resize(arg.argi + 1);
+		arguments[arg.argi] = arg;
+	}
+}
+
+void Block::Context::add_thread_input(ThreadInput tin)
+{
+	if (thread_inputs.size() > tin.argi) {
+		// already registered
+		__builtin_trap();
+	} else {
+		thread_inputs.resize(tin.argi + 1);
+		thread_inputs[tin.argi] = tin;
+	}
+}
+
+void Block::Context::add_thread_output(ThreadOutput tout)
+{
+	if (thread_outputs.size() > tout.argi) {
+		// already registered
+		// TODO: this is fine, just make sure its the same or
+		// its uninitialized...
+		__builtin_trap();
+	} else {
+		thread_outputs.resize(tout.argi + 1);
+		thread_outputs[tout.argi] = tout;
 	}
 }

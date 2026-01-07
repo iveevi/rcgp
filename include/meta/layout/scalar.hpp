@@ -4,7 +4,9 @@
 
 #include <glm/glm.hpp>
 
-#include "../../dsl/primitives.hpp"
+#include "../../dsl/scalar.hpp"
+#include "../../dsl/vector.hpp"
+#include "../../dsl/matrix.hpp"
 #include "../reflection.hpp"
 #include "../scaffold.hpp"
 #include "../static_string.hpp"

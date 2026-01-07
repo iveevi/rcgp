@@ -1,13 +1,14 @@
 #pragma once
 
-#include "../../dsl/instructions.hpp"
 #include "../../dsl/generators_glsl.hpp"
+#include "../../dsl/instructions.hpp"
 #include "../../rhi/shader_compiler.hpp"
+#include "../attribute_description.hpp"
+#include "../binding_description.hpp"
 #include "../collect_gvrs.hpp"
 #include "../collect_streams.hpp"
-#include "../implicit_context.hpp"
 #include "../group_allocation.hpp"
-#include "../reference_introspection.hpp"
+#include "../implicit_context.hpp"
 #include "../pipeline/rasterization.hpp"
 #include "../shader_stage.hpp"
 

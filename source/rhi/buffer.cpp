@@ -7,7 +7,10 @@ auto Buffer::write(const void *data, size_t bytes, vk::DeviceSize relative_offse
 	-> const Buffer &
 {
 	if (relative_offset + bytes > size)
-		fatal("buffer upload exceeds allocation ({} + {} > {})", relative_offset, bytes, size);
+		fatal("buffer upload exceeds allocation (%llu + %zu > %llu)",
+			static_cast<unsigned long long>(relative_offset),
+			bytes,
+			static_cast<unsigned long long>(size));
 
 	auto mapped = device.mapMemory(backing, offset + relative_offset, bytes);
 	std::memcpy(mapped, data, bytes);

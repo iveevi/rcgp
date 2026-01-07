@@ -11,6 +11,7 @@
 #include <fmt/format.h>
 
 #include "../util/variant.hpp"
+#include "instruction_enums.hpp"
 
 struct Instruction;
 
@@ -27,12 +28,8 @@ struct Constant : variant <
 };
 
 struct Operation {
-	enum Code {
-		eAdd,
-		eSubtract,
-		eMultiply,
-		eDivide,
-	} code;
+	using Code = OperationCode;
+	Code code;
 
 	Reference a;
 	Reference b;
@@ -102,19 +99,10 @@ struct Argument {
 
 struct GlobalResource {
 	Reference type;
-
-	enum Kind {
-		ePushConstant,
-		eUniformBuffer,
-		eStorageBuffer,
-		eSampler,
-	} kind;
-
-	enum class Layout {
-		eUnknown,
-		eScalar,
-		eStd430,
-	} layout;
+	using Kind = GlobalResourceKind;
+	using Layout = GlobalResourceLayout;
+	Kind kind;
+	Layout layout;
 
 	// group := descriptor set index
 	std::optional <uint32_t> group;
@@ -124,19 +112,6 @@ struct GlobalResource {
 	std::optional <uint32_t> push_constant_index;
 	// push constants use this to determine offset within the shared block
 	std::optional <uint32_t> push_constant_offset;
-};
-
-enum class GlobalIntrinsic {
-	eScreenPosition,
-	eInstanceIndex,
-	eVertexIndex,
-};
-
-enum class RateProperties {
-	eNone,
-	eSmooth,
-	eFlat,
-	eNoPerspective,
 };
 
 struct ThreadInput {
@@ -153,23 +128,8 @@ struct ThreadOutput {
 };
 
 struct BuiltinIntrinsic {
-	enum Code {
-		eCos,
-		eCross,
-		eDFdx,
-		eDFdxFine,
-		eDFdy,
-		eDFdyFine,
-		eDot,
-		eInverse,
-		eMax,
-		eMin,
-		eNormalize,
-		eSample,
-		eSin,
-		eTan,
-		eTranspose,
-	} code;
+	using Code = BuiltinIntrinsicCode;
+	Code code;
 
 	std::vector <Reference> args;
 	
@@ -179,48 +139,13 @@ struct BuiltinIntrinsic {
 };
 
 struct Swizzle {
-	enum Code {
-		// Level 1
-		eX, eY, eZ, eW,
-
-		// Level 2
-		eXX, eXY, eXZ, eXW,
-		eYX, eYY, eYZ, eYW,
-		eZX, eZY, eZZ, eZW,
-		eWX, eWY, eWZ, eWW,
-		
-		// Level 3
-		eXXX, eXXY, eXXZ, eXXW, eXYX, eXYY, eXYZ, eXYW, eXZX, eXZY, eXZZ, eXZW, eXWX, eXWY, eXWZ, eXWW,
-		eYXX, eYXY, eYXZ, eYXW, eYYX, eYYY, eYYZ, eYYW, eYZX, eYZY, eYZZ, eYZW, eYWX, eYWY, eYWZ, eYWW,
-		eZXX, eZXY, eZXZ, eZXW, eZYX, eZYY, eZYZ, eZYW, eZZX, eZZY, eZZZ, eZZW, eZWX, eZWY, eZWZ, eZWW,
-		eWXX, eWXY, eWXZ, eWXW, eWYX, eWYY, eWYZ, eWYW, eWZX, eWZY, eWZZ, eWZW, eWWX, eWWY, eWWZ, eWWW,
-		
-		// Level 4
-		eXXXX, eXXXY, eXXXZ, eXXXW, eXXYX, eXXYY, eXXYZ, eXXYW, eXXZX, eXXZY, eXXZZ, eXXZW, eXXWX, eXXWY, eXXWZ, eXXWW,
-		eXYXX, eXYXY, eXYXZ, eXYXW, eXYYX, eXYYY, eXYYZ, eXYYW, eXYZX, eXYZY, eXYZZ, eXYZW, eXYWX, eXYWY, eXYWZ, eXYWW,
-		eXZXX, eXZXY, eXZXZ, eXZXW, eXZYX, eXZYY, eXZYZ, eXZYW, eXZZX, eXZZY, eXZZZ, eXZZW, eXZWX, eXZWY, eXZWZ, eXZWW,
-		eXWXX, eXWXY, eXWXZ, eXWXW, eXWYX, eXWYY, eXWYZ, eXWYW, eXWZX, eXWZY, eXWZZ, eXWZW, eXWWX, eXWWY, eXWWZ, eXWWW,
-		
-		eYXXX, eYXXY, eYXXZ, eYXXW, eYXYX, eYXYY, eYXYZ, eYXYW, eYXZX, eYXZY, eYXZZ, eYXZW, eYXWX, eYXWY, eYXWZ, eYXWW,
-		eYYXX, eYYXY, eYYXZ, eYYXW, eYYYX, eYYYY, eYYYZ, eYYYW, eYYZX, eYYZY, eYYZZ, eYYZW, eYYWX, eYYWY, eYYWZ, eYYWW,
-		eYZXX, eYZXY, eYZXZ, eYZXW, eYZYX, eYZYY, eYZYZ, eYZYW, eYZZX, eYZZY, eYZZZ, eYZZW, eYZWX, eYZWY, eYZWZ, eYZWW,
-		eYWXX, eYWXY, eYWXZ, eYWXW, eYWYX, eYWYY, eYWYZ, eYWYW, eYWZX, eYWZY, eYWZZ, eYWZW, eYWWX, eYWWY, eYWWZ, eYWWW,
-		
-		eZXXX, eZXXY, eZXXZ, eZXXW, eZXYX, eZXYY, eZXYZ, eZXYW, eZXZX, eZXZY, eZXZZ, eZXZW, eZXWX, eZXWY, eZXWZ, eZXWW,
-		eZYXX, eZYXY, eZYXZ, eZYXW, eZYYX, eZYYY, eZYYZ, eZYYW, eZYZX, eZYZY, eZYZZ, eZYZW, eZYWX, eZYWY, eZYWZ, eZYWW,
-		eZZXX, eZZXY, eZZXZ, eZZXW, eZZYX, eZZYY, eZZYZ, eZZYW, eZZZX, eZZZY, eZZZZ, eZZZW, eZZWX, eZZWY, eZZWZ, eZZWW,
-		eZWXX, eZWXY, eZWXZ, eZWXW, eZWYX, eZWYY, eZWYZ, eZWYW, eZWZX, eZWZY, eZWZZ, eZWZW, eZWWX, eZWWY, eZWWZ, eZWWW,
-		
-		eWXXX, eWXXY, eWXXZ, eWXXW, eWXYX, eWXYY, eWXYZ, eWXYW, eWXZX, eWXZY, eWXZZ, eWXZW, eWXWX, eWXWY, eWXWZ, eWXWW,
-		eWYXX, eWYXY, eWYXZ, eWYXW, eWYYX, eWYYY, eWYYZ, eWYYW, eWYZX, eWYZY, eWYZZ, eWYZW, eWYWX, eWYWY, eWYWZ, eWYWW,
-		eWZXX, eWZXY, eWZXZ, eWZXW, eWZYX, eWZYY, eWZYZ, eWZYW, eWZZX, eWZZY, eWZZZ, eWZZW, eWZWX, eWZWY, eWZWZ, eWZWW,
-		eWWXX, eWWXY, eWWXZ, eWWXW, eWWYX, eWWYY, eWWYZ, eWWYW, eWWZX, eWWZY, eWWZZ, eWWZW, eWWWX, eWWWY, eWWWZ, eWWWW,
-	} code;
+	using Code = SwizzleCode;
+	Code code;
 
 	Reference value;
 };
 
-std::string swizzle_string(Swizzle::Code code);
+std::string swizzle_string(SwizzleCode code);
 
 struct FieldAccess {
 	Reference value;
@@ -246,13 +171,6 @@ struct Return {
 	Reference value;
 };
 
-enum class ExecutionModel {
-	eAgnostic,
-	eVulkanVertex,
-	eVulkanFragment,
-	eVulkanCompute,
-};
-
 using group_allocation_map = std::map <void *, size_t>;
 
 struct PushConstantAllocation {
@@ -271,37 +189,9 @@ struct Block : std::vector <Reference> {
 		std::vector <ThreadOutput> thread_outputs;
 		std::map <void *, std::set <Reference>> global_resources;
 		
-		void add_argument(Argument arg) {
-			if (arguments.size() > arg.argi) {
-				// already registered
-				__builtin_trap();
-			} else {
-				arguments.resize(arg.argi + 1);
-				arguments[arg.argi] = arg;
-			}
-		}
-
-		void add_thread_input(ThreadInput tin) {
-			if (thread_inputs.size() > tin.argi) {
-				// already registered
-				__builtin_trap();
-			} else {
-				thread_inputs.resize(tin.argi + 1);
-				thread_inputs[tin.argi] = tin;
-			}
-		}
-		
-		void add_thread_output(ThreadOutput tout) {
-			if (thread_outputs.size() > tout.argi) {
-				// already registered
-				// TODO: this is fine, just make sure its the same or
-				// its uninitialized...
-				__builtin_trap();
-			} else {
-				thread_outputs.resize(tout.argi + 1);
-				thread_outputs[tout.argi] = tout;
-			}
-		}
+		void add_argument(Argument arg);
+		void add_thread_input(ThreadInput tin);
+		void add_thread_output(ThreadOutput tout);
 
 		template <auto &rsrc>
 		void add_global_resource(Reference resource) {

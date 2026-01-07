@@ -76,7 +76,10 @@ Device Device::from(
 
 	info("queue families:");
 	for (const auto &[i, family] : std::views::enumerate(queue_families)) {
-		fmt::println("{}: {} of {}", i, family.queueCount, vk::to_string(family.queueFlags));
+		info("%zu: %u of %s",
+			static_cast<size_t>(i),
+			family.queueCount,
+			vk::to_string(family.queueFlags).c_str());
 	}
 
 	auto queue_allocation = std::set <int32_t> ();
@@ -110,7 +113,7 @@ Device Device::from(
 	for (auto &[key, flags] : options.queues) {
 		auto idx = queue_family_index(flags);
 		if (idx == -1) {
-			error("failed to find a suitable queue for '{}'", key);
+			error("failed to find a suitable queue for '%s'", key);
 			continue;
 		}
 

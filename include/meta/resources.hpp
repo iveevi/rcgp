@@ -58,7 +58,7 @@ struct Sampler : jems::handle {
 	auto sample(vector <T, D> x, $location) const
 		requires native_float_scalar <T>
 	{
-		return vector <T, 4> ::reinterpret(jems::builtin_intrinsic_loc(loc, BuiltinIntrinsic::eSample, *this, x));
+		return vector <T, 4> ::reinterpret(jems::builtin_intrinsic_loc(loc, BuiltinIntrinsicCode::eSample, *this, x));
 	}
 };
 

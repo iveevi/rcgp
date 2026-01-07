@@ -26,11 +26,11 @@ public:
 	template <typename U>
 	requires std::is_convertible_v <U, scalar <T>>
 	friend matrix operator*(const U &s, const matrix &m) {
-		return reinterpret(jems::operation(Operation::eMultiply, scalar <T> (s), m));
+		return reinterpret(jems::operation(OperationCode::eMultiply, scalar <T> (s), m));
 	}
 
 	friend matrix operator-(const matrix &m) {
-		return reinterpret(jems::operation(Operation::eMultiply, scalar <T> (-1), m));
+		return reinterpret(jems::operation(OperationCode::eMultiply, scalar <T> (-1), m));
 	}
 };
 

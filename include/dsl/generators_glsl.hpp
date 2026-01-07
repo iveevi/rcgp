@@ -24,14 +24,14 @@ struct GLSL {
 	
 	GLSL(const Block &block_);
 
-	std::string layout_string(GlobalResource::Layout layout) const;
+	std::string layout_string(GlobalResourceLayout layout) const;
 	
 	struct generate_reference {
 		GLSL &parent;
 
 		std::string impl(auto x) {
-			fatal("generate_reference::impl not implemented for {}",
-	 			$ss_type(decltype(x)).view());
+			auto type_name = std::string($ss_type(decltype(x)).view());
+			fatal("generate_reference::impl not implemented for %s", type_name.c_str());
 		}
 
 		std::string impl(GlobalIntrinsic gi);
@@ -46,8 +46,8 @@ struct GLSL {
 		GLSL &parent;
 
 		std::string impl(auto x) {
-			fatal("generate_expression::impl not implemented for {}",
-	 			$ss_type(decltype(x)).view());
+			auto type_name = std::string($ss_type(decltype(x)).view());
+			fatal("generate_expression::impl not implemented for %s", type_name.c_str());
 		}
 		
 		std::string impl(Constant value);
@@ -87,8 +87,8 @@ struct GLSL {
 		std::string impl(const AggregateType &aggregate);
 		
 		std::string impl(auto type) {
-			fatal("generate_type::impl not implemented for {}",
-	 			$ss_type(decltype(type)).view());
+			auto type_name = std::string($ss_type(decltype(type)).view());
+			fatal("generate_type::impl not implemented for %s", type_name.c_str());
 		}
 		
 		std::string main(Reference type);

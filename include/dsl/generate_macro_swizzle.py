@@ -12,4 +12,4 @@ for dim in range(2, 5):
         for var in product(components, repeat=l):
             var = ''.join(var)
             code = 'e' + var.upper()
-            print(f'\t[[no_unique_address]] swizzle_component <Swizzle::{code}, self, C{l}> {var}; \\')
+            print(f'\t[[no_unique_address]] swizzle_component <SwizzleCode::{code}, self, C{l}> {var}; \\')

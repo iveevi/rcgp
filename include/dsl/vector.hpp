@@ -17,67 +17,67 @@ struct vector : public vector_base <T, N> {
 
 	// Arithmetic operations
 	friend vector operator+(const vector &a, const vector &b) {
-		return reinterpret(jems::operation(Operation::eAdd, a, b));
+		return reinterpret(jems::operation(OperationCode::eAdd, a, b));
 	}
 
 	friend vector operator-(const vector &a, const vector &b) {
-		return reinterpret(jems::operation(Operation::eSubtract, a, b));
+		return reinterpret(jems::operation(OperationCode::eSubtract, a, b));
 	}
 
 	friend vector operator-(const vector &v) {
-		return reinterpret(jems::operation(Operation::eMultiply, scalar <T> (-1), v));
+		return reinterpret(jems::operation(OperationCode::eMultiply, scalar <T> (-1), v));
 	}
 
 	template <typename U>
 	requires std::is_convertible_v <U, scalar <T>>
 	friend vector operator+(const U &s, const vector &v) {
-		return reinterpret(jems::operation(Operation::eAdd, scalar <T> (s), v));
+		return reinterpret(jems::operation(OperationCode::eAdd, scalar <T> (s), v));
 	}
 	
 	template <typename U>
 	requires std::is_convertible_v <U, scalar <T>>
 	friend vector operator+(const vector &v, const U &s) {
-		return reinterpret(jems::operation(Operation::eAdd, v, scalar <T> (s)));
+		return reinterpret(jems::operation(OperationCode::eAdd, v, scalar <T> (s)));
 	}
 
 	template <typename U>
 	requires std::is_convertible_v <U, scalar <T>>
 	friend vector operator-(const vector &v, const U &s) {
-		return reinterpret(jems::operation(Operation::eSubtract, v, scalar <T> (s)));
+		return reinterpret(jems::operation(OperationCode::eSubtract, v, scalar <T> (s)));
 	}
 
 	template <typename U>
 	requires std::is_convertible_v <U, scalar <T>>
 	friend vector operator-(const U &s, const vector &v) {
-		return reinterpret(jems::operation(Operation::eSubtract, scalar <T> (s), v));
+		return reinterpret(jems::operation(OperationCode::eSubtract, scalar <T> (s), v));
 	}
 	
 	template <typename U>
 	requires std::is_convertible_v <U, scalar <T>>
 	friend vector operator*(const U &s, const vector &v) {
-		return reinterpret(jems::operation(Operation::eMultiply, scalar <T> (s), v));
+		return reinterpret(jems::operation(OperationCode::eMultiply, scalar <T> (s), v));
 	}
 
 	template <typename U>
 	requires std::is_convertible_v <U, scalar <T>>
 	friend vector operator*(const vector &v, const U &s) {
-		return reinterpret(jems::operation(Operation::eMultiply, v, scalar <T> (s)));
+		return reinterpret(jems::operation(OperationCode::eMultiply, v, scalar <T> (s)));
 	}
 
 	friend vector operator/(const vector &a, const vector &b) {
-		return reinterpret(jems::operation(Operation::eDivide, a, b));
+		return reinterpret(jems::operation(OperationCode::eDivide, a, b));
 	}
 
 	template <typename U>
 	requires std::is_convertible_v <U, scalar <T>>
 	friend vector operator/(const vector &v, const U &s) {
-		return reinterpret(jems::operation(Operation::eDivide, v, scalar <T> (s)));
+		return reinterpret(jems::operation(OperationCode::eDivide, v, scalar <T> (s)));
 	}
 
 	template <typename U>
 	requires std::is_convertible_v <U, scalar <T>>
 	friend vector operator/(const U &s, const vector &v) {
-		return reinterpret(jems::operation(Operation::eDivide, scalar <T> (s), v));
+		return reinterpret(jems::operation(OperationCode::eDivide, scalar <T> (s), v));
 	}
 };
 

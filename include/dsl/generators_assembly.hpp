@@ -23,7 +23,7 @@ struct Assembly {
 	std::string stringify(ArrayAccess x, Reference ref);
 	std::string stringify(FieldAccess x, Reference ref);
 	std::string stringify(Argument x, Reference ref);
-	std::string stringify(GlobalResource::Layout layout);
+	std::string stringify(GlobalResourceLayout layout);
 	std::string stringify(GlobalResource x, Reference ref);
 	std::string stringify(ThreadInput x, Reference ref);
 	std::string stringify_rate_properties(RateProperties properties);
