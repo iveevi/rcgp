@@ -24,8 +24,6 @@ struct sequence {
 	template <typename T>
 	using push_back_t = sequence <Args..., T>;
 
-	using tuple = std::tuple <Args...>;
-
 	template <template <typename ...> typename F>
 	using invoke = F <Args...>;
 

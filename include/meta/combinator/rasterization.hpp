@@ -247,12 +247,12 @@ struct RasterizationCombinator {
 
 		auto alloc = sequence_to_group_allocation(descriptor_gvrs);
 		auto gamap = new_allocation(alloc);
-		vertex.apply_group_allocation_map(gamap);
-		fragment.apply_group_allocation_map(gamap);
+		vertex->apply_group_allocation_map(gamap);
+		fragment->apply_group_allocation_map(gamap);
 
 		auto pcmap = reference_sequence_to_pclm(push_constant_gvrs);
-		vertex.apply_push_constant_allocation_map(pcmap);
-		fragment.apply_push_constant_allocation_map(pcmap);
+		vertex->apply_push_constant_allocation_map(pcmap);
+		fragment->apply_push_constant_allocation_map(pcmap);
 
 		// Compile the shaders
 		auto vshader = generators::GLSL(vertex).generate();

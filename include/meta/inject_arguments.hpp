@@ -108,7 +108,7 @@ void inject_one_argument(T &value, InjectionCounters &counters)
 		auto tin = ThreadInput(type, counters.threadidx++);
 		$tsb.context.add_thread_input(tin);
 		inject_reference(value, jems::thread_input(tin));
-	} else if constexpr (S == ShaderStage::eUndefined) {
+	} else if constexpr (S == ShaderStage::eSubroutine) {
 		// Function argument
 		auto arg = Argument(type, counters.argidx++);
 		$tsb.context.add_argument(arg);

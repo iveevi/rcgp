@@ -13,16 +13,22 @@ struct GLSL {
 	const Block &block;
 
 	std::vector <std::string> thread_inputs;
+	std::vector <std::string> argument_names;
+	std::map <uint32_t, std::string> local_thread_outputs;
 
 	// TODO: use cref?
 	std::map <const AggregateType *, std::string> aggregate_names;
+	std::map <const Block *, std::string> subroutine_names;
+	std::set <const Block *> emitted_subroutines;
+
+	const Block *active_block = nullptr;
 
 	// TODO: prelude section for types, etc.
 	std::string result; // TODO: refactor to 'code'
 
 	// TODO: indentation as well
 	
-	GLSL(const Block &block_);
+	GLSL(const SharedBlockReference &sbr);
 
 	std::string layout_string(GlobalResourceLayout layout) const;
 	
@@ -37,6 +43,7 @@ struct GLSL {
 		std::string impl(GlobalIntrinsic gi);
 		std::string impl(GlobalResource grsrc);
 		std::string impl(ThreadOutput tout);
+		std::string impl(Argument arg);
 		
 		std::string main(Reference reference);
 		DEFINE_CALL_OPERATOR(std::string);
@@ -59,6 +66,8 @@ struct GLSL {
 		std::string impl(Swizzle swizzle);
 		std::string impl(GlobalResource grsrc);
 		std::string impl(GlobalIntrinsic intrinsic);
+		std::string impl(Argument arg);
+		std::string impl(Invocation invocation);
 		std::string impl(const BuiltinIntrinsic &builtin);
 		std::string main(Reference expression);
 		DEFINE_CALL_OPERATOR(std::string);
@@ -68,6 +77,7 @@ struct GLSL {
 		GLSL &parent;
 
 		void impl(Store store);
+		void impl(Invocation invocation);
 
 		void impl(auto x) {
 			parent.result += "    ?\n";
@@ -96,6 +106,25 @@ struct GLSL {
 	} type;
 
 	std::string generate(size_t tabs = 0);
+
+private:
+	void set_active_block(const Block &blk);
+	void reset_state();
+	void collect_blocks(std::vector <const Block *> &blocks) const;
+	void emit_preamble();
+	void emit_aggregate_decls();
+	void emit_thread_inputs();
+	void emit_thread_outputs();
+	void emit_global_resources();
+	void collect_push_constant_indices(const std::vector <const Block *> &blocks,
+		std::map <void *, uint32_t> &pc_indices);
+	std::string resource_key(const GlobalResource &grsrc) const;
+	void emit_resource_decl(GlobalResource &grsrc);
+	void emit_subroutine_functions();
+	void emit_subroutine_function(const Block &blk, const std::string &name);
+	void emit_main_function();
+	void emit_block_statements(const Block &blk);
+	std::string subroutine_return_type(const Block &blk, uint32_t &out_argi);
 };
 
 } // namespace generators

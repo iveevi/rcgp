@@ -26,8 +26,8 @@ public:
 };
 
 struct scope {
-	scope(Block &record) {
-		Tracer::singleton.records.emplace(std::ref(record));
+	scope(const SharedBlockReference &sbr) {
+		Tracer::singleton.records.emplace(sbr);
 	}
 
 	~scope() {
@@ -55,6 +55,7 @@ struct scope {
 
 JEM(operation, Operation);
 JEM(constant, Constant);
+JEM(invocation, Invocation);
 JEM(type, Type);
 JEM(construct, Construct);
 JEM(argument, Argument);

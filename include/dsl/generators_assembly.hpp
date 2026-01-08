@@ -8,9 +8,12 @@
 namespace generators {
 
 struct Assembly {
-	const Block &block;
+	const SharedBlockReference &sbr;
 
-	std::map <std::intptr_t, uint32_t> ids;
+	std::map <intptr_t, uint32_t> ids;
+
+	Assembly(const SharedBlockReference &sbr_)
+		: sbr(sbr_) {}
 
 	std::string stringify(Reference ref);
 	std::string stringify(Constant x, Reference ref);
@@ -28,12 +31,13 @@ struct Assembly {
 	std::string stringify(ThreadInput x, Reference ref);
 	std::string stringify_rate_properties(RateProperties properties);
 	std::string stringify(ThreadOutput x, Reference ref);
+	std::string stringify(Invocation x, Reference ref);
 	std::string stringify(GlobalIntrinsic x, Reference ref);
 	std::string stringify(Construct x, Reference ref);
 	std::string stringify(BuiltinIntrinsic x, Reference ref);
 	std::string stringify(Swizzle x, Reference ref);
 	std::string stringify(Block x, Reference ref);
-	std::string stringify(ExecutionModel model);
+	std::string stringify(ShaderStage stage);
 	std::string generate(size_t tabs = 0);
 };
 

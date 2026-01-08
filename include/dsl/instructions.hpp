@@ -11,11 +11,13 @@
 #include "../util/variant.hpp"
 #include "instruction_enums.hpp"
 
+struct Block;
 struct Instruction;
 
-// TODO: need a better (paged arena) allocator which effectively just uint32_t or smth
+using SharedBlockReference = std::shared_ptr <Block>;
 using Reference = std::shared_ptr <Instruction>;
 
+// TODO: organize into categories and put into separate headers...
 struct Constant : variant <
 	bool,
 	int32_t,
@@ -88,6 +90,15 @@ struct Construct {
 	template <typename ... Args>
 	Construct(Reference type_, Args ... args_)
 		: type(type_), args { args_ ... } {}
+};
+
+struct Invocation {
+	SharedBlockReference sbr;
+	std::vector <Reference> args;
+
+	template <typename ... Args>
+	Invocation(SharedBlockReference sbr_, Args ... args_)
+		: sbr(sbr_), args { args_ ... } {}
 };
 
 struct Argument {
@@ -180,7 +191,7 @@ using push_constant_allocation_map = std::map <void *, PushConstantAllocation>;
 
 struct Block : std::vector <Reference> {
 	struct Context {
-		ExecutionModel model = ExecutionModel::eAgnostic;
+		ShaderStage model = ShaderStage::eSubroutine;
 
 		std::vector <Argument> arguments;
 		std::vector <ThreadInput> thread_inputs;
@@ -202,14 +213,15 @@ struct Block : std::vector <Reference> {
 
 struct Instruction : variant <
 	Argument,
+	ArrayAccess,
 	Block,
 	BuiltinIntrinsic,
 	Constant,
 	Construct,
-	ArrayAccess,
 	FieldAccess,
 	GlobalIntrinsic,
 	GlobalResource,
+	Invocation,
 	Operation,
 	Store,
 	Swizzle,

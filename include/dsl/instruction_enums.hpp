@@ -89,9 +89,9 @@ enum class SwizzleCode {
 	eWWXX, eWWXY, eWWXZ, eWWXW, eWWYX, eWWYY, eWWYZ, eWWYW, eWWZX, eWWZY, eWWZZ, eWWZW, eWWWX, eWWWY, eWWWZ, eWWWW,
 };
 
-enum class ExecutionModel {
-	eAgnostic,
-	eVulkanVertex,
-	eVulkanFragment,
-	eVulkanCompute,
+enum class ShaderStage {
+	eSubroutine,
+	eVertex,
+	eFragment,
+	eCompute,
 };

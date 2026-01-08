@@ -16,8 +16,13 @@ struct vector : public vector_base <T, N> {
 	}
 
 	// Arithmetic operations
+	// TODO: move to a header/generate with a script?
 	friend vector operator+(const vector &a, const vector &b) {
 		return reinterpret(jems::operation(OperationCode::eAdd, a, b));
+	}
+	
+	friend vector operator*(const vector &a, const vector &b) {
+		return reinterpret(jems::operation(OperationCode::eMultiply, a, b));
 	}
 
 	friend vector operator-(const vector &a, const vector &b) {
@@ -25,6 +30,7 @@ struct vector : public vector_base <T, N> {
 	}
 
 	friend vector operator-(const vector &v) {
+		// TODO: negative operation
 		return reinterpret(jems::operation(OperationCode::eMultiply, scalar <T> (-1), v));
 	}
 

@@ -5,20 +5,15 @@
 #include "instructions.hpp"
 #include "../util/logging.hpp"
 
-// NOTE: this tracer is not limited to just shaders...
-// it also includes game engine stuff/code
 struct Tracer {
-	std::stack <std::reference_wrapper <Block>> records;
+	std::stack <SharedBlockReference> records;
 
 	Block &active() {
-		if (records.empty()) {
+		if (records.empty())
 			fatal("no active record");
-		}
-
-		return records.top();
+		return *records.top();
 	}
 
-	// Singleton
 	static thread_local Tracer singleton;
 };
 

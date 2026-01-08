@@ -7,47 +7,28 @@
 #include "shader_stage.hpp"
 
 template <ShaderStage S, typename R, typename ... Args>
-struct signature {
+struct shader_signature {
 	using args = std::tuple <std::decay_t <Args> ...>;
 	using returns = R;
 	using type = shader_stage <S, R, Args...>;
 };
 
-template <ShaderStage S, typename Rt, typename R, typename ... Args>
-constexpr auto new_signature(std::function <R (Args...)>) -> signature <S, Rt, Args...>;
-
-template <ShaderStage S>
-void inject_execution_model()
-{
-	if constexpr (S == ShaderStage::eVertex)
-		$tsb.context.model = ExecutionModel::eVulkanVertex;
-	else if constexpr (S == ShaderStage::eFragment)
-		$tsb.context.model = ExecutionModel::eVulkanFragment;
-	else
-		$tsb.context.model = ExecutionModel::eAgnostic;
-}
+template <ShaderStage S, typename R, typename Rt, typename ... Args>
+struct shader_signature <S, R, std::function <Rt (Args...)>>
+	: shader_signature <S, R, Args...> {};
 
 template <ShaderStage S, typename R, typename F>
 auto compile(F ftn)
 {
-	// TODO: require that all arguments are reflected?
-
-	// TODO: custom vertex assembler stage; experiments section showing an alternative pipeline...
-	// TODO: ss of enums via wrapper type wrap <Enum> and then extract substring?
 	using function = decltype(std::function(ftn));
-	using signature = decltype(new_signature <S, R> (std::declval <function> ()));
+	using signature = shader_signature <S, R, function>;
 
-	typename signature::type result;
+	auto result = signature::type::alloc();
 
-	// TODO: verify signature against provided stage...
-
+	result->context.model = S;
 	if (auto s = jems::scope(result)) {
 		typename signature::args args;
-		inject_execution_model <S> ();
 		inject_arguments <S> (args);
-		// inject_arguments <S, 0> (args, InjectionState(0, 0));
-		// TODO: need to concretize returns at the return operator...
-		// (not here or at return value construction)
 		std::apply(ftn, args);
 	}
 
@@ -116,9 +97,9 @@ using Read = std::remove_pointer_t <decltype(adl_lever(Reader <v> {}))>;
 
 #define $returns(...) decltype(frenj_ret::Writer <__COUNTER__, compact_returns_t <__VA_ARGS__>> {}, void())
 #define $return (_return_operator <frenj_ret::Read <__rpidx.value>> ()) << 
-#define $fn (_fn_operator <ShaderStage::eUndefined, __COUNTER__ + 2> ()) \
+#define $fn (_fn_operator <ShaderStage::eSubroutine, __COUNTER__ + 2> ()) \
 	<< [__rpidx = el <__COUNTER__ + 1> ()] $context_capture
-#define $cafn(...) (_fn_operator <ShaderStage::eUndefined, __COUNTER__ + 2> ()) \
+#define $cafn(...) (_fn_operator <ShaderStage::eSubroutine, __COUNTER__ + 2> ()) \
 	<< [__VA_ARGS__ __VA_OPT__(,) __rpidx = el <__COUNTER__ + 1> ()] $context_capture
 
 template <ShaderStage S, int I>
@@ -129,7 +110,7 @@ auto operator<<(_fn_operator <S, I>, auto lambda)
 }
 
 template <ShaderStage S, int I>
-auto operator*(_stage_operator <S>, _fn_operator <ShaderStage::eUndefined, I>)
+auto operator*(_stage_operator <S>, _fn_operator <ShaderStage::eSubroutine, I>)
 {
 	return _fn_operator <S, I> ();
 }

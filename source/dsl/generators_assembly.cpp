@@ -1,10 +1,9 @@
-#include "dsl/generators_assembly.hpp"
+#include <filesystem>
 
 #include <fmt/format.h>
 
-#include <filesystem>
-
 #include "util/logging.hpp"
+#include "dsl/generators_assembly.hpp"
 
 namespace generators {
 
@@ -191,6 +190,8 @@ std::string Assembly::stringify(GlobalIntrinsic x, Reference ref)
 std::string Assembly::stringify(Construct x, Reference ref)
 {
 	std::string result = fmt::format("new {}(", stringify(x.type));
+
+	// TODO: method for args:
 	for (size_t i = 0; i < x.args.size(); i++) {
 		result += stringify(x.args[i]);
 		if (i + 1 < x.args.size())
@@ -234,6 +235,19 @@ std::string Assembly::stringify(Swizzle x, Reference ref)
 		stringify(x.value), swizzle_string(x.code));
 }
 
+std::string Assembly::stringify(Invocation x, Reference ref)
+{
+	std::string result = fmt::format("@{}(", (void *) x.sbr.get());
+	for (size_t i = 0; i < x.args.size(); i++) {
+		result += stringify(x.args[i]);
+		if (i + 1 < x.args.size())
+			result += ", ";
+	}
+	result += ")";
+
+	return $assign result;
+}
+
 #undef $assign
 
 std::string Assembly::stringify(Block x, Reference ref)
@@ -241,13 +255,13 @@ std::string Assembly::stringify(Block x, Reference ref)
 	fatal("cannot generate assembly for block");
 }
 
-std::string Assembly::stringify(ExecutionModel model)
+std::string Assembly::stringify(ShaderStage stage)
 {
-	switch (model) {
-	case ExecutionModel::eAgnostic: return "agnostic";
-	case ExecutionModel::eVulkanVertex: return "Vulkan vertex shader";
-	case ExecutionModel::eVulkanFragment: return "Vulkan fragment shader";
-	case ExecutionModel::eVulkanCompute: return "Vulkan compute shader";
+	switch (stage) {
+	case ShaderStage::eSubroutine: return "subroutine";
+	case ShaderStage::eVertex: return "vertex shader";
+	case ShaderStage::eFragment: return "fragment shader";
+	case ShaderStage::eCompute: return "compute shader";
 	default:
 		break;
 	}
@@ -260,20 +274,21 @@ std::string Assembly::generate(size_t tabs)
 	std::string result = "block {\n";
 
 	result += "  context {\n";
-	result += "    model: " + stringify(block.context.model) + ",\n";
+	result += fmt::format("    blkid: {},\n", (void *) sbr.get());
+	result += "    model: " + stringify(sbr->context.model) + ",\n";
 
-	for (auto tin : block.context.thread_inputs) {
+	for (auto tin : sbr->context.thread_inputs) {
 		result += fmt::format("    thread in {}: {},\n",
 			tin.argi, stringify(tin.type));
 	}
 
-	for (auto tout : block.context.thread_outputs) {
+	for (auto tout : sbr->context.thread_outputs) {
 		result += fmt::format("    thread out {}: {} ({}),\n",
 			tout.argi, stringify(tout.type),
 			stringify_rate_properties(tout.properties));
 	}
 
-	for (auto [k, v] : block.context.global_resources) {
+	for (auto [k, v] : sbr->context.global_resources) {
 		std::string set;
 
 		size_t count = 0;
@@ -288,7 +303,7 @@ std::string Assembly::generate(size_t tabs)
 
 	result += "  }\n";
 
-	for (auto &instr : block) {
+	for (auto &instr : *sbr) {
 		auto str = std::visit([&](auto x) {
 			return stringify(x, instr);
 		}, *instr);

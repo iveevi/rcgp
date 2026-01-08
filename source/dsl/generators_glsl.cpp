@@ -4,14 +4,12 @@
 
 namespace generators {
 
-GLSL::GLSL(const Block &block_)
-	: block(block_),
+GLSL::GLSL(const SharedBlockReference &sbr)
+	: block(*sbr.get()),
 	reference(*this),
 	expression(*this),
 	statement(*this),
-	type(*this)
-{
-}
+	type(*this) {}
 
 std::string GLSL::layout_string(GlobalResourceLayout layout) const
 {
@@ -48,7 +46,20 @@ std::string GLSL::generate_reference::impl(GlobalResource grsrc)
 
 std::string GLSL::generate_reference::impl(ThreadOutput tout)
 {
+	if (parent.active_block
+		&& parent.active_block->context.model == ShaderStage::eSubroutine
+		&& parent.local_thread_outputs.contains(tout.argi)) {
+		return parent.local_thread_outputs[tout.argi];
+	}
+
 	return fmt::format("lout{}", tout.argi);
+}
+
+std::string GLSL::generate_reference::impl(Argument arg)
+{
+	if (arg.argi < parent.argument_names.size())
+		return parent.argument_names[arg.argi];
+	return fmt::format("arg{}", arg.argi);
 }
 
 std::string GLSL::generate_reference::main(Reference reference)
@@ -133,6 +144,32 @@ std::string GLSL::generate_expression::impl(GlobalIntrinsic intrinsic)
 	return parent.reference.impl(intrinsic);
 }
 
+std::string GLSL::generate_expression::impl(Argument arg)
+{
+	if (arg.argi < parent.argument_names.size())
+		return parent.argument_names[arg.argi];
+	return fmt::format("arg{}", arg.argi);
+}
+
+std::string GLSL::generate_expression::impl(Invocation invocation)
+{
+	const Block *callee = invocation.sbr.get();
+	auto it = parent.subroutine_names.find(callee);
+	std::string name = (it != parent.subroutine_names.end())
+		? it->second
+		: fmt::format("fn_{}", (void *) callee);
+
+	std::string out = name + "(";
+	auto nargs = invocation.args.size();
+	for (size_t i = 0; i < nargs; i++) {
+		out += main(invocation.args[i]);
+		if (i + 1 < nargs)
+			out += ", ";
+	}
+
+	return out + ")";
+}
+
 std::string GLSL::generate_expression::impl(const BuiltinIntrinsic &builtin)
 {
 	std::string out = "?";
@@ -181,6 +218,12 @@ void GLSL::generate_statement::impl(Store store)
 	parent.result += fmt::format("    {} = {};\n",
 		parent.reference(store.destination),
 		parent.expression(store.source));
+}
+
+void GLSL::generate_statement::impl(Invocation invocation)
+{
+	parent.result += fmt::format("    {};\n",
+		parent.expression.impl(invocation));
 }
 
 void GLSL::generate_statement::main(Reference instruction)
@@ -243,17 +286,61 @@ std::string GLSL::generate_type::operator()(Reference r)
 	return main(r);
 }
 
-std::string GLSL::generate(size_t tabs)
+void GLSL::set_active_block(const Block &blk)
 {
-	if (block.context.model != ExecutionModel::eAgnostic) {
-		result = "#version 460\n";
+	active_block = &blk;
+}
 
-		result += "#extension GL_EXT_scalar_block_layout : require\n\n";
+void GLSL::reset_state()
+{
+	result.clear();
+	aggregate_names.clear();
+	subroutine_names.clear();
+	emitted_subroutines.clear();
+	thread_inputs.clear();
+	argument_names.clear();
+	local_thread_outputs.clear();
+	set_active_block(block);
+}
 
-		result += "\n";
+void GLSL::collect_blocks(std::vector <const Block *> &blocks) const
+{
+	std::set <const Block *> visited;
 
-		size_t aggregate_counter = 0;
-		for (auto &instr : block) {
+	auto visit = [&](auto &&self, const Block &blk) -> void {
+		if (visited.contains(&blk))
+			return;
+		visited.emplace(&blk);
+		blocks.push_back(&blk);
+
+		for (auto &instr : blk) {
+			if (instr->is <Invocation> ()) {
+				auto &inv = instr->as <Invocation> ();
+				self(self, *inv.sbr);
+			}
+		}
+	};
+
+	visit(visit, block);
+}
+
+void GLSL::emit_preamble()
+{
+	result = "// Preamble\n";
+	result += "#version 460\n\n";
+	result += "#extension GL_EXT_scalar_block_layout : require\n\n";
+}
+
+void GLSL::emit_aggregate_decls()
+{
+	result += "// Types\n";
+
+	std::vector <const Block *> blocks;
+	collect_blocks(blocks);
+
+	size_t aggregate_counter = 0;
+	for (auto *blk : blocks) {
+		for (auto &instr : *blk) {
 			if (not instr->is <Type> ())
 				continue;
 
@@ -275,97 +362,299 @@ std::string GLSL::generate(size_t tabs)
 
 			aggregate_names.emplace(&agg, fmt::format("AGG{}", aggregate_counter - 1));
 		}
+	}
 
-		thread_inputs.reserve(block.context.thread_inputs.size());
-		for (auto &tin : block.context.thread_inputs) {
-			thread_inputs.push_back(fmt::format("lin{}", tin.argi));
-			result += fmt::format("layout (location = {}) in {} lin{};\n",
-				tin.argi, type.main(tin.type), tin.argi);
+	result += "\n";
+}
+
+void GLSL::emit_thread_inputs()
+{
+	result += "// Inputs\n";
+
+	thread_inputs.reserve(block.context.thread_inputs.size());
+	for (auto &tin : block.context.thread_inputs) {
+		thread_inputs.push_back(fmt::format("lin{}", tin.argi));
+		result += fmt::format("layout (location = {}) in {} lin{};\n",
+			tin.argi, type.main(tin.type), tin.argi);
+	}
+
+	if (block.context.thread_inputs.size())
+		result += "\n";
+	else
+		result += "\n";
+}
+
+void GLSL::emit_thread_outputs()
+{
+	result += "// Outputs\n";
+
+	for (auto &tout : block.context.thread_outputs) {
+		std::string qualifier = "? ";
+		switch (tout.properties) {
+		case RateProperties::eFlat: qualifier = "flat "; break;
+		case RateProperties::eNone: qualifier = ""; break;
+		case RateProperties::eNoPerspective: qualifier = "noperspective "; break;
+		case RateProperties::eSmooth: qualifier = "smooth "; break;
+		default:
+			break;
 		}
 
-		if (block.context.thread_inputs.size())
-			result += "\n";
+		result += fmt::format("layout (location = {}) {}out {} lout{};\n",
+			tout.argi, qualifier, type.main(tout.type), tout.argi);
+	}
 
-		for (auto &tout : block.context.thread_outputs) {
-			std::string qualifier = "? ";
-			switch (tout.properties) {
-			case RateProperties::eFlat: qualifier = "flat "; break;
-			case RateProperties::eNone: qualifier = ""; break;
-			case RateProperties::eNoPerspective: qualifier = "noperspective "; break;
-			case RateProperties::eSmooth: qualifier = "smooth "; break;
-			default:
-				break;
-			}
+	if (block.context.thread_outputs.size())
+		result += "\n";
+	else
+		result += "\n";
+}
 
-			result += fmt::format("layout (location = {}) {}out {} lout{};\n",
-				tout.argi, qualifier, type.main(tout.type), tout.argi);
-		}
+void GLSL::emit_global_resources()
+{
+	std::vector <const Block *> blocks;
+	collect_blocks(blocks);
 
-		if (block.context.thread_outputs.size())
-			result += "\n";
+	std::map <void *, uint32_t> pc_indices;
+	collect_push_constant_indices(blocks, pc_indices);
 
-		uint32_t pcounter = 0;
+	result += "// Resources\n";
 
-		for (auto &[_, refs] : block.context.global_resources) {
+	std::set <std::string> emitted;
+	for (auto *blk : blocks) {
+		for (auto &[_, refs] : blk->context.global_resources) {
 			for (auto &ref : refs) {
 				auto &grsrc = ref->as <GlobalResource> ();
-				if (grsrc.kind == GlobalResourceKind::eSampler) {
-					auto group = grsrc.group.value_or(-1);
-					auto index = grsrc.index.value_or(-1);
-					result += fmt::format("layout (set = {}, binding = {}) uniform sampler2D r{}_i{};\n\n",
-						group, index, group, index);
-				} else if (grsrc.kind == GlobalResourceKind::ePushConstant) {
-					auto idx = grsrc.push_constant_index.value_or(pcounter++);
-					grsrc.push_constant_index = idx;
-					auto offset = grsrc.push_constant_offset.value_or(0);
-
-					result += fmt::format("layout ({}push_constant) uniform PC{} {{\n",
-						layout_string(grsrc.layout), idx);
-					result += fmt::format("    layout (offset = {}) {} pc{};\n", offset, type.main(grsrc.type), idx);
-					result += "};\n\n";
-				} else {
-					std::string modifier;
-					switch (grsrc.kind) {
-					case GlobalResourceKind::eUniformBuffer: modifier = "uniform"; break;
-					case GlobalResourceKind::eStorageBuffer: modifier = "buffer"; break;
-					default:
-						fatal("unsupported global resource kind");
-					}
-
-					auto group = grsrc.group.value_or(-1);
-					auto index = grsrc.index.value_or(-1);
-					result += fmt::format("layout ({}set = {}, binding = {}) {} R{}{} {{\n",
-						layout_string(grsrc.layout), group, index, modifier, group, index);
-					result += fmt::format("    {} r{}_i{};\n", type.main(grsrc.type), group, index);
-					result += "};\n\n";
-				}
+				auto key = resource_key(grsrc);
+				if (emitted.contains(key))
+					continue;
+				emitted.emplace(key);
+				emit_resource_decl(grsrc);
 			}
 		}
-
-		result += "void main()\n";
-		result += "{\n";
-
-		std::vector <Reference> manifest;
-
-		for (auto &instr : block) {
-			vswitch ((*instr)) {
-			vcase(Store):
-				manifest.push_back(instr);
-				break;
-			default:
-				break;
-			}
-		}
-
-		for (auto &instr : manifest)
-			statement(instr);
-
-		result += "}";
-
-		return result;
-	} else {
-		fatal("per-function generation is not supported");
 	}
+
+	result += "\n";
+}
+
+void GLSL::collect_push_constant_indices(const std::vector <const Block *> &blocks,
+	std::map <void *, uint32_t> &pc_indices)
+{
+	uint32_t pcounter = 0;
+	for (auto *blk : blocks) {
+		for (auto &[addr, refs] : blk->context.global_resources) {
+			for (auto &ref : refs) {
+				auto &grsrc = ref->as <GlobalResource> ();
+				if (grsrc.kind != GlobalResourceKind::ePushConstant)
+					continue;
+
+				auto it = pc_indices.find(addr);
+				if (it == pc_indices.end())
+					it = pc_indices.emplace(addr, pcounter++).first;
+				grsrc.push_constant_index = it->second;
+			}
+		}
+	}
+}
+
+std::string GLSL::resource_key(const GlobalResource &grsrc) const
+{
+	if (grsrc.kind == GlobalResourceKind::eSampler) {
+		auto group = grsrc.group.value_or(-1);
+		auto index = grsrc.index.value_or(-1);
+		return fmt::format("sampler:{}:{}", group, index);
+	}
+
+	if (grsrc.kind == GlobalResourceKind::ePushConstant) {
+		auto idx = grsrc.push_constant_index.value_or(0);
+		auto offset = grsrc.push_constant_offset.value_or(0);
+		return fmt::format("pc:{}:{}:{}:{}",
+			idx, offset, (int) grsrc.layout, (void *) grsrc.type.get());
+	}
+
+	auto group = grsrc.group.value_or(-1);
+	auto index = grsrc.index.value_or(-1);
+	return fmt::format("buf:{}:{}:{}:{}",
+		(int) grsrc.kind, group, index, (int) grsrc.layout);
+}
+
+void GLSL::emit_resource_decl(GlobalResource &grsrc)
+{
+	if (grsrc.kind == GlobalResourceKind::eSampler) {
+		auto group = grsrc.group.value_or(-1);
+		auto index = grsrc.index.value_or(-1);
+		result += fmt::format("layout (set = {}, binding = {}) uniform sampler2D r{}_i{};\n\n",
+			group, index, group, index);
+		return;
+	}
+
+	if (grsrc.kind == GlobalResourceKind::ePushConstant) {
+		auto idx = grsrc.push_constant_index.value_or(0);
+		grsrc.push_constant_index = idx;
+		auto offset = grsrc.push_constant_offset.value_or(0);
+
+		result += fmt::format("layout ({}push_constant) uniform PC{} {{\n",
+			layout_string(grsrc.layout), idx);
+		result += fmt::format("    layout (offset = {}) {} pc{};\n", offset, type.main(grsrc.type), idx);
+		result += "};\n\n";
+		return;
+	}
+
+	std::string modifier;
+	switch (grsrc.kind) {
+	case GlobalResourceKind::eUniformBuffer: modifier = "uniform"; break;
+	case GlobalResourceKind::eStorageBuffer: modifier = "buffer"; break;
+	default:
+		fatal("unsupported global resource kind");
+	}
+
+	auto group = grsrc.group.value_or(-1);
+	auto index = grsrc.index.value_or(-1);
+	result += fmt::format("layout ({}set = {}, binding = {}) {} R{}{} {{\n",
+		layout_string(grsrc.layout), group, index, modifier, group, index);
+	result += fmt::format("    {} r{}_i{};\n", type.main(grsrc.type), group, index);
+	result += "};\n\n";
+}
+
+void GLSL::emit_block_statements(const Block &blk)
+{
+	for (auto &instr : blk) {
+		if (instr->is <Store> () || instr->is <Invocation> ())
+			statement(instr);
+	}
+}
+
+std::string GLSL::subroutine_return_type(const Block &blk, uint32_t &out_argi)
+{
+	out_argi = 0;
+	if (blk.context.thread_outputs.empty())
+		return "void";
+	if (blk.context.thread_outputs.size() > 1)
+		fatal("subroutine return with multiple outputs is not supported");
+
+	auto &tout = blk.context.thread_outputs.front();
+	out_argi = tout.argi;
+	return type.main(tout.type);
+}
+
+void GLSL::emit_subroutine_function(const Block &blk, const std::string &name)
+{
+	set_active_block(blk);
+	argument_names.clear();
+	local_thread_outputs.clear();
+
+	for (auto &arg : blk.context.arguments)
+		argument_names.push_back(fmt::format("arg{}", arg.argi));
+
+	uint32_t ret_argi = 0;
+	auto return_type = subroutine_return_type(blk, ret_argi);
+
+	result += fmt::format("{} {}(", return_type, name);
+	for (size_t i = 0; i < blk.context.arguments.size(); i++) {
+		auto &arg = blk.context.arguments[i];
+		result += fmt::format("{} {}", type.main(arg.type), argument_names[arg.argi]);
+		if (i + 1 < blk.context.arguments.size())
+			result += ", ";
+	}
+	result += ")\n{\n";
+
+	// TODO: should just be one set of returns...
+	// for perf maybe even prefer out parameters for tuples
+	for (auto &tout : blk.context.thread_outputs) {
+		auto name = fmt::format("lout{}", tout.argi);
+		local_thread_outputs.emplace(tout.argi, name);
+		result += fmt::format("    {} {};\n", type.main(tout.type), name);
+	}
+
+	if (blk.context.thread_outputs.size())
+		result += "\n";
+
+	emit_block_statements(blk);
+
+	if (return_type != "void") {
+		auto name_it = local_thread_outputs.find(ret_argi);
+		auto local_name = (name_it != local_thread_outputs.end())
+			? name_it->second
+			: fmt::format("lout{}", ret_argi);
+		result += fmt::format("    return {};\n", local_name);
+	}
+
+	result += "}\n\n";
+	set_active_block(block);
+}
+
+void GLSL::emit_subroutine_functions()
+{
+	result += "// Subroutines\n";
+
+	std::vector <const Block *> order;
+	std::set <const Block *> visited;
+
+	auto visit = [&](auto &&self, const Block &blk) -> void {
+		for (auto &instr : blk) {
+			if (instr->is <Invocation> ()) {
+				auto &inv = instr->as <Invocation> ();
+				const Block *callee = inv.sbr.get();
+				if (visited.contains(callee))
+					continue;
+				visited.emplace(callee);
+				self(self, *callee);
+				order.push_back(callee);
+			}
+		}
+	};
+
+	visit(visit, block);
+
+	for (auto *callee : order) {
+		if (callee->context.model != ShaderStage::eSubroutine)
+			continue;
+
+		auto it = subroutine_names.find(callee);
+		if (it == subroutine_names.end()) {
+			auto name = fmt::format("fn_{}", (void *) callee);
+			it = subroutine_names.emplace(callee, name).first;
+		}
+
+		if (emitted_subroutines.contains(callee))
+			continue;
+
+		emitted_subroutines.emplace(callee);
+		emit_subroutine_function(*callee, it->second);
+	}
+}
+
+void GLSL::emit_main_function()
+{
+	result += "// Main\n";
+	result += "void main()\n";
+	result += "{\n";
+
+	emit_block_statements(block);
+
+	result += "}";
+}
+
+std::string GLSL::generate(size_t tabs)
+{
+	reset_state();
+
+	if (block.context.model == ShaderStage::eSubroutine) {
+		emit_aggregate_decls();
+		auto name = fmt::format("fn_{}", (void *) &block);
+		subroutine_names.emplace(&block, name);
+		emit_subroutine_function(block, name);
+		return result;
+	}
+
+	emit_preamble();
+	emit_aggregate_decls();
+	emit_thread_inputs();
+	emit_thread_outputs();
+	emit_global_resources();
+	emit_subroutine_functions();
+	emit_main_function();
+
+	return result;
 }
 
 } // namespace generators

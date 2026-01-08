@@ -12,15 +12,24 @@ constexpr const char *COLOR_ERROR = "\x1b[91m";
 constexpr const char *COLOR_OK = "\x1b[92m";
 constexpr const char *COLOR_ASSERT = "\x1b[31m";
 constexpr const char *COLOR_FATAL = "\x1b[95m";
+constexpr const char *STYLE_BOLD = "\x1b[1m";
+constexpr const char *STYLE_FAINT = "\x1b[2m";
 
 void logv(const char *level, const char *color, const char *fmt_str, va_list args)
 {
-	std::fputs("rcgp: ", stderr);
-	std::fputs(color, stderr);
-	std::fputs(level, stderr);
+	std::fputs(STYLE_BOLD, stderr);
+	std::fputs("rcgp:", stderr);
 	std::fputs(COLOR_RESET, stderr);
-	std::fputs(": ", stderr);
+	std::fputs(" ", stderr);
+	std::fputs(color, stderr);
+	std::fputs(STYLE_BOLD, stderr);
+	std::fputs(level, stderr);
+	std::fputs(":", stderr);
+	std::fputs(COLOR_RESET, stderr);
+	std::fputs(" ", stderr);
+	std::fputs(STYLE_FAINT, stderr);
 	std::vfprintf(stderr, fmt_str, args);
+	std::fputs(COLOR_RESET, stderr);
 	std::fputc('\n', stderr);
 }
 

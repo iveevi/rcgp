@@ -23,6 +23,9 @@ struct is_reference : std::false_type {};
 template <auto &rsrc>
 struct is_reference <reference <rsrc>> : std::true_type {};
 
+template <typename T>
+constexpr bool is_reference_v = is_reference <T> ::value;
+
 #define $ref(name)		reference <name> name
 #define $tref(name, ...)	reference <name <__VA_ARGS__>> name
 
