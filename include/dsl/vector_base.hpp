@@ -5,6 +5,7 @@
 
 #include "pygen_macro_swizzle.hpp"
 #include "scalar.hpp"
+#include "local.hpp"
 
 template <SwizzleCode S, typename T, typename R>
 struct swizzle_component {
@@ -22,7 +23,14 @@ template <native_scalar T, size_t D>
 struct vector;
 
 template <native_scalar T, size_t D>
-struct vector_base : jems::handle {};
+struct vector_base : jems::handle {
+	vector_base() {
+		if (!Tracer::singleton.records.empty()) {
+			auto type = jems::type_loc(std::source_location::current(), VectorType <T, D> ());
+			init_local_if_tracing(*this, type);
+		}
+	}
+};
 
 template <native_scalar T>
 class vector_base <T, 2> : public jems::handle {
@@ -31,7 +39,12 @@ protected:
 public:
 	SWIZZLE_D2;
 
-	vector_base() = default;
+	vector_base() {
+		if (!Tracer::singleton.records.empty()) {
+			auto type = jems::type_loc(std::source_location::current(), VectorType <T, 2> ());
+			init_local_if_tracing(*this, type);
+		}
+	}
 	
 	vector_base(const scalar <T> &x, const scalar <T> &y, $location)
 		: handle(jems::construct_loc(loc,
@@ -47,7 +60,12 @@ protected:
 public:
 	SWIZZLE_D3;
 
-	vector_base() = default;
+	vector_base() {
+		if (!Tracer::singleton.records.empty()) {
+			auto type = jems::type_loc(std::source_location::current(), VectorType <T, 3> ());
+			init_local_if_tracing(*this, type);
+		}
+	}
 
 	vector_base(const scalar <T> x, $location)
 		: handle(jems::construct_loc(loc,
@@ -81,7 +99,12 @@ protected:
 public:
 	SWIZZLE_D4;
 
-	vector_base() = default;
+	vector_base() {
+		if (!Tracer::singleton.records.empty()) {
+			auto type = jems::type_loc(std::source_location::current(), VectorType <T, 4> ());
+			init_local_if_tracing(*this, type);
+		}
+	}
 	
 	vector_base(const scalar <T> &x, $location)
 		: handle(jems::construct_loc(loc,

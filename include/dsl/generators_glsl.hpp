@@ -15,6 +15,8 @@ struct GLSL {
 	std::vector <std::string> thread_inputs;
 	std::vector <std::string> argument_names;
 	std::map <uint32_t, std::string> local_thread_outputs;
+	std::map <const Instruction *, std::string> local_names;
+	uint32_t local_count = 0;
 
 	// TODO: use cref?
 	std::map <const AggregateType *, std::string> aggregate_names;
@@ -45,6 +47,7 @@ struct GLSL {
 		std::string impl(GlobalResource grsrc);
 		std::string impl(ThreadOutput tout);
 		std::string impl(Argument arg);
+		std::string impl(Local local, Reference ref);
 		
 		std::string main(Reference reference);
 		DEFINE_CALL_OPERATOR(std::string);
@@ -80,6 +83,8 @@ struct GLSL {
 		void impl(Store store);
 		void impl(Invocation invocation);
 		void impl(Branch branch);
+		void impl(Loop loop);
+		void impl(Local local, Reference ref);
 
 		void impl(auto x) {
 			parent.result += "    ?\n";

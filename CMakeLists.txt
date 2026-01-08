@@ -63,6 +63,7 @@ add_library(rcgp STATIC
 	${RCGP_GENERATED_SOURCES}
 	source/dsl/instructions.cpp
 	source/dsl/branching.cpp
+	source/dsl/looping.cpp
 	source/dsl/generators_assembly.cpp
 	source/dsl/generators_glsl.cpp
 	source/dsl/primitives.cpp

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dsl/branching.hpp"
+#include "dsl/looping.hpp"
 #include "meta/combinator/rasterization.hpp"
 #include "meta/commands.hpp"
 #include "meta/descriptor.hpp"

@@ -266,6 +266,36 @@ std::string Assembly::stringify(Branch x, Reference ref)
 	return $assign result;
 }
 
+std::string Assembly::stringify(Loop x, Reference ref)
+{
+	std::string result = "loop(";
+	switch (x.kind) {
+	case LoopKind::eWhile: result += "while"; break;
+	case LoopKind::eFor: result += "for"; break;
+	default:
+		result += "?";
+		break;
+	}
+
+	if (x.init.has_value())
+		result += fmt::format(", init: {}", stringify_block_ref(x.init.value()));
+
+	result += fmt::format(", cond: {}", stringify_block_ref(x.cond));
+
+	if (x.step.has_value())
+		result += fmt::format(", step: {}", stringify_block_ref(x.step.value()));
+
+	result += fmt::format(", body: {}", stringify_block_ref(x.body));
+	result += ")";
+
+	return $assign result;
+}
+
+std::string Assembly::stringify(Local x, Reference ref)
+{
+	return $assign fmt::format("local {}", stringify(x.type));
+}
+
 std::string Assembly::stringify(Invocation x, Reference ref)
 {
 	std::string result = fmt::format("@{}(", (void *) x.sbr.get());
@@ -376,6 +406,41 @@ std::string Assembly::generate(size_t tabs, bool emit_branches)
 				result += entries[i];
 				result += (i + 1 < entries.size()) ? ",\n" : "\n";
 			}
+			result += "  )\n";
+			continue;
+		}
+		if (emit_branches && instr->is <Loop> ()) {
+			auto &loop = instr->as <Loop> ();
+			if (loop.init.has_value()) {
+				auto ref = stringify_block_ref(loop.init.value());
+				result += fmt::format("  {} = {}\n",
+					ref, generate_block_body(loop.init.value(), "  "));
+			}
+
+			auto cond_ref = stringify_block_ref(loop.cond);
+			result += fmt::format("  {} = {}\n",
+				cond_ref, generate_block_body(loop.cond, "  "));
+
+			if (loop.step.has_value()) {
+				auto ref = stringify_block_ref(loop.step.value());
+				result += fmt::format("  {} = {}\n",
+					ref, generate_block_body(loop.step.value(), "  "));
+			}
+
+			auto body_ref = stringify_block_ref(loop.body);
+			result += fmt::format("  {} = {}\n",
+				body_ref, generate_block_body(loop.body, "  "));
+
+			auto line = fmt::format("{} = loop(", stringify(instr));
+			emit_line(line);
+			result += fmt::format("    kind: {}\n",
+				(loop.kind == LoopKind::eWhile) ? "while" : "for");
+			if (loop.init.has_value())
+				result += fmt::format("    init: {},\n", stringify_block_ref(loop.init.value()));
+			result += fmt::format("    cond: {},\n", stringify_block_ref(loop.cond));
+			if (loop.step.has_value())
+				result += fmt::format("    step: {},\n", stringify_block_ref(loop.step.value()));
+			result += fmt::format("    body: {}\n", stringify_block_ref(loop.body));
 			result += "  )\n";
 			continue;
 		}

@@ -4,6 +4,66 @@
 
 namespace generators {
 
+namespace {
+
+bool is_same_type(const Reference &a, const Reference &b)
+{
+	if (a.get() == b.get())
+		return true;
+	if (!a || !b)
+		return false;
+	if (!a->is <Type> () || !b->is <Type> ())
+		return false;
+
+	auto &ta = a->as <Type> ();
+	auto &tb = b->as <Type> ();
+	if (ta.index() != tb.index())
+		return false;
+
+	vswitch (ta) {
+	vcase(PrimitiveType):
+		return ta.as <PrimitiveType> ().index() == tb.as <PrimitiveType> ().index();
+	vcase(AggregateType): {
+		auto &aa = ta.as <AggregateType> ();
+		auto &bb = tb.as <AggregateType> ();
+		if (aa.size() != bb.size())
+			return false;
+		for (size_t i = 0; i < aa.size(); i++) {
+			if (!is_same_type(aa[i], bb[i]))
+				return false;
+		}
+		return true;
+	}
+	vcase(ArrayType): {
+		auto &aa = ta.as <ArrayType> ();
+		auto &bb = tb.as <ArrayType> ();
+		if (aa.size != bb.size)
+			return false;
+		return is_same_type(aa.base, bb.base);
+	}
+	default:
+		break;
+	}
+
+	return false;
+}
+
+std::string rate_qualifier(RateProperties properties)
+{
+	switch (properties) {
+	case RateProperties::eFlat: return "flat ";
+	case RateProperties::eNone: return "";
+	case RateProperties::eNoPerspective: return "noperspective ";
+	case RateProperties::eSmooth: return "smooth ";
+	default:
+		break;
+	}
+
+	return "? ";
+}
+
+} // namespace
+
 GLSL::GLSL(const SharedBlockReference &sbr)
 	: block(*sbr.get()),
 	reference(*this),
@@ -62,8 +122,23 @@ std::string GLSL::generate_reference::impl(Argument arg)
 	return fmt::format("arg{}", arg.argi);
 }
 
+std::string GLSL::generate_reference::impl(Local local, Reference ref)
+{
+	auto ptr = ref.get();
+	auto it = parent.local_names.find(ptr);
+	if (it != parent.local_names.end())
+		return it->second;
+
+	auto name = fmt::format("lvar{}", parent.local_count++);
+	parent.local_names.emplace(ptr, name);
+	return name;
+}
+
 std::string GLSL::generate_reference::main(Reference reference)
 {
+	if (reference->is <Local> ())
+		return impl(reference->as <Local> (), reference);
+
 	auto ftn = [&](auto x) { return impl(x); };
 	return std::visit(ftn, *reference);
 }
@@ -212,6 +287,9 @@ std::string GLSL::generate_expression::impl(const BuiltinIntrinsic &builtin)
 
 std::string GLSL::generate_expression::main(Reference expression)
 {
+	if (expression->is <Local> ())
+		return parent.reference(expression);
+
 	auto ftn = [&](auto x) { return impl(x); };
 	return std::visit(ftn, *expression);
 }
@@ -263,8 +341,45 @@ void GLSL::generate_statement::impl(Branch branch)
 	}
 }
 
+void GLSL::generate_statement::impl(Loop loop)
+{
+	auto emit_body = [&](const SharedBlockReference &blk) {
+		auto prev = parent.indent;
+		parent.indent += "    ";
+		parent.emit_block_statements(*blk);
+		parent.indent = prev;
+	};
+
+	auto cond_expr = parent.expression(loop.cond_value);
+
+	if (loop.kind == LoopKind::eFor && loop.init.has_value())
+		parent.emit_block_statements(*loop.init.value());
+
+	auto loop_kw = (loop.kind == LoopKind::eFor) ? "for (;;)" : "while (true)";
+	parent.result += fmt::format("{}{}\n", parent.indent, loop_kw);
+	parent.result += fmt::format("{}{{\n", parent.indent);
+	emit_body(loop.cond);
+	parent.result += fmt::format("{}    if (!({}))\n", parent.indent, cond_expr);
+	parent.result += fmt::format("{}        break;\n", parent.indent);
+	emit_body(loop.body);
+	if (loop.kind == LoopKind::eFor && loop.step.has_value())
+		emit_body(loop.step.value());
+	parent.result += fmt::format("{}}}\n", parent.indent);
+}
+
+void GLSL::generate_statement::impl(Local local, Reference ref)
+{
+	auto name = parent.reference(ref);
+	parent.result += fmt::format("{}{} {};\n",
+		parent.indent, parent.type.main(local.type), name);
+}
+
 void GLSL::generate_statement::main(Reference instruction)
 {
+	if (instruction->is <Local> ()) {
+		impl(instruction->as <Local> (), instruction);
+		return;
+	}
 	auto ftn = [&](auto x) { return impl(x); };
 	return std::visit(ftn, *instruction);
 }
@@ -339,6 +454,8 @@ void GLSL::reset_state()
 	thread_inputs.clear();
 	argument_names.clear();
 	local_thread_outputs.clear();
+	local_names.clear();
+	local_count = 0;
 	set_active_block(block);
 }
 
@@ -356,6 +473,20 @@ void GLSL::collect_blocks(std::vector <const Block *> &blocks) const
 			if (instr->is <Invocation> ()) {
 				auto &inv = instr->as <Invocation> ();
 				self(self, *inv.sbr);
+			} else if (instr->is <Branch> ()) {
+				auto &branch = instr->as <Branch> ();
+				for (auto &segment : branch.segments)
+					self(self, *segment.body);
+				if (branch.fallback.has_value())
+					self(self, *branch.fallback.value());
+			} else if (instr->is <Loop> ()) {
+				auto &loop = instr->as <Loop> ();
+				if (loop.init.has_value())
+					self(self, *loop.init.value());
+				self(self, *loop.cond);
+				if (loop.step.has_value())
+					self(self, *loop.step.value());
+				self(self, *loop.body);
 			}
 		}
 	};
@@ -427,22 +558,31 @@ void GLSL::emit_thread_outputs()
 {
 	result += "// Outputs\n";
 
-	for (auto &tout : block.context.thread_outputs) {
-		std::string qualifier = "? ";
-		switch (tout.properties) {
-		case RateProperties::eFlat: qualifier = "flat "; break;
-		case RateProperties::eNone: qualifier = ""; break;
-		case RateProperties::eNoPerspective: qualifier = "noperspective "; break;
-		case RateProperties::eSmooth: qualifier = "smooth "; break;
-		default:
-			break;
-		}
+	std::map <uint32_t, ThreadOutput> outputs;
+	std::vector <const Block *> blocks;
+	collect_blocks(blocks);
 
+	for (auto *blk : blocks) {
+		for (auto &tout : blk->context.thread_outputs) {
+			auto it = outputs.find(tout.argi);
+			if (it == outputs.end()) {
+				outputs.emplace(tout.argi, tout);
+				continue;
+			}
+
+			if (!is_same_type(it->second.type, tout.type)
+				|| it->second.properties != tout.properties)
+				fatal("thread output mismatch for location %u", tout.argi);
+		}
+	}
+
+	for (auto &[_, tout] : outputs) {
+		auto qualifier = rate_qualifier(tout.properties);
 		result += fmt::format("layout (location = {}) {}out {} lout{};\n",
 			tout.argi, qualifier, type.main(tout.type), tout.argi);
 	}
 
-	if (block.context.thread_outputs.size())
+	if (outputs.size())
 		result += "\n";
 	else
 		result += "\n";
@@ -557,7 +697,9 @@ void GLSL::emit_resource_decl(GlobalResource &grsrc)
 void GLSL::emit_block_statements(const Block &blk)
 {
 	for (auto &instr : blk) {
-		if (instr->is <Store> () || instr->is <Invocation> () || instr->is <Branch> ())
+		if (instr->is <Store> () || instr->is <Invocation> ()
+			|| instr->is <Branch> () || instr->is <Loop> ()
+			|| instr->is <Local> ())
 			statement(instr);
 	}
 }

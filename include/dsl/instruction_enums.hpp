@@ -101,3 +101,8 @@ enum class ShaderStage {
 	eFragment,
 	eCompute,
 };
+
+enum class LoopKind {
+	eWhile,
+	eFor,
+};

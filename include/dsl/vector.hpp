@@ -15,6 +15,19 @@ struct vector : public vector_base <T, N> {
 		return vector(h);
 	}
 
+	vector &operator=(const vector &rhs) {
+		if (Tracer::singleton.records.empty()) {
+			Reference &self_ref = *this;
+			const Reference &rhs_ref = rhs;
+			self_ref = rhs_ref;
+			return *this;
+		}
+
+		auto type = jems::type_loc(std::source_location::current(), VectorType <T, N> ());
+		assign_or_store(*this, rhs, type);
+		return *this;
+	}
+
 	// Arithmetic operations
 	// TODO: move to a header/generate with a script?
 	friend vector operator+(const vector &a, const vector &b) {

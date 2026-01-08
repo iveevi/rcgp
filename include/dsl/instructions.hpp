@@ -111,6 +111,19 @@ struct Branch {
 	std::optional <SharedBlockReference> fallback;
 };
 
+struct Loop {
+	LoopKind kind;
+	std::optional <SharedBlockReference> init;
+	SharedBlockReference cond;
+	Reference cond_value;
+	std::optional <SharedBlockReference> step;
+	SharedBlockReference body;
+};
+
+struct Local {
+	Reference type;
+};
+
 struct Argument {
 	Reference type;
 	uint32_t argi;
@@ -232,6 +245,8 @@ struct Instruction : variant <
 	GlobalIntrinsic,
 	GlobalResource,
 	Branch,
+	Loop,
+	Local,
 	Invocation,
 	Operation,
 	Store,
@@ -264,6 +279,8 @@ extern template Reference Block::add <FieldAccess> (const FieldAccess &sub, Debu
 extern template Reference Block::add <GlobalIntrinsic> (const GlobalIntrinsic &sub, Debug aux);
 extern template Reference Block::add <GlobalResource> (const GlobalResource &sub, Debug aux);
 extern template Reference Block::add <Branch> (const Branch &sub, Debug aux);
+extern template Reference Block::add <Loop> (const Loop &sub, Debug aux);
+extern template Reference Block::add <Local> (const Local &sub, Debug aux);
 extern template Reference Block::add <Operation> (const Operation &sub, Debug aux);
 extern template Reference Block::add <Store> (const Store &sub, Debug aux);
 extern template Reference Block::add <Swizzle> (const Swizzle &sub, Debug aux);

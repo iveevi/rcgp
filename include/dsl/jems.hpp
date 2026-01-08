@@ -68,6 +68,7 @@ JEM(swizzle, Swizzle);
 JEM(array_access, ArrayAccess);
 JEM(field_access, FieldAccess);
 JEM(store, Store);
+JEM(local, Local);
 
 } // namespace jems
 

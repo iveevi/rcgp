@@ -37,6 +37,8 @@ struct Assembly {
 	std::string stringify(BuiltinIntrinsic x, Reference ref);
 	std::string stringify(Swizzle x, Reference ref);
 	std::string stringify(Branch x, Reference ref);
+	std::string stringify(Loop x, Reference ref);
+	std::string stringify(Local x, Reference ref);
 	std::string stringify(Block x, Reference ref);
 	std::string stringify(ShaderStage stage);
 	std::string generate(size_t tabs = 0, bool emit_branches = true);
