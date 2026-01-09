@@ -38,6 +38,10 @@ struct Block : std::vector <Reference> {
 
 	template <typename T>
 	Reference add(const T &sub, Debug aux);
+
+	std::string repr() const {
+		return "Block";
+	}
 };
 
 extern template Reference Block::add <Argument> (const Argument &sub, Debug aux);

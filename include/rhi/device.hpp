@@ -11,7 +11,7 @@ struct CommandPool;
 struct DescriptorPool;
 struct Frame;
 
-template <auto &ref, bool resolved, typename Enable = void>
+template <auto &ref, bool resolved>
 struct DescriptorWritePair;
 
 struct Device {

@@ -21,12 +21,20 @@ struct GlobalResource {
 	std::optional <uint32_t> push_constant_index;
 	// push constants use this to determine offset within the shared block
 	std::optional <uint32_t> push_constant_offset;
+
+	std::string repr() const {
+		return "GlobalResource";
+	}
 };
 
 struct ThreadInput {
 	Reference type;
 	// corresponds to actual order
 	uint32_t argi;
+
+	std::string repr() const {
+		return "ThreadInput";
+	}
 };
 
 struct ThreadOutput {
@@ -34,4 +42,8 @@ struct ThreadOutput {
 	uint32_t argi;
 
 	RateProperties properties;
+
+	std::string repr() const {
+		return "ThreadOutput";
+	}
 };

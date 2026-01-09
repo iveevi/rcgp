@@ -49,6 +49,7 @@ enum class BuiltinIntrinsicCode {
 	eDot,
 	eInverse,
 	eMax,
+	ePow,
 	eMin,
 	eNormalize,
 	eSample,

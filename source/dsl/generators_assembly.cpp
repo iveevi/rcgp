@@ -273,6 +273,8 @@ std::string stringify(AssemblyContext &ctx, BuiltinIntrinsic x, Reference ref)
 	case BuiltinIntrinsicCode::eDot: ftn = "dot"; break;
 	case BuiltinIntrinsicCode::eNormalize: ftn = "normalize"; break;
 	case BuiltinIntrinsicCode::eMax: ftn = "max"; break;
+	case BuiltinIntrinsicCode::ePow: ftn = "pow"; break;
+	case BuiltinIntrinsicCode::eMin: ftn = "min"; break;
 	default:
 		break;
 	}
@@ -494,17 +496,26 @@ std::string generate(AssemblyContext &ctx, size_t tabs, bool emit_branches)
 	result += "  }\n";
 
 	for (auto &instr : *ctx.sbr) {
-		if (emit_branches) {
-			if (instr->is <Branch> ())
-				emit_branch_block(ctx, instr->as <Branch> (), instr, result);
-			if (instr->is <Loop> ())
-				emit_loop_block(ctx, instr->as <Loop> (), instr, result);
-		} else {
-			auto str = std::visit([&](auto x) {
-				return stringify(ctx, x, instr);
-			}, *instr);
-			emit_debug_line(result, str, instr->debug_info.origin);
+		if (emit_branches && instr->is <Branch> ()) {
+			emit_branch_block(ctx,
+				instr->as <Branch> (),
+				instr, result
+			);
+			continue;
 		}
+
+		if (emit_branches && instr->is <Loop> ()) {
+			emit_loop_block(ctx,
+				instr->as <Loop> (),
+				instr, result
+			);
+			continue;
+		}
+
+		auto str = std::visit([&](auto x) {
+			return stringify(ctx, x, instr);
+		}, *instr);
+		emit_debug_line(result, str, instr->debug_info.origin);
 	}
 	result += "}";
 
@@ -563,6 +574,9 @@ std::string generate_block_body(AssemblyContext &ctx, const SharedBlockReference
 	auto pad_width = 40;
 	if (indent.size() < static_cast <size_t> (pad_width))
 		pad_width -= static_cast <int> (indent.size());
+
+	if (blk->empty())
+		result += prefix + "(empty block)\n";
 
 	for (auto &instr : *blk) {
 		auto str = std::visit([&](auto x) {

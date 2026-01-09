@@ -45,7 +45,7 @@ template <typename Original, typename ... Ts>
 struct bindings_from_reflection <aggregate_reflection <Original, Ts...>>
 	: std::integral_constant <size_t, sizeof...(Ts)> {};
 
-template <auto &ref, bool resolved, typename Enable>
+template <auto &ref, bool resolved>
 struct DescriptorWritePair {
 	const DescriptorFor <ref, resolved> &descriptor;
 	const ResourceTypeFor <ref> &resource;
@@ -80,6 +80,7 @@ struct DescriptorWritePair {
 					.setDstSet(descriptor)
 					.setDstBinding(I);
 
+				// TODO: again need a method to go from reflection/resource type to descriptor type
 				if constexpr (is_sampler_reflection_v <field_t>) {
 					descriptor_infos[I].image = field.descriptor_info();
 					writes[I]

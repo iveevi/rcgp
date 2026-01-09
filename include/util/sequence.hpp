@@ -7,6 +7,8 @@ template <typename ... Args>
 struct sequence {
 	static constexpr size_t size = sizeof...(Args);
 
+	// TODO: get rid of this... type identity already
+	// allows us to avoid declval
 	constexpr sequence(std::type_identity <Args> ...) {}
 
 	template <size_t I>

@@ -11,7 +11,9 @@ struct array : public jems::handle {
 
 	template <projectively_int_scalar U>
 	T operator[](const U &idx) const {
-		// TODO: different for primitives and aggregates...
-		return T::reinterpret(jems::array_access(ref, project(idx)));
+		T result;
+		auto access = jems::array_access(ref, project(idx));
+		inject_reference(result, access);
+		return result;
 	}
 };

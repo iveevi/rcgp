@@ -1,14 +1,11 @@
 #include "dsl/generators.hpp"
-#include "meta/static_string.hpp"
 #include "util/logging.hpp"
 
 #include <fmt/format.h>
 
-#include <type_traits>
-
 namespace {
 
-struct GLSLContext {
+struct Context {
 	const Block &block;
 
 	std::vector <std::string> thread_inputs;
@@ -94,7 +91,8 @@ std::string layout_string(GlobalResourceLayout layout)
 	}
 }
 
-std::string type_name(GLSLContext &ctx, const PrimitiveType &primitive)
+// Type name generation
+std::string primitive_type_string(const PrimitiveType &primitive)
 {
 	vswitch (primitive) {
 	vcase(int32_t): return "int";
@@ -117,34 +115,54 @@ std::string type_name(GLSLContext &ctx, const PrimitiveType &primitive)
 		break;
 	}
 
-	return "?";
+	fatal("unhandled primitive type string case");
 }
 
-std::string type_name(GLSLContext &ctx, const Type &type)
-{
-	return std::visit([&](const auto &x) { return type_name(ctx, x); }, type);
-}
-
-std::string type_name(GLSLContext &ctx, const ArrayType &array)
-{
-	auto size = (array.size > 0)
-		? fmt::format("[{}]", array.size)
-		: "[]";
-
-	if (!array.base || !array.base->is <Type> ())
-		fatal("invalid array base type");
-
-	return type_name(ctx, array.base->as <Type> ()) + size;
-}
-
-struct TypeDecl {
+struct TypeRepr {
 	std::string base;
 	std::string suffix;
 };
 
+TypeRepr type_repr(Context &ctx, const Reference &ref)
+{
+	// TODO: each reference should have an assembly dump (with tabs);
+	// in fact we should overhaul the current assembly generator
+	// to be like this...
+	assertion(ref->is <Type> (),
+		"type_repr only operates on Type instructions:"
+		"\n\tref: %s",
+		ref->repr().c_str());
+
+	auto &type = ref->as <Type> ();
+	vswitch (type) {
+	vcase(PrimitiveType): {
+		auto &pt = type.as <PrimitiveType> ();
+		auto ptstr = primitive_type_string(pt);
+		return TypeRepr { ptstr, "" };
+	}
+	vcase(AggregateType): {
+		auto &agg = type.as <AggregateType> ();
+		auto name = ctx.aggregate_names.at(&agg);
+		return TypeRepr { name,  "" };
+	}
+	vcase(ArrayType): {
+		auto &array = type.as <ArrayType> ();
+		auto decl = type_repr(ctx, array.base);
+		decl.suffix += (array.size > 0)
+			? fmt::format("[{}]", array.size)
+			: "[]";
+		return decl;
+	}
+	default:
+		break;
+	}
+
+	fatal("unhandled case for type_repr:\n%s", ref->repr().c_str());
+}
+
 bool contains_unsized_array(Reference type)
 {
-	if (!type || !type->is <Type> ())
+	if (not type or not type->is <Type> ())
 		return false;
 
 	auto &t = type->as <Type> ();
@@ -175,72 +193,7 @@ bool contains_unsized_array(const AggregateType &agg)
 	return false;
 }
 
-TypeDecl type_decl(GLSLContext &ctx, const Type &type)
-{
-	if (type.is <ArrayType> ()) {
-		auto &array = type.as <ArrayType> ();
-		if (!array.base || !array.base->is <Type> ())
-			fatal("invalid array base type");
-		auto decl = type_decl(ctx, array.base->as <Type> ());
-		auto size = (array.size > 0)
-			? fmt::format("[{}]", array.size)
-			: "[]";
-		decl.suffix += size;
-		return decl;
-	}
-
-	return TypeDecl { type_name(ctx, type), "" };
-}
-
-TypeDecl type_decl(GLSLContext &ctx, Reference type)
-{
-	return std::visit([&](const auto &x) -> TypeDecl {
-		using T = std::decay_t <decltype(x)>;
-		if constexpr (std::is_same_v <T, Type>)
-			return type_decl(ctx, x);
-		if constexpr (std::is_same_v <T, PrimitiveType>)
-			return TypeDecl { type_name(ctx, x), "" };
-		if constexpr (std::is_same_v <T, ArrayType>) {
-			auto tmp = Type { x };
-			return type_decl(ctx, tmp);
-		}
-		if constexpr (std::is_same_v <T, AggregateType>)
-			return TypeDecl { type_name(ctx, x), "" };
-		auto type_name = std::string($ss_type(T).view());
-		fatal("type decl not implemented for %s", type_name.c_str());
-		return TypeDecl { "?", "" };
-	}, *type);
-}
-
-std::string type_name(GLSLContext &ctx, const AggregateType &aggregate)
-{
-	auto addr = &aggregate;
-	if (ctx.aggregate_names.contains(addr))
-		return ctx.aggregate_names[addr];
-	if (contains_unsized_array(aggregate))
-		fatal("aggregate type with unsized array is not supported outside buffer blocks");
-	return "?";
-}
-
-std::string type_name(GLSLContext &ctx, Reference type)
-{
-	return std::visit([&](const auto &x) -> std::string {
-		using T = std::decay_t <decltype(x)>;
-		if constexpr (std::is_same_v <T, Type>)
-			return type_name(ctx, x);
-		if constexpr (std::is_same_v <T, PrimitiveType>)
-			return type_name(ctx, x);
-		if constexpr (std::is_same_v <T, ArrayType>)
-			return type_name(ctx, x);
-		if constexpr (std::is_same_v <T, AggregateType>)
-			return type_name(ctx, x);
-		auto type_name = std::string($ss_type(T).view());
-		fatal("type not implemented for %s", type_name.c_str());
-		return "?";
-	}, *type);
-}
-
-std::string reference_local(GLSLContext &ctx, Reference ref)
+std::string reference_local(Context &ctx, Reference ref)
 {
 	auto ptr = ref.get();
 	auto it = ctx.local_names.find(ptr);
@@ -261,7 +214,7 @@ std::string resource_base_name(const GlobalResource &grsrc)
 	return fmt::format("r{}_i{}", group, index);
 }
 
-std::string reference(GLSLContext &ctx, GlobalIntrinsic gi)
+std::string reference(Context &ctx, GlobalIntrinsic gi)
 {
 	switch (gi) {
 	case GlobalIntrinsic::eScreenPosition: return "gl_Position";
@@ -271,7 +224,7 @@ std::string reference(GLSLContext &ctx, GlobalIntrinsic gi)
 	}
 }
 
-std::string reference(GLSLContext &ctx, GlobalResource grsrc)
+std::string reference(Context &ctx, GlobalResource grsrc)
 {
 	if (grsrc.kind == GlobalResourceKind::ePushConstant) {
 		auto idx = grsrc.push_constant_index.value_or(0);
@@ -279,6 +232,8 @@ std::string reference(GLSLContext &ctx, GlobalResource grsrc)
 	}
 
 	auto base = resource_base_name(grsrc);
+	if (grsrc.kind == GlobalResourceKind::eSampler)
+		return base;
 
 	if (!grsrc.type || !grsrc.type->is <Type> ())
 		return base;
@@ -290,7 +245,7 @@ std::string reference(GLSLContext &ctx, GlobalResource grsrc)
 	return base + ".value";
 }
 
-std::string reference(GLSLContext &ctx, ThreadOutput tout)
+std::string reference(Context &ctx, ThreadOutput tout)
 {
 	if (ctx.active_block
 		&& ctx.active_block->context.model == ShaderStage::eSubroutine
@@ -301,241 +256,276 @@ std::string reference(GLSLContext &ctx, ThreadOutput tout)
 	return fmt::format("lout{}", tout.argi);
 }
 
-std::string reference(GLSLContext &ctx, Argument arg)
+std::string reference(Context &ctx, Argument arg)
 {
 	if (arg.argi < ctx.argument_names.size())
 		return ctx.argument_names[arg.argi];
 	return fmt::format("arg{}", arg.argi);
 }
 
-std::string reference(GLSLContext &ctx, Reference ref)
+// TODO: rebrand to lvalue
+std::string reference(Context &ctx, Reference ref)
 {
-	return std::visit([&](auto x) -> std::string {
-		using T = std::decay_t <decltype(x)>;
-		if constexpr (std::is_same_v <T, Local>)
-			return reference_local(ctx, ref);
-		if constexpr (std::is_same_v <T, GlobalIntrinsic>)
-			return reference(ctx, x);
-		if constexpr (std::is_same_v <T, GlobalResource>)
-			return reference(ctx, x);
-		if constexpr (std::is_same_v <T, ThreadOutput>)
-			return reference(ctx, x);
-		if constexpr (std::is_same_v <T, Argument>)
-			return reference(ctx, x);
-		auto type_name = std::string($ss_type(T).view());
-		fatal("reference not implemented for %s", type_name.c_str());
-		return "?";
-	}, *ref);
+	auto &value = *ref;
+	vswitch (value) {
+	vcase(Local):
+		return reference_local(ctx, ref);
+	vcase(GlobalIntrinsic):
+		return reference(ctx, value.as <GlobalIntrinsic> ());
+	vcase(GlobalResource):
+		return reference(ctx, value.as <GlobalResource> ());
+	vcase(ThreadOutput):
+		return reference(ctx, value.as <ThreadOutput> ());
+	vcase(Argument):
+		return reference(ctx, value.as <Argument> ());
+	default:
+		break;
+	}
+
+	fatal("unhandled reference:\n%s", ref->repr().c_str());
 }
 
-std::string expression(GLSLContext &ctx, Reference expr)
+std::string expression(Context &ctx, Reference expr)
 {
-	return std::visit([&](auto x) -> std::string {
-		using T = std::decay_t <decltype(x)>;
-		if constexpr (std::is_same_v <T, Local>)
-			return reference(ctx, expr);
-		if constexpr (std::is_same_v <T, Constant>) {
-			if (x.template is <int32_t> ())
-				return fmt::format("{}", x.template as <int32_t> ());
-			if (x.template is <uint32_t> ())
-				return fmt::format("{}", x.template as <uint32_t> ());
-			if (x.template is <bool> ())
-				return fmt::format("{}", x.template as <bool> ());
-			if (x.template is <float> ())
-				return fmt::format("{}", x.template as <float> ());
-			return "?";
-		}
-		if constexpr (std::is_same_v <T, Operation>) {
-			std::string op = "?";
-			switch (x.code) {
-			case OperationCode::eAdd: op = "+"; break;
-			case OperationCode::eSubtract: op = "-"; break;
-			case OperationCode::eMultiply: op = "*"; break;
-			case OperationCode::eDivide: op = "/"; break;
-			case OperationCode::eEqual: op = "=="; break;
-			case OperationCode::eNotEqual: op = "!="; break;
-			case OperationCode::eLess: op = "<"; break;
-			case OperationCode::eLessEqual: op = "<="; break;
-			case OperationCode::eGreater: op = ">"; break;
-			case OperationCode::eGreaterEqual: op = ">="; break;
-			default:
-				break;
-			}
-
-			return fmt::format("({} {} {})",
-				expression(ctx, x.a), op, expression(ctx, x.b));
-		}
-		if constexpr (std::is_same_v <T, ThreadInput>)
-			return ctx.thread_inputs[x.argi];
-		if constexpr (std::is_same_v <T, Construct>) {
-			std::string out = type_name(ctx, x.type) + "(";
-
-			auto nargs = x.args.size();
-			for (size_t i = 0; i < nargs; i++) {
-				out += expression(ctx, x.args[i]);
-				if (i + 1 < nargs)
-					out += ", ";
-			}
-
-			return out + ")";
-		}
-		if constexpr (std::is_same_v <T, FieldAccess>)
-			return fmt::format("{}.f{}", expression(ctx, x.value), x.fidx);
-		if constexpr (std::is_same_v <T, ArrayAccess>)
-			return fmt::format("{}[{}]", expression(ctx, x.value), expression(ctx, x.index));
-		if constexpr (std::is_same_v <T, Swizzle>)
-			return fmt::format("{}.{}", expression(ctx, x.value), swizzle_string(x.code));
-		if constexpr (std::is_same_v <T, GlobalResource>)
-			return reference(ctx, x);
-		if constexpr (std::is_same_v <T, GlobalIntrinsic>)
-			return reference(ctx, x);
-		if constexpr (std::is_same_v <T, Argument>)
-			return reference(ctx, x);
-		if constexpr (std::is_same_v <T, Invocation>) {
-			const Block *callee = x.sbr.get();
-			auto it = ctx.subroutine_names.find(callee);
-			std::string name = (it != ctx.subroutine_names.end())
-				? it->second
-				: fmt::format("fn_{}", (void *) callee);
-
-			std::string out = name + "(";
-			auto nargs = x.args.size();
-			for (size_t i = 0; i < nargs; i++) {
-				out += expression(ctx, x.args[i]);
-				if (i + 1 < nargs)
-					out += ", ";
-			}
-
-			return out + ")";
-		}
-		if constexpr (std::is_same_v <T, BuiltinIntrinsic>) {
-			std::string out = "?";
-
-			switch (x.code) {
-			case BuiltinIntrinsicCode::eCross: out = "cross"; break;
-			case BuiltinIntrinsicCode::eDFdx: out = "dFdx"; break;
-			case BuiltinIntrinsicCode::eDFdxFine: out = "dFdxFine"; break;
-			case BuiltinIntrinsicCode::eDFdy: out = "dFdy"; break;
-			case BuiltinIntrinsicCode::eDFdyFine: out = "dFdyFine"; break;
-			case BuiltinIntrinsicCode::eDot: out = "dot"; break;
-			case BuiltinIntrinsicCode::eInverse: out = "inverse"; break;
-			case BuiltinIntrinsicCode::eMax: out = "max"; break;
-			case BuiltinIntrinsicCode::eNormalize: out = "normalize"; break;
-			case BuiltinIntrinsicCode::eSample: out = "texture"; break;
-			case BuiltinIntrinsicCode::eTranspose: out = "transpose"; break;
-			default:
-				break;
-			}
-
-			out += "(";
-
-			auto nargs = x.args.size();
-			for (size_t i = 0; i < nargs; i++) {
-				out += expression(ctx, x.args[i]);
-				if (i + 1 < nargs)
-					out += ", ";
-			}
-
-			return out + ")";
-		}
-
-		auto type_name = std::string($ss_type(T).view());
-		fatal("expression not implemented for %s", type_name.c_str());
+	auto &value = *expr;
+	vswitch (value) {
+	vcase(Local):
+		return reference(ctx, expr);
+	vcase(Constant): {
+		auto &constant = value.as <Constant> ();
+		if (constant.template is <int32_t> ())
+			return fmt::format("{}", constant.template as <int32_t> ());
+		if (constant.template is <uint32_t> ())
+			return fmt::format("{}", constant.template as <uint32_t> ());
+		if (constant.template is <bool> ())
+			return fmt::format("{}", constant.template as <bool> ());
+		if (constant.template is <float> ())
+			return fmt::format("{}", constant.template as <float> ());
 		return "?";
-	}, *expr);
+	}
+	vcase(Operation): {
+		auto &op = value.as <Operation> ();
+		std::string op_name = "?";
+		switch (op.code) {
+		case OperationCode::eAdd: op_name = "+"; break;
+		case OperationCode::eSubtract: op_name = "-"; break;
+		case OperationCode::eMultiply: op_name = "*"; break;
+		case OperationCode::eDivide: op_name = "/"; break;
+		case OperationCode::eEqual: op_name = "=="; break;
+		case OperationCode::eNotEqual: op_name = "!="; break;
+		case OperationCode::eLess: op_name = "<"; break;
+		case OperationCode::eLessEqual: op_name = "<="; break;
+		case OperationCode::eGreater: op_name = ">"; break;
+		case OperationCode::eGreaterEqual: op_name = ">="; break;
+		default:
+			break;
+		}
+
+		return fmt::format("({} {} {})",
+			expression(ctx, op.a), op_name, expression(ctx, op.b));
+	}
+	vcase(ThreadInput): {
+		auto &input = value.as <ThreadInput> ();
+		return ctx.thread_inputs[input.argi];
+	}
+	vcase(Construct): {
+		auto &construct = value.as <Construct> ();
+	
+		// TODO: need to detect arrays; also should
+		// handle static (global) construction
+		auto repr = type_repr(ctx, construct.type);
+		assertion(repr.suffix.empty(),
+			"construct cannot handle array types yet (base=%p, suffix=%p)",
+			repr.base.c_str(),
+			repr.suffix.c_str()
+		);
+
+		std::string out = repr.base + "(";
+
+		auto nargs = construct.args.size();
+		for (size_t i = 0; i < nargs; i++) {
+			out += expression(ctx, construct.args[i]);
+			if (i + 1 < nargs)
+				out += ", ";
+		}
+
+		return out + ")";
+	}
+	vcase(FieldAccess): {
+		auto &access = value.as <FieldAccess> ();
+		return fmt::format("{}.f{}", expression(ctx, access.value), access.fidx);
+	}
+	vcase(ArrayAccess): {
+		auto &access = value.as <ArrayAccess> ();
+		return fmt::format("{}[{}]", expression(ctx, access.value), expression(ctx, access.index));
+	}
+	vcase(Swizzle): {
+		auto &swizzle = value.as <Swizzle> ();
+		return fmt::format("{}.{}", expression(ctx, swizzle.value), swizzle_string(swizzle.code));
+	}
+	vcase(GlobalResource):
+		return reference(ctx, value.as <GlobalResource> ());
+	vcase(GlobalIntrinsic):
+		return reference(ctx, value.as <GlobalIntrinsic> ());
+	vcase(Argument):
+		return reference(ctx, value.as <Argument> ());
+	vcase(Invocation): {
+		auto &invocation = value.as <Invocation> ();
+		const Block *callee = invocation.sbr.get();
+		auto it = ctx.subroutine_names.find(callee);
+		std::string name = (it != ctx.subroutine_names.end())
+			? it->second
+			: fmt::format("fn_{}", (void *) callee);
+
+		std::string out = name + "(";
+		auto nargs = invocation.args.size();
+		for (size_t i = 0; i < nargs; i++) {
+			out += expression(ctx, invocation.args[i]);
+			if (i + 1 < nargs)
+				out += ", ";
+		}
+
+		return out + ")";
+	}
+	vcase(BuiltinIntrinsic): {
+		auto &intrinsic = value.as <BuiltinIntrinsic> ();
+		std::string out = "?";
+
+		switch (intrinsic.code) {
+		case BuiltinIntrinsicCode::eCross: out = "cross"; break;
+		case BuiltinIntrinsicCode::eDFdx: out = "dFdx"; break;
+		case BuiltinIntrinsicCode::eDFdxFine: out = "dFdxFine"; break;
+		case BuiltinIntrinsicCode::eDFdy: out = "dFdy"; break;
+		case BuiltinIntrinsicCode::eDFdyFine: out = "dFdyFine"; break;
+		case BuiltinIntrinsicCode::eDot: out = "dot"; break;
+		case BuiltinIntrinsicCode::eInverse: out = "inverse"; break;
+		case BuiltinIntrinsicCode::eMax: out = "max"; break;
+		case BuiltinIntrinsicCode::ePow: out = "pow"; break;
+		case BuiltinIntrinsicCode::eMin: out = "min"; break;
+		case BuiltinIntrinsicCode::eNormalize: out = "normalize"; break;
+		case BuiltinIntrinsicCode::eSample: out = "texture"; break;
+		case BuiltinIntrinsicCode::eTranspose: out = "transpose"; break;
+		default:
+			break;
+		}
+
+		out += "(";
+
+		auto nargs = intrinsic.args.size();
+		for (size_t i = 0; i < nargs; i++) {
+			out += expression(ctx, intrinsic.args[i]);
+			if (i + 1 < nargs)
+				out += ", ";
+		}
+
+		return out + ")";
+	}
+	default:
+		break;
+	}
+
+	fatal("expression not implemented for %d", value.index());
+	return "?";
 }
 
-void statement(GLSLContext &ctx, Reference instruction)
+void statement(Context &ctx, Reference instruction)
 {
-	std::visit([&](auto x) {
-		using T = std::decay_t <decltype(x)>;
-		if constexpr (std::is_same_v <T, Local>) {
-			auto name = reference(ctx, instruction);
-			auto decl = type_decl(ctx, x.type);
-			ctx.result += fmt::format("{}{} {}{};\n",
-				ctx.indent, decl.base, name, decl.suffix);
-			return;
-		}
-		if constexpr (std::is_same_v <T, Store>) {
-			ctx.result += fmt::format("{}{} = {};\n",
-				ctx.indent,
-				reference(ctx, x.destination),
-				expression(ctx, x.source));
-			return;
-		}
-		if constexpr (std::is_same_v <T, Invocation>) {
-			ctx.result += fmt::format("{}{};\n",
-				ctx.indent,
-				expression(ctx, instruction));
-			return;
-		}
-		if constexpr (std::is_same_v <T, Branch>) {
-			auto emit_body = [&](const SharedBlockReference &blk) {
-				auto prev = ctx.indent;
-				ctx.indent += "    ";
-				for (auto &nested : *blk) {
-					if (nested->is <Store> () || nested->is <Invocation> ()
-						|| nested->is <Branch> () || nested->is <Loop> ()
-						|| nested->is <Local> ())
-						statement(ctx, nested);
-				}
-				ctx.indent = prev;
-			};
-
-			for (size_t i = 0; i < x.segments.size(); i++) {
-				auto &segment = x.segments[i];
-				auto kw = (i == 0) ? "if" : "else if";
-				ctx.result += fmt::format("{}{} ({})\n",
-					ctx.indent, kw, expression(ctx, segment.cond));
-				ctx.result += fmt::format("{}{{\n", ctx.indent);
-				emit_body(segment.body);
-				ctx.result += fmt::format("{}}}\n", ctx.indent);
+	auto &value = *instruction;
+	vswitch (value) {
+	vcase(Local): {
+		auto name = reference(ctx, instruction);
+		auto decl = type_repr(ctx, value.as <Local> ().type);
+		ctx.result += fmt::format("{}{} {}{};\n",
+			ctx.indent, decl.base, name, decl.suffix);
+		return;
+	}
+	vcase(Store): {
+		auto &store = value.as <Store> ();
+		info("storing %s into %s\n",
+			store.source->repr().c_str(),
+			store.destination->repr().c_str());
+		ctx.result += fmt::format("{}{} = {};\n",
+			ctx.indent,
+			reference(ctx, store.destination),
+			expression(ctx, store.source));
+		return;
+	}
+	vcase(Invocation):
+		ctx.result += fmt::format("{}{};\n",
+			ctx.indent,
+			expression(ctx, instruction));
+		return;
+	vcase(Branch): {
+		auto &branch = value.as <Branch> ();
+		auto emit_body = [&](const SharedBlockReference &blk) {
+			auto prev = ctx.indent;
+			ctx.indent += "    ";
+			for (auto &nested : *blk) {
+				if (nested->is <Store> () || nested->is <Invocation> ()
+					|| nested->is <Branch> () || nested->is <Loop> ()
+					|| nested->is <Local> ())
+					statement(ctx, nested);
 			}
+			ctx.indent = prev;
+		};
 
-			if (x.fallback.has_value()) {
-				ctx.result += fmt::format("{}else\n", ctx.indent);
-				ctx.result += fmt::format("{}{{\n", ctx.indent);
-				emit_body(x.fallback.value());
-				ctx.result += fmt::format("{}}}\n", ctx.indent);
-			}
-			return;
-		}
-		if constexpr (std::is_same_v <T, Loop>) {
-			auto emit_body = [&](const SharedBlockReference &blk) {
-				auto prev = ctx.indent;
-				ctx.indent += "    ";
-				for (auto &nested : *blk) {
-					if (nested->is <Store> () || nested->is <Invocation> ()
-						|| nested->is <Branch> () || nested->is <Loop> ()
-						|| nested->is <Local> ())
-						statement(ctx, nested);
-				}
-				ctx.indent = prev;
-			};
-
-			auto cond_expr = expression(ctx, x.cond_value);
-
-			if (x.kind == LoopKind::eFor && x.init.has_value())
-				emit_body(x.init.value());
-
-			auto loop_kw = (x.kind == LoopKind::eFor) ? "for (;;)" : "while (true)";
-			ctx.result += fmt::format("{}{}\n", ctx.indent, loop_kw);
+		for (size_t i = 0; i < branch.segments.size(); i++) {
+			auto &segment = branch.segments[i];
+			auto kw = (i == 0) ? "if" : "else if";
+			ctx.result += fmt::format("{}{} ({})\n",
+				ctx.indent, kw, expression(ctx, segment.cond));
 			ctx.result += fmt::format("{}{{\n", ctx.indent);
-			emit_body(x.cond);
-			ctx.result += fmt::format("{}    if (!({}))\n", ctx.indent, cond_expr);
-			ctx.result += fmt::format("{}        break;\n", ctx.indent);
-			emit_body(x.body);
-			if (x.kind == LoopKind::eFor && x.step.has_value())
-				emit_body(x.step.value());
+			emit_body(segment.body);
 			ctx.result += fmt::format("{}}}\n", ctx.indent);
-			return;
 		}
 
-		ctx.result += fmt::format("{}?\n", ctx.indent);
-	}, *instruction);
+		if (branch.fallback.has_value()) {
+			ctx.result += fmt::format("{}else\n", ctx.indent);
+			ctx.result += fmt::format("{}{{\n", ctx.indent);
+			emit_body(branch.fallback.value());
+			ctx.result += fmt::format("{}}}\n", ctx.indent);
+		}
+		return;
+	}
+	vcase(Loop): {
+		auto &loop = value.as <Loop> ();
+		auto emit_body = [&](const SharedBlockReference &blk) {
+			auto prev = ctx.indent;
+			ctx.indent += "    ";
+			for (auto &nested : *blk) {
+				if (nested->is <Store> () || nested->is <Invocation> ()
+					|| nested->is <Branch> () || nested->is <Loop> ()
+					|| nested->is <Local> ())
+					statement(ctx, nested);
+			}
+			ctx.indent = prev;
+		};
+
+		auto cond_expr = expression(ctx, loop.cond_value);
+
+		if (loop.kind == LoopKind::eFor && loop.init.has_value())
+			emit_body(loop.init.value());
+
+		auto loop_kw = (loop.kind == LoopKind::eFor) ? "for (;;)" : "while (true)";
+		ctx.result += fmt::format("{}{}\n", ctx.indent, loop_kw);
+		ctx.result += fmt::format("{}{{\n", ctx.indent);
+		emit_body(loop.cond);
+		ctx.result += fmt::format("{}    if (!({}))\n", ctx.indent, cond_expr);
+		ctx.result += fmt::format("{}        break;\n", ctx.indent);
+		emit_body(loop.body);
+		if (loop.kind == LoopKind::eFor && loop.step.has_value())
+			emit_body(loop.step.value());
+		ctx.result += fmt::format("{}}}\n", ctx.indent);
+		return;
+	}
+	default:
+		break;
+	}
+
+	ctx.result += fmt::format("{}?\n", ctx.indent);
 }
 
-void emit_block_statements(GLSLContext &ctx, const Block &blk)
+void emit_block_statements(Context &ctx, const Block &blk)
 {
 	for (auto &instr : blk) {
 		if (instr->is <Store> () || instr->is <Invocation> ()
@@ -545,12 +535,12 @@ void emit_block_statements(GLSLContext &ctx, const Block &blk)
 	}
 }
 
-void set_active_block(GLSLContext &ctx, const Block &blk)
+void set_active_block(Context &ctx, const Block &blk)
 {
 	ctx.active_block = &blk;
 }
 
-void reset_state(GLSLContext &ctx)
+void reset_state(Context &ctx)
 {
 	ctx.result.clear();
 	ctx.aggregate_names.clear();
@@ -564,7 +554,7 @@ void reset_state(GLSLContext &ctx)
 	set_active_block(ctx, ctx.block);
 }
 
-void collect_blocks(const GLSLContext &ctx, std::vector <const Block *> &blocks)
+void collect_blocks(const Context &ctx, std::vector <const Block *> &blocks)
 {
 	std::set <const Block *> visited;
 
@@ -599,17 +589,20 @@ void collect_blocks(const GLSLContext &ctx, std::vector <const Block *> &blocks)
 	visit(visit, ctx.block);
 }
 
-void emit_preamble(GLSLContext &ctx)
+void emit_preamble(Context &ctx)
 {
 	ctx.result = "// Preamble\n";
 	ctx.result += "#version 460\n\n";
 	ctx.result += "#extension GL_EXT_scalar_block_layout : require\n\n";
 }
 
-void emit_aggregate_decls(GLSLContext &ctx)
+void emit_aggregate_decls(Context &ctx)
 {
 	ctx.result += "// Types\n";
 
+	// TODO: this pattern is common enough,
+	// make an abstraction out of it with
+	// an instruction emitter
 	std::vector <const Block *> blocks;
 	collect_blocks(ctx, blocks);
 
@@ -631,7 +624,7 @@ void emit_aggregate_decls(GLSLContext &ctx)
 
 			size_t field_counter = 0;
 			for (auto &field : agg) {
-				auto decl = type_decl(ctx, field);
+				auto decl = type_repr(ctx, field);
 				ctx.result += fmt::format("    {} f{}{};\n",
 					decl.base, field_counter++, decl.suffix);
 			}
@@ -645,14 +638,14 @@ void emit_aggregate_decls(GLSLContext &ctx)
 	ctx.result += "\n";
 }
 
-void emit_thread_inputs(GLSLContext &ctx)
+void emit_thread_inputs(Context &ctx)
 {
 	ctx.result += "// Inputs\n";
 
 	ctx.thread_inputs.reserve(ctx.block.context.thread_inputs.size());
 	for (auto &tin : ctx.block.context.thread_inputs) {
 		ctx.thread_inputs.push_back(fmt::format("lin{}", tin.argi));
-		auto decl = type_decl(ctx, tin.type);
+		auto decl = type_repr(ctx, tin.type);
 		ctx.result += fmt::format("layout (location = {}) in {} lin{}{};\n",
 			tin.argi, decl.base, tin.argi, decl.suffix);
 	}
@@ -663,7 +656,7 @@ void emit_thread_inputs(GLSLContext &ctx)
 		ctx.result += "\n";
 }
 
-void emit_thread_outputs(GLSLContext &ctx)
+void emit_thread_outputs(Context &ctx)
 {
 	ctx.result += "// Outputs\n";
 
@@ -687,7 +680,7 @@ void emit_thread_outputs(GLSLContext &ctx)
 
 	for (auto &[_, tout] : outputs) {
 		auto qualifier = rate_qualifier(tout.properties);
-		auto decl = type_decl(ctx, tout.type);
+		auto decl = type_repr(ctx, tout.type);
 		ctx.result += fmt::format("layout (location = {}) {}out {} lout{}{};\n",
 			tout.argi, qualifier, decl.base, tout.argi, decl.suffix);
 	}
@@ -698,8 +691,10 @@ void emit_thread_outputs(GLSLContext &ctx)
 		ctx.result += "\n";
 }
 
-void collect_push_constant_indices(const std::vector <const Block *> &blocks,
-	std::map <void *, uint32_t> &pc_indices)
+void collect_push_constant_indices(
+	const std::vector <const Block *> &blocks,
+	std::map <void *, uint32_t> &pc_indices
+)
 {
 	uint32_t pcounter = 0;
 	for (auto *blk : blocks) {
@@ -744,17 +739,17 @@ std::string resource_instance_name(const GlobalResource &grsrc)
 	return resource_base_name(grsrc);
 }
 
-void emit_buffer_fields(GLSLContext &ctx, const AggregateType &agg)
+void emit_buffer_fields(Context &ctx, const AggregateType &agg)
 {
 	for (size_t i = 0; i < agg.size(); i++) {
 		if (contains_unsized_array(agg[i]) && (i + 1 < agg.size()))
 			fatal("unsized array must be the last field in a buffer block");
-		auto decl = type_decl(ctx, agg[i]);
+		auto decl = type_repr(ctx, agg[i]);
 		ctx.result += fmt::format("    {} f{}{};\n", decl.base, i, decl.suffix);
 	}
 }
 
-void emit_resource_decl(GLSLContext &ctx, GlobalResource &grsrc)
+void emit_resource_decl(Context &ctx, GlobalResource &grsrc)
 {
 	if (grsrc.kind == GlobalResourceKind::eSampler) {
 		auto group = grsrc.group.value_or(0);
@@ -768,7 +763,7 @@ void emit_resource_decl(GLSLContext &ctx, GlobalResource &grsrc)
 		auto idx = grsrc.push_constant_index.value_or(0);
 		grsrc.push_constant_index = idx;
 		auto offset = grsrc.push_constant_offset.value_or(0);
-		auto decl = type_decl(ctx, grsrc.type);
+		auto decl = type_repr(ctx, grsrc.type);
 
 		ctx.result += fmt::format("layout ({}push_constant) uniform PC{} {{\n",
 			layout_string(grsrc.layout), idx);
@@ -781,7 +776,7 @@ void emit_resource_decl(GLSLContext &ctx, GlobalResource &grsrc)
 	std::string modifier;
 	switch (grsrc.kind) {
 	case GlobalResourceKind::eUniformBuffer: modifier = "uniform"; break;
-	case GlobalResourceKind::eStorageBuffer: modifier = "buffer"; break;
+	case GlobalResourceKind::eStorageBuffer: modifier = "readonly buffer"; break;
 	default:
 		fatal("unsupported global resource kind");
 	}
@@ -798,13 +793,13 @@ void emit_resource_decl(GLSLContext &ctx, GlobalResource &grsrc)
 	if (type.is <AggregateType> ()) {
 		emit_buffer_fields(ctx, type.as <AggregateType> ());
 	} else {
-		auto decl = type_decl(ctx, grsrc.type);
+		auto decl = type_repr(ctx, grsrc.type);
 		ctx.result += fmt::format("    {} value{};\n", decl.base, decl.suffix);
 	}
 	ctx.result += fmt::format("}} {};\n\n", instance);
 }
 
-void emit_global_resources(GLSLContext &ctx)
+void emit_global_resources(Context &ctx)
 {
 	std::vector <const Block *> blocks;
 	collect_blocks(ctx, blocks);
@@ -831,8 +826,9 @@ void emit_global_resources(GLSLContext &ctx)
 	ctx.result += "\n";
 }
 
-std::string subroutine_return_type(GLSLContext &ctx, const Block &blk, uint32_t &out_argi)
+std::string subroutine_return_type(Context &ctx, const Block &blk, uint32_t &out_argi)
 {
+	// TODO: should have proper returns (and proper parameters instead of thread index)
 	out_argi = 0;
 	if (blk.context.thread_outputs.empty())
 		return "void";
@@ -841,10 +837,12 @@ std::string subroutine_return_type(GLSLContext &ctx, const Block &blk, uint32_t 
 
 	auto &tout = blk.context.thread_outputs.front();
 	out_argi = tout.argi;
-	return type_name(ctx, tout.type);
+
+	auto repr = type_repr(ctx, tout.type);
+	return repr.base + repr.suffix;
 }
 
-void emit_subroutine_function(GLSLContext &ctx, const Block &blk, const std::string &name)
+void emit_subroutine_function(Context &ctx, const Block &blk, const std::string &name)
 {
 	set_active_block(ctx, blk);
 	ctx.argument_names.clear();
@@ -859,7 +857,7 @@ void emit_subroutine_function(GLSLContext &ctx, const Block &blk, const std::str
 	ctx.result += fmt::format("{} {}(", return_type, name);
 	for (size_t i = 0; i < blk.context.arguments.size(); i++) {
 		auto &arg = blk.context.arguments[i];
-		auto decl = type_decl(ctx, arg.type);
+		auto decl = type_repr(ctx, arg.type);
 		ctx.result += fmt::format("{} {}{}", decl.base, ctx.argument_names[arg.argi], decl.suffix);
 		if (i + 1 < blk.context.arguments.size())
 			ctx.result += ", ";
@@ -871,7 +869,7 @@ void emit_subroutine_function(GLSLContext &ctx, const Block &blk, const std::str
 	for (auto &tout : blk.context.thread_outputs) {
 		auto name = fmt::format("lout{}", tout.argi);
 		ctx.local_thread_outputs.emplace(tout.argi, name);
-		auto decl = type_decl(ctx, tout.type);
+		auto decl = type_repr(ctx, tout.type);
 		ctx.result += fmt::format("    {} {}{};\n", decl.base, name, decl.suffix);
 	}
 
@@ -892,7 +890,7 @@ void emit_subroutine_function(GLSLContext &ctx, const Block &blk, const std::str
 	set_active_block(ctx, ctx.block);
 }
 
-void emit_subroutine_functions(GLSLContext &ctx)
+void emit_subroutine_functions(Context &ctx)
 {
 	ctx.result += "// Subroutines\n";
 
@@ -933,7 +931,7 @@ void emit_subroutine_functions(GLSLContext &ctx)
 	}
 }
 
-void emit_main_function(GLSLContext &ctx)
+void emit_main_function(Context &ctx)
 {
 	ctx.result += "// Main\n";
 	ctx.result += "void main()\n";
@@ -944,7 +942,7 @@ void emit_main_function(GLSLContext &ctx)
 	ctx.result += "}";
 }
 
-std::string generate(GLSLContext &ctx, size_t tabs)
+std::string generate(Context &ctx, size_t tabs)
 {
 	reset_state(ctx);
 
@@ -971,6 +969,6 @@ std::string generate(GLSLContext &ctx, size_t tabs)
 
 std::string generate_glsl(const SharedBlockReference &sbr, size_t tabs)
 {
-	GLSLContext ctx { *sbr.get() };
+	Context ctx { *sbr.get() };
 	return generate(ctx, tabs);
 }

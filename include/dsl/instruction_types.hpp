@@ -66,4 +66,8 @@ struct Type : variant <
 	ArrayType
 > {
 	using variant_self::variant;
+
+	std::string repr() const {
+		return "Type";
+	}
 };

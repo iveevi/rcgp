@@ -21,6 +21,46 @@ auto max(const T &a, const U &b)
 	);
 }
 
+template <typename T, typename U>
+requires projectively_equivalent <T, U>
+auto min(const T &a, const U &b)
+{
+	using result = projection_t <T>;
+	return result::reinterpret(
+		jems::builtin_intrinsic(
+			BuiltinIntrinsicCode::eMin,
+			project(a), project(b)
+		)
+	);
+}
+
+template <typename T, typename U, typename V>
+requires projectively_equivalent <T, U> && projectively_equivalent <T, V>
+auto clamp(const T &v, const U &lo, const V &hi)
+{
+	return min(max(v, lo), hi);
+}
+
+template <typename T, typename U, typename V>
+requires projectively_equivalent <T, U> && projectively_equivalent <T, V>
+auto mix(const T &a, const U &b, const V &t)
+{
+	return a + (b - a) * t;
+}
+
+template <typename T, typename U>
+requires projectively_equivalent <T, U>
+auto pow(const T &a, const U &b)
+{
+	using result = projection_t <T>;
+	return result::reinterpret(
+		jems::builtin_intrinsic(
+			BuiltinIntrinsicCode::ePow,
+			project(a), project(b)
+		)
+	);
+}
+
 template <native_scalar T, size_t D>
 scalar <T> dot(const vector <T, D> &a, const vector <T, D> &b)
 {

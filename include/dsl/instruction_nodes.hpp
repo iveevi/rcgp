@@ -16,6 +16,10 @@ struct Constant : variant <
 	float, std::string
 > {
 	using variant_self::variant;
+
+	std::string repr() const {
+		return "Constant";
+	}
 };
 
 struct Operation {
@@ -24,6 +28,10 @@ struct Operation {
 
 	Reference a;
 	Reference b;
+
+	std::string repr() const {
+		return "Operation";
+	}
 };
 
 struct Construct {
@@ -33,6 +41,10 @@ struct Construct {
 	template <typename ... Args>
 	Construct(Reference type_, Args ... args_)
 		: type(type_), args { args_ ... } {}
+
+	std::string repr() const {
+		return "Construct";
+	}
 };
 
 struct Invocation {
@@ -42,6 +54,10 @@ struct Invocation {
 	template <typename ... Args>
 	Invocation(SharedBlockReference sbr_, Args ... args_)
 		: sbr(sbr_), args { args_ ... } {}
+
+	std::string repr() const {
+		return "Invocation";
+	}
 };
 
 struct Branch {
@@ -52,6 +68,10 @@ struct Branch {
 
 	std::vector <Segment> segments;
 	std::optional <SharedBlockReference> fallback;
+
+	std::string repr() const {
+		return "Branch";
+	}
 };
 
 struct Loop {
@@ -61,15 +81,28 @@ struct Loop {
 	Reference cond_value;
 	std::optional <SharedBlockReference> step;
 	SharedBlockReference body;
+
+	std::string repr() const {
+		return "Loop";
+	}
 };
 
 struct Local {
 	Reference type;
+
+	std::string repr() const {
+		return "Local";
+	}
 };
 
 struct Argument {
 	Reference type;
 	uint32_t argi;
+
+	std::string repr() const {
+		// TODO: display reference of self
+		return "Argument";
+	}
 };
 
 struct BuiltinIntrinsic {
@@ -81,6 +114,10 @@ struct BuiltinIntrinsic {
 	template <typename ... Args>
 	BuiltinIntrinsic(Code code_, Args ... args_)
 		: code(code_), args { args_ ... } {}
+
+	std::string repr() const {
+		return "BuiltinIntrinsic";
+	}
 };
 
 struct Swizzle {
@@ -88,6 +125,10 @@ struct Swizzle {
 	Code code;
 
 	Reference value;
+
+	std::string repr() const {
+		return "Swizzle";
+	}
 };
 
 std::string swizzle_string(SwizzleCode code);
@@ -95,16 +136,28 @@ std::string swizzle_string(SwizzleCode code);
 struct FieldAccess {
 	Reference value;
 	uint32_t fidx;
+
+	std::string repr() const {
+		return "FieldAccess";
+	}
 };
 
 struct ArrayAccess {
 	Reference value;
 	Reference index;
+
+	std::string repr() const {
+		return "ArrayAccess";
+	}
 };
 
 struct Store {
 	Reference destination;
 	Reference source;
+
+	std::string repr() const {
+		return "Store";
+	}
 };
 
 // TODO: enable/disable with macros... or templated instructions?
@@ -114,4 +167,8 @@ struct Debug {
 
 struct Return {
 	Reference value;
+
+	std::string repr() const {
+		return "Return";
+	}
 };
