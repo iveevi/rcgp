@@ -4,6 +4,7 @@
 #include "../../rhi/pipelines.hpp"
 #include "../../rhi/shader_compiler.hpp"
 #include "../../util/logging.hpp"
+#include "../../util/timer.hpp"
 #include "../collect_gvrs.hpp"
 #include "../collect_streams.hpp"
 #include "../group_allocation.hpp"
@@ -196,8 +197,12 @@ struct RasterizationCombinator {
 	RasterizationOptions options;
 
 	template <typename VRet, typename ... As, typename FRet, typename ... Bs>
-	auto operator()(shader_stage <ShaderStage::eVertex, VRet, As...> &vertex,
-		 	shader_stage <ShaderStage::eFragment, FRet, Bs...> &fragment) const {
+	auto operator()(
+		shader_stage <ShaderStage::eVertex, VRet, As...> &vertex,
+		shader_stage <ShaderStage::eFragment, FRet, Bs...> &fragment
+	) const {
+		TSCOPE("rasterization combinator");
+
 		// TODO: check between vshader output and fshader input
 		// TODO: store # of attachments required from # of fshader outputs
 		using vertex_icontext = find_implicit_context <As...> ::type;
@@ -230,10 +235,10 @@ struct RasterizationCombinator {
 
 		// Compile the shaders
 		auto vshader = generate_glsl(vertex);
-		info("vertex shader:\n%s", vshader.c_str());
+		// info("vertex shader:\n%s", vshader.c_str());
 
 		auto fshader = generate_glsl(fragment);
-		info("fragment shader:\n%s", fshader.c_str());
+		// info("fragment shader:\n%s", fshader.c_str());
 	
 		auto vspv = compiler.glsl_to_spirv(vshader, EShLangVertex);
 		auto fspv = compiler.glsl_to_spirv(fshader, EShLangFragment);
@@ -257,6 +262,8 @@ struct RasterizationCombinator {
 			translate_topology(T),
 			vertex_shader_module,
 			fragment_shader_module,
+			"main",
+			"main",
 			layout,
 			vertex_bindings,
 			vertex_attributes,

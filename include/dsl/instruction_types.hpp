@@ -24,21 +24,20 @@ struct PrimitiveType : variant <
 	int32_t,
 	uint32_t,
 	float,
+	
 	// Vector types
-	VectorType <uint32_t, 1>, // mainly symbolic
 	VectorType <uint32_t, 2>,
 	VectorType <uint32_t, 3>,
 	VectorType <uint32_t, 4>,
 
-	VectorType <int32_t, 1>,
 	VectorType <int32_t, 2>,
 	VectorType <int32_t, 3>,
 	VectorType <int32_t, 4>,
 
-	VectorType <float, 1>,
 	VectorType <float, 2>,
 	VectorType <float, 3>,
 	VectorType <float, 4>,
+
 	// Matrix types
 	MatrixType <int32_t, 2, 2>,
 	MatrixType <int32_t, 3, 3>,

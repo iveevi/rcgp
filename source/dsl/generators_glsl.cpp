@@ -1,9 +1,8 @@
-#include "dsl/generators.hpp"
-#include "util/logging.hpp"
-
 #include <fmt/format.h>
 
-namespace {
+#include "dsl/generators.hpp"
+#include "util/logging.hpp"
+#include "util/timer.hpp"
 
 struct Context {
 	const Block &block;
@@ -962,10 +961,9 @@ std::string generate(Context &ctx, size_t tabs)
 	return ctx.result;
 }
 
-} // namespace
-
 std::string generate_glsl(const SharedBlockReference &sbr, size_t tabs)
 {
+	TSCOPE("generating glsl code");
 	Context ctx { *sbr.get() };
 	return generate(ctx, tabs);
 }

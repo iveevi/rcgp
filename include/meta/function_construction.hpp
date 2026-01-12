@@ -5,6 +5,7 @@
 #include "../dsl/jems.hpp"
 #include "../dsl/optimizer.hpp"
 #include "../util/cti.hpp"
+#include "../util/timer.hpp"
 #include "inject_arguments.hpp"
 #include "shader_stage.hpp"
 
@@ -20,21 +21,30 @@ struct shader_signature <S, R, std::function <Rt (Args...)>>
 	: shader_signature <S, R, Args...> {};
 
 template <ShaderStage S, typename R, typename F>
-auto compile(F ftn)
+auto trace(F ftn)
 {
+	// TODO: profile this; should be able to name blocks
 	using function = decltype(std::function(ftn));
 	using signature = shader_signature <S, R, function>;
 
 	auto result = signature::type::alloc();
 
-	result->context.model = S;
-	if (auto s = jems::scope(result)) {
-		typename signature::args args;
-		inject_arguments <S> (args);
-		std::apply(ftn, args);
-	}
+	// NOTE: Globally defined shaders will be traced before main()
+	// so we cannot rely on the user to add the callback in time
+	TimerToken::add_default_callback();
+	{
+		TSCOPE("JIT tracing DSL code");
+		result->context.model = S;
+		if (auto s = jems::scope(result)) {
+			TSCOPE("primary trace");
+			typename signature::args args;
+			inject_arguments <S> (args);
+			std::apply(ftn, args);
+		}
 
-	optimize_block(result);
+		optimize_block(result);
+	}
+	TimerToken::remove_callback("default");
 
 	return result;
 }
@@ -110,7 +120,7 @@ template <ShaderStage S, int I>
 auto operator<<(_fn_operator <S, I>, auto lambda)
 {
 	using R = frenj_ret::Read <I>;
-	return compile <S, R> (lambda);
+	return trace <S, R> (lambda);
 }
 
 template <ShaderStage S, int I>

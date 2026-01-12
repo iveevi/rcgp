@@ -1,5 +1,6 @@
 #include "rhi/pipelines.hpp"
 #include "util/logging.hpp"
+#include "util/timer.hpp"
 
 vk::Pipeline compile_rasterization_pipeline(
 	const Device &device,
@@ -7,22 +8,26 @@ vk::Pipeline compile_rasterization_pipeline(
 	const vk::PrimitiveTopology topology,
 	const vk::ShaderModule &vertex_shader_module,
 	const vk::ShaderModule &fragment_shader_module,
+	const char *vertex_entry,
+	const char *fragment_entry,
 	const vk::PipelineLayout &layout,
 	const vk::ArrayProxy <vk::VertexInputBindingDescription> &vertex_bindings,
 	const vk::ArrayProxy <vk::VertexInputAttributeDescription> &vertex_attributes,
 	const RasterizationOptions &options
 )
 {
+	TSCOPE("compile rasterization pipeline");
+
 	// Building the pipeline
 	auto shader_stages = std::array {
 		vk::PipelineShaderStageCreateInfo()
 			.setStage(vk::ShaderStageFlagBits::eVertex)
 			.setModule(vertex_shader_module)
-			.setPName("main"),
+			.setPName(vertex_entry),
 		vk::PipelineShaderStageCreateInfo()
 			.setStage(vk::ShaderStageFlagBits::eFragment)
 			.setModule(fragment_shader_module)
-			.setPName("main"),
+			.setPName(fragment_entry),
 	};
 
 	auto vertex_input = vk::PipelineVertexInputStateCreateInfo()

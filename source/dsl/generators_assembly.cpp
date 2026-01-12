@@ -7,8 +7,6 @@
 #include "dsl/generators.hpp"
 #include "util/logging.hpp"
 
-namespace {
-
 struct Context {
 	const SharedBlockReference &sbr;
 	std::map <intptr_t, uint32_t> ids;
@@ -83,7 +81,6 @@ std::string stringify_type(Context &ctx, PrimitiveType x, Reference ref)
 	vcase(uint32_t): return "u32";
 	vcase(float): return "f32";
 
-	vcase(VectorType <float, 1>): return "vec1";
 	vcase(VectorType <float, 2>): return "vec2";
 	vcase(VectorType <float, 3>): return "vec3";
 	vcase(VectorType <float, 4>): return "vec4";
@@ -592,8 +589,6 @@ std::string generate_block_body(Context &ctx, const SharedBlockReference &blk, c
 	result += indent + "}";
 	return result;
 }
-
-} // namespace
 
 std::string generate_assembly(const SharedBlockReference &sbr, size_t tabs)
 {

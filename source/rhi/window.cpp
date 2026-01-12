@@ -2,8 +2,6 @@
 
 #include <utility>
 
-namespace {
-
 struct HandlerTable {
 	int dragging_button = -1;
 	bool cursor_initialized = false;
@@ -64,8 +62,6 @@ void dispatch_cursor_pos(GLFWwindow *w, double xpos, double ypos)
 		}
 	}
 }
-
-} // namespace
 
 void Window::poll() const
 {

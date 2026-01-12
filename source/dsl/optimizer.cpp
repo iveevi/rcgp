@@ -1,11 +1,11 @@
-#include "dsl/optimizer.hpp"
-
 #include <algorithm>
 #include <map>
 #include <set>
 #include <vector>
 
-namespace {
+#include "dsl/optimizer.hpp"
+#include "dsl/instructions.hpp"
+#include "util/timer.hpp"
 
 struct LocalInfo {
 	uint32_t read_count = 0;
@@ -112,10 +112,10 @@ void visit_refs_mut(Reference &instr, const auto &fn)
 	}, *instr);
 }
 
-} // namespace
-
 void optimize_block(const SharedBlockReference &sbr)
 {
+	TSCOPE("optimize block");
+
 	if (!sbr)
 		return;
 

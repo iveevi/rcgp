@@ -3,8 +3,6 @@
 #include <cstdio>
 #include <cstdarg>
 
-namespace {
-
 constexpr const char *COLOR_RESET = "\x1b[0m";
 constexpr const char *COLOR_INFO = "\x1b[94m";
 constexpr const char *COLOR_WARNING = "\x1b[93m";
@@ -32,8 +30,6 @@ void logv(const char *level, const char *color, const char *fmt_str, va_list arg
 	std::fputs(COLOR_RESET, stderr);
 	std::fputc('\n', stderr);
 }
-
-} // namespace
 
 void info(const char *fmt_str, ...)
 {

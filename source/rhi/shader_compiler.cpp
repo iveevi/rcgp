@@ -1,17 +1,23 @@
-#include "rhi/shader_compiler.hpp"
-
 #include <fmt/printf.h>
 
 #include <glslang/Public/ResourceLimits.h>
 #include <glslang/Public/ShaderLang.h>
 #include <glslang/SPIRV/GlslangToSpv.h>
 
+#include "rhi/shader_compiler.hpp"
+#include "util/timer.hpp"
+
 std::vector <uint32_t> ShaderCompiler::glsl_to_spirv(const std::string &glsl, const EShLanguage &stage) const
 {
+	auto defaults = GetDefaultResources();
+
+	TSCOPE("compile glsl to spirv");
+
 	const char *cstr[] = { glsl.c_str() };
 
 	glslang::SpvOptions options;
 	options.generateDebugInfo = true;
+	options.disableOptimizer = false;
 
 	glslang::TShader shader(stage);
 
@@ -28,7 +34,7 @@ std::vector <uint32_t> ShaderCompiler::glsl_to_spirv(const std::string &glsl, co
 		| EShMsgDebugInfo
 	};
 
-	if (!shader.parse(GetDefaultResources(), 460, false, messages)) {
+	if (!shader.parse(defaults, 460, false, messages)) {
 		std::string log = shader.getInfoLog();
 		fmt::println("failed to compile to SPIRV:\n{}", log);
 		return {};
@@ -50,6 +56,8 @@ std::vector <uint32_t> ShaderCompiler::glsl_to_spirv(const std::string &glsl, co
 
 vk::ShaderModule ShaderCompiler::spirv_to_shader_module(const std::vector <uint32_t> &spirv) const
 {
+	TSCOPE("spirv to shader module");
+
 	vk::ShaderModuleCreateInfo info;
 	info.setCodeSize(spirv.size() * sizeof(uint32_t));
 	info.setPCode(spirv.data());

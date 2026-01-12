@@ -14,6 +14,8 @@ vk::Pipeline compile_rasterization_pipeline(
 	const vk::PrimitiveTopology topology,
 	const vk::ShaderModule &vertex_shader_module,
 	const vk::ShaderModule &fragment_shader_module,
+	const char *vertex_entry,
+	const char *fragment_entry,
 	const vk::PipelineLayout &layout,
 	const vk::ArrayProxy <vk::VertexInputBindingDescription> &vertex_bindings,
 	const vk::ArrayProxy <vk::VertexInputAttributeDescription> &vertex_attributes,

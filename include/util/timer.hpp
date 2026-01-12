@@ -6,7 +6,6 @@
 #include <memory>
 #include <stack>
 #include <string>
-#include <vector>
 
 #include <fmt/format.h>
 
@@ -27,9 +26,10 @@ struct TimerToken {
 	static thread_local std::stack <std::shared_ptr <Payload>> active;
 
 	using PayloadCallback = std::function <void (const Payload &)>;
-	static void add_payload_callback(PayloadCallback callback);
-	static void add_default_report_callback();
-	static void clear_payload_callbacks();
+	static void add_callback(const std::string &name, PayloadCallback callback);
+	static void add_default_callback();
+	static void remove_callback(const std::string &name);
+	static void clear_callbacks();
 
 	std::shared_ptr <Payload> payload;
 
