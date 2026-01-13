@@ -129,3 +129,106 @@ vk::Pipeline compile_compute_pipeline(
 
 	return pipeline;
 }
+
+vk::Pipeline compile_mesh_shading_pipeline(
+	const Device &device,
+	const vk::RenderPass &render_pass,
+	const vk::ShaderModule &task_shader_module,
+	const vk::ShaderModule &mesh_shader_module,
+	const vk::ShaderModule &fragment_shader_module,
+	const char *task_entry,
+	const char *mesh_entry,
+	const char *fragment_entry,
+	const vk::PipelineLayout &layout,
+	const RasterizationOptions &options
+)
+{
+	TSCOPE("compile mesh shading pipeline");
+
+	auto shader_stages = std::array {
+		vk::PipelineShaderStageCreateInfo()
+			.setStage(vk::ShaderStageFlagBits::eTaskEXT)
+			.setModule(task_shader_module)
+			.setPName(task_entry),
+		vk::PipelineShaderStageCreateInfo()
+			.setStage(vk::ShaderStageFlagBits::eMeshEXT)
+			.setModule(mesh_shader_module)
+			.setPName(mesh_entry),
+		vk::PipelineShaderStageCreateInfo()
+			.setStage(vk::ShaderStageFlagBits::eFragment)
+			.setModule(fragment_shader_module)
+			.setPName(fragment_entry),
+	};
+
+	auto viewport = vk::Viewport()
+		.setX(0.0f)
+		.setY(0.0f)
+		.setWidth(float(options.extent.width))
+		.setHeight(float(options.extent.height))
+		.setMinDepth(0.0f)
+		.setMaxDepth(1.0f);
+
+	auto scissor = vk::Rect2D()
+		.setOffset({ 0, 0 })
+		.setExtent(options.extent);
+
+	auto viewport_state = vk::PipelineViewportStateCreateInfo()
+		.setViewports(viewport)
+		.setScissors(scissor);
+
+	auto rasterization = vk::PipelineRasterizationStateCreateInfo()
+		.setDepthClampEnable(false)
+		.setRasterizerDiscardEnable(false)
+		.setPolygonMode(vk::PolygonMode::eFill)
+		.setCullMode(vk::CullModeFlagBits::eBack)
+		.setFrontFace(vk::FrontFace::eCounterClockwise)
+		.setDepthBiasEnable(false)
+		.setLineWidth(1.0f);
+
+	auto multisampling = vk::PipelineMultisampleStateCreateInfo()
+		.setRasterizationSamples(vk::SampleCountFlagBits::e1)
+		.setSampleShadingEnable(false)
+		.setMinSampleShading(1.0f);
+
+	auto color_blend_attachment = vk::PipelineColorBlendAttachmentState()
+		.setBlendEnable(false)
+		.setColorWriteMask(
+			vk::ColorComponentFlagBits::eR
+			| vk::ColorComponentFlagBits::eG
+			| vk::ColorComponentFlagBits::eB
+			| vk::ColorComponentFlagBits::eA
+		);
+
+	auto color_blend = vk::PipelineColorBlendStateCreateInfo()
+		.setAttachments(color_blend_attachment);
+
+	auto depth_stencil = vk::PipelineDepthStencilStateCreateInfo()
+		.setDepthTestEnable(options.depth_test)
+		.setDepthWriteEnable(options.depth_test)
+		.setDepthCompareOp(vk::CompareOp::eLess)
+		.setDepthBoundsTestEnable(false)
+		.setStencilTestEnable(false);
+
+	auto vertex_input = vk::PipelineVertexInputStateCreateInfo();
+	auto input_assembly = vk::PipelineInputAssemblyStateCreateInfo()
+		.setTopology(vk::PrimitiveTopology::eTriangleList)
+		.setPrimitiveRestartEnable(false);
+
+	auto pipeline_info = vk::GraphicsPipelineCreateInfo()
+		.setLayout(layout)
+		.setPInputAssemblyState(&input_assembly)
+		.setPVertexInputState(&vertex_input)
+		.setPRasterizationState(&rasterization)
+		.setPMultisampleState(&multisampling)
+		.setPColorBlendState(&color_blend)
+		.setPDepthStencilState(&depth_stencil)
+		.setPViewportState(&viewport_state)
+		.setStages(shader_stages)
+		.setRenderPass(render_pass)
+		.setSubpass(0);
+
+	auto [result, pipeline] = device.logical.createGraphicsPipeline(nullptr, pipeline_info, nullptr);
+	assertion(result == vk::Result::eSuccess, "failed to compile mesh shading pipeline");
+
+	return pipeline;
+}

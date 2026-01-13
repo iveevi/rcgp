@@ -48,6 +48,18 @@ struct WorkGroup {
 	GlobalInvocationID global_index;
 };
 
+template <uint32_t X, uint32_t Y = 1, uint32_t Z = 1>
+struct TaskGroup : WorkGroup <X, Y, Z> {
+	void emit_mesh_tasks(u32 x, u32 y = 1, u32 z = 1, $location) const
+	{
+		jems::builtin_intrinsic_loc(
+			loc,
+			BuiltinIntrinsicCode::eEmitMeshTasksEXT,
+			x, y, z
+		);
+	}
+};
+
 // Required result of the vertex shader
 struct Position {
 	Position() = default;

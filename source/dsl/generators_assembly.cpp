@@ -290,6 +290,7 @@ std::string stringify(Context &ctx, BuiltinIntrinsic x, Reference ref)
 	case BuiltinIntrinsicCode::ePow: ftn = "pow"; break;
 	case BuiltinIntrinsicCode::eMin: ftn = "min"; break;
 	case BuiltinIntrinsicCode::eSetMeshOutputsEXT: ftn = "SetMeshOutputsEXT"; break;
+	case BuiltinIntrinsicCode::eEmitMeshTasksEXT: ftn = "EmitMeshTasksEXT"; break;
 	default:
 		break;
 	}

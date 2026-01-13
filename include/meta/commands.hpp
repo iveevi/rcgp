@@ -6,6 +6,7 @@
 #include "../util/timer.hpp"
 #include "../rhi/command_buffer.hpp"
 #include "pipeline/compute.hpp"
+#include "pipeline/mesh_shading.hpp"
 #include "pipeline/rasterization.hpp"
 #include "barrier.hpp"
 #include "vertex_buffer_for.hpp"
@@ -73,6 +74,16 @@ auto pipeline_mappings(const ComputePipeline <GAMAP, GRCs> &pipeline)
 	PipelineMappings result;
 	result.layout = pipeline.layout;
 	result.bind_point = vk::PipelineBindPoint::eCompute;
+	write_pb_infos(result, GRCs());
+	return result;
+}
+
+template <typename GAMAP, typename GRCs>
+auto pipeline_mappings(const MeshShadingPipeline <GAMAP, GRCs> &pipeline)
+{
+	PipelineMappings result;
+	result.layout = pipeline.layout;
+	result.bind_point = vk::PipelineBindPoint::eGraphics;
 	write_pb_infos(result, GRCs());
 	return result;
 }
@@ -158,6 +169,13 @@ consteval auto dependency_sequence(const ComputePipeline <GAMAP, GRCs> &pipeline
 	return grcs;
 }
 
+template <typename GAMAP, typename GRCs>
+consteval auto dependency_sequence(const MeshShadingPipeline <GAMAP, GRCs> &pipeline)
+{
+	auto grcs = dependency_sequence_for_grcs(GRCs());
+	return grcs;
+}
+
 // TODO: more efficient std function representation?
 // TODO: need to compare with slang version...
 // ideally finish up specular lighting...
@@ -173,7 +191,7 @@ struct Commands : std::vector <command_operator> {
 	}
 
 	// TODO: must be in a satisfied state...
-	auto &operator()(const vk::CommandBuffer &cmd) const {
+	auto &operator()(CommandBuffer &cmd) const {
 		TSCOPE("commands serialization");
 		TNOTE("{} commands to trace", size());
 
@@ -236,6 +254,9 @@ TYPE_TRAIT(is_pipeline);
 
 	template <typename GA, typename GR>
 	TYPE_TRAIT_INCLUDES(is_pipeline, ComputePipeline <GA, GR>);
+	
+	template <typename GA, typename GR>
+	TYPE_TRAIT_INCLUDES(is_pipeline, MeshShadingPipeline <GA, GR>);
 
 template <typename Pipeline>
 requires is_pipeline_v <Pipeline>
@@ -344,6 +365,15 @@ inline auto draw_indexed(uint32_t count)
 		DependencyEnforcerForIndexBuffer,
 		DependencySentinel
 	> { binder };
+}
+
+inline auto draw_mesh_tasks(uint32_t x, uint32_t y = 1, uint32_t z = 1)
+{
+	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
+		cmd.drawMeshTasks(x, y, z);
+	};
+
+	return Commands <DependencySentinel> { binder };
 }
 
 inline auto end_render_pass()

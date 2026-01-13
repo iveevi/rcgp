@@ -81,6 +81,11 @@ struct Device {
 	struct Options {
 		std::vector <const char *> extensions;
 		std::map <const char *, vk::QueueFlags> queues;
+		// TODO: more general handling for device
+		// features... custom enum?
+		bool mesh_shaders = false;
+		bool maintenance4 = false;
+		bool scalar_block_layout = false;
 	};
 
 	static Device from(

@@ -77,6 +77,7 @@ enum class BuiltinIntrinsicCode {
 	eTan,
 	eTranspose,
 	eSetMeshOutputsEXT,
+	eEmitMeshTasksEXT,
 };
 
 enum class SwizzleCode {

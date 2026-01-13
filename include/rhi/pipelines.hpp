@@ -22,6 +22,19 @@ vk::Pipeline compile_rasterization_pipeline(
 	const RasterizationOptions &options
 );
 
+vk::Pipeline compile_mesh_shading_pipeline(
+	const Device &device,
+	const vk::RenderPass &render_pass,
+	const vk::ShaderModule &task_shader_module,
+	const vk::ShaderModule &mesh_shader_module,
+	const vk::ShaderModule &fragment_shader_module,
+	const char *task_entry,
+	const char *mesh_entry,
+	const char *fragment_entry,
+	const vk::PipelineLayout &layout,
+	const RasterizationOptions &options
+);
+
 vk::Pipeline compile_compute_pipeline(
 	const Device &device,
 	const vk::ShaderModule &compute_shader_module,

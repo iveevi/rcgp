@@ -29,9 +29,18 @@ void inject_one_argument(WorkGroup <X, Y, Z> &, InjectionCounters &)
 {
 	static_assert(
 		S == ShaderStage::eCompute
-		|| S == ShaderStage::eTask
 		|| S == ShaderStage::eMesh,
-		"WorkGroup is only valid for compute/task/mesh shaders"
+		"WorkGroup is only valid for compute/mesh shaders"
+	);
+	$tsb.context.set_workgroup_size(X, Y, Z);
+}
+
+template <ShaderStage S, uint32_t X, uint32_t Y, uint32_t Z>
+void inject_one_argument(TaskGroup <X, Y, Z> &, InjectionCounters &)
+{
+	static_assert(
+		S == ShaderStage::eTask,
+		"TaskGroup is only valid for task shaders"
 	);
 	$tsb.context.set_workgroup_size(X, Y, Z);
 }

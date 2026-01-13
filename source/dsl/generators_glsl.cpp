@@ -443,6 +443,7 @@ std::string expression(Context &ctx, Reference expr)
 		case BuiltinIntrinsicCode::eSample: out = "texture"; break;
 		case BuiltinIntrinsicCode::eTranspose: out = "transpose"; break;
 		case BuiltinIntrinsicCode::eSetMeshOutputsEXT: out = "SetMeshOutputsEXT"; break;
+		case BuiltinIntrinsicCode::eEmitMeshTasksEXT: out = "EmitMeshTasksEXT"; break;
 		default:
 			break;
 		}

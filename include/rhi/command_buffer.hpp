@@ -2,6 +2,7 @@
 
 #include "image.hpp"
 #include "buffer.hpp"
+#include "../util/logging.hpp"
 
 constexpr auto layout_to_stage_and_access(vk::ImageLayout layout)
 	-> std::pair <vk::PipelineStageFlagBits2, vk::AccessFlags2>
@@ -46,10 +47,18 @@ struct CommandBuffer : vk::CommandBuffer {
 	using super = vk::CommandBuffer;
 
 	CommandBuffer() = default;
-	CommandBuffer(const vk::CommandBuffer &cmd) : vk::CommandBuffer(cmd) {}
+	CommandBuffer(const vk::CommandBuffer &cmd, const vk::detail::DispatchLoaderDynamic *loader = nullptr)
+		: vk::CommandBuffer(cmd), loader(loader) {}
+
+	const vk::detail::DispatchLoaderDynamic *loader = nullptr;
 
 	CommandBuffer &begin() {
 		super::begin(vk::CommandBufferBeginInfo());
+		return *this;
+	}
+
+	CommandBuffer &begin(const vk::CommandBufferBeginInfo &info) {
+		super::begin(info);
 		return *this;
 	}
 
@@ -88,6 +97,12 @@ struct CommandBuffer : vk::CommandBuffer {
 
 	CommandBuffer &end() {
 		super::end();
+		return *this;
+	}
+
+	const CommandBuffer &drawMeshTasks(uint32_t x, uint32_t y = 1, uint32_t z = 1) const {
+		assertion(loader != nullptr, "drawMeshTasks requires a dynamic loader");
+		loader->vkCmdDrawMeshTasksEXT(*this, x, y, z);
 		return *this;
 	}
 };

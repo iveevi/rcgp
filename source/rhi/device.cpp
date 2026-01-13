@@ -32,7 +32,7 @@ auto Device::new_command_buffers(const CommandPool &cpool, size_t count) const
 		.setCommandPool(cpool);
 
 	return logical.allocateCommandBuffers(info)
-		| std::views::transform([] (auto x) { return CommandBuffer(x); })
+		| std::views::transform([&] (auto x) { return CommandBuffer(x, &loader); })
 		| std::ranges::to <std::vector> ();
 }
 	
@@ -167,7 +167,28 @@ Device Device::from(
 	}
 
 	auto features13 = vk::PhysicalDeviceVulkan13Features()
-		.setSynchronization2(true);
+		.setSynchronization2(true)
+		.setMaintenance4(options.maintenance4);
+
+	void *feature_chain = nullptr;
+
+	vk::PhysicalDeviceScalarBlockLayoutFeatures scalar_layout;
+	if (options.scalar_block_layout) {
+		scalar_layout.setScalarBlockLayout(true);
+		scalar_layout.setPNext(feature_chain);
+		feature_chain = &scalar_layout;
+	}
+
+	vk::PhysicalDeviceMeshShaderFeaturesEXT mesh_features;
+	if (options.mesh_shaders) {
+		mesh_features
+			.setTaskShader(true)
+			.setMeshShader(true);
+		mesh_features.setPNext(feature_chain);
+		feature_chain = &mesh_features;
+	}
+
+	features13.setPNext(feature_chain);
 
 	auto device_info = vk::DeviceCreateInfo()
 		.setQueueCreateInfos(queue_create_infos)
@@ -177,6 +198,7 @@ Device Device::from(
 	device.logical = device.physical.createDevice(device_info);
 
 	dld.init(device.logical);
+	device.loader = dld;
 
 	// Populate the queue handles
 	for (auto &[_, queue] : device.queues)
