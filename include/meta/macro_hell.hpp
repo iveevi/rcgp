@@ -10,6 +10,9 @@
 #define MACRO_EMPTY()
 #define MACRO_DEFER(id) id MACRO_EMPTY()
 
+#define MACRO_UNPACK(...) __VA_ARGS__
+#define MACRO_APPLY(m, args) m args
+
 #define MACRO_CAT(a, b) MACRO_CAT_I(a, b)
 #define MACRO_CAT_I(a, b) a##b
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <type_traits>
 
 #include "../dsl/jems.hpp"
 #include "../dsl/optimizer.hpp"
@@ -69,6 +70,9 @@ auto operator<<(_fn_tag <S>, auto lambda)
 	return trace <S> (lambda);
 }
 
+template <bool B, typename T>
+using enable_if = std::conditional_t <B, T, std::nullptr_t>;
+
 #define rcgp_vertex	(_fn_tag <ShaderStage::eVertex> ("main"))
 #define rcgp_fragment	(_fn_tag <ShaderStage::eFragment> ("main"))
 #define rcgp_compute	(_fn_tag <ShaderStage::eCompute> ("main"))
@@ -80,9 +84,45 @@ auto operator<<(_fn_tag <S>, auto lambda)
 #define $shader(type, ...)	rcgp_##type << [__VA_ARGS__ __VA_OPT__(,) rcgp_context
 #define $subroutine(name, ...)	(_fn_tag <ShaderStage::eSubroutine> (#name)) << [__VA_ARGS__ __VA_OPT__(,) rcgp_context
 
+#define $enable_if(cond, arg) (ENABLE_IF, cond, arg)
+
 #define RCGP_REFERENCE_FROM_NAME(name) , reference <name> name
 #define RCGP_REFERENCE_FROM_TUPLE(name, ref) , reference <(ref)> name
+
+#define RCGP_CONTRACT_IS_ENABLE_IF(tag, ...) \
+	MACRO_CHECK(MACRO_CAT(RCGP_CONTRACT_IS_ENABLE_IF_PROBE_, tag))
+#define RCGP_CONTRACT_IS_ENABLE_IF_PROBE_ENABLE_IF MACRO_PROBE()
+
+#define RCGP_CONTRACT_ENABLE_IF_TUPLE(cond, name, ref) \
+	, std::conditional_t <cond, reference <(ref)>, std::nullptr_t> name
+#define RCGP_CONTRACT_ENABLE_IF_NAME(cond, name) \
+	, std::conditional_t <cond, reference <name>, std::nullptr_t> name
+
+#define RCGP_CONTRACT_FROM_ENABLE_IF(tag, cond, arg) \
+	RCGP_CONTRACT_FROM_ENABLE_IF_ARG(cond, arg)
+#define RCGP_CONTRACT_ENABLE_IF_TUPLE_WRAPPER(cond, arg) \
+	MACRO_APPLY(RCGP_CONTRACT_ENABLE_IF_TUPLE, (cond, MACRO_UNPACK arg))
+#define RCGP_CONTRACT_ENABLE_IF_NAME_WRAPPER(cond, arg) \
+	RCGP_CONTRACT_ENABLE_IF_NAME(cond, arg)
+#define RCGP_CONTRACT_FROM_ENABLE_IF_ARG(cond, arg) \
+	MACRO_IF(MACRO_IS_PAREN(arg))	\
+	(	\
+		RCGP_CONTRACT_ENABLE_IF_TUPLE_WRAPPER,	\
+		RCGP_CONTRACT_ENABLE_IF_NAME_WRAPPER	\
+	)(cond, arg)
+
+#define RCGP_CONTRACT_FROM_ENABLE_IF_WRAPPER(...) \
+	RCGP_CONTRACT_FROM_ENABLE_IF(__VA_ARGS__)
+#define RCGP_REFERENCE_FROM_TUPLE_WRAPPER(...) \
+	RCGP_REFERENCE_FROM_TUPLE(__VA_ARGS__)
+#define RCGP_REFERENCE_FROM_PAREN(...) \
+	MACRO_IF(RCGP_CONTRACT_IS_ENABLE_IF(__VA_ARGS__)) \
+	(	\
+		RCGP_CONTRACT_FROM_ENABLE_IF_WRAPPER, \
+		RCGP_REFERENCE_FROM_TUPLE_WRAPPER \
+	)(__VA_ARGS__)
+
 #define RCGP_REFERENCE_FROM_ARG(arg) \
-	MACRO_IF(MACRO_IS_PAREN(arg))(RCGP_REFERENCE_FROM_TUPLE arg, RCGP_REFERENCE_FROM_NAME(arg))
+	MACRO_IF(MACRO_IS_PAREN(arg))(RCGP_REFERENCE_FROM_PAREN arg, RCGP_REFERENCE_FROM_NAME(arg))
 #define REFERENCE_GENERATOR(ctx, arg) RCGP_REFERENCE_FROM_ARG(arg)
 #define $contracts(...) std::nullptr_t MAP(REFERENCE_GENERATOR, /* N/A */, __VA_ARGS__)
