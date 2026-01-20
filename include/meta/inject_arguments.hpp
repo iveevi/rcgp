@@ -16,6 +16,10 @@ struct InjectionCounters {
 	size_t threadidx;
 };
 
+// nullptr type is a freebie
+template <ShaderStage S>
+void inject_one_argument(std::nullptr_t &value, InjectionCounters &counters) {}
+
 // Fallback case with error reported
 template <ShaderStage S, typename T>
 void inject_one_argument(T &value, InjectionCounters &counters)

@@ -21,6 +21,3 @@ struct reference : reference_base_t <ref> {
 TYPE_TRAIT(is_reference);
 	template <auto &ref>
 	TYPE_TRAIT_INCLUDES(is_reference, reference <ref>);
-
-#define $ref(name)		reference <name> name
-#define $tref(name, ...)	reference <name <__VA_ARGS__>> name
