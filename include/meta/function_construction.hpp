@@ -81,11 +81,17 @@ using enable_if = std::conditional_t <B, T, std::nullptr_t>;
 
 #define rcgp_context(...)	_ctx = icontext_from_vptr((void (*)(__VA_ARGS__)) nullptr)] (__VA_ARGS__)
 
+#define $def static inline
+
 #define $shader(type, ...)	rcgp_##type << [__VA_ARGS__ __VA_OPT__(,) rcgp_context
 #define $subroutine(name, ...)	(_fn_tag <ShaderStage::eSubroutine> (#name)) << [__VA_ARGS__ __VA_OPT__(,) rcgp_context
 
 #define $enable_if(cond, arg) (ENABLE_IF, cond, arg)
 
+#define ICONTEXT_GENERATOR(ctx, ftn) , typename decltype(ftn)::icontext
+#define $inherits(...) std::nullptr_t MAP(ICONTEXT_GENERATOR, /* N/A */, __VA_ARGS__)
+
+// TODO: move to separate header... contract_hell
 #define RCGP_REFERENCE_FROM_NAME(name) , reference <name> name
 #define RCGP_REFERENCE_FROM_TUPLE(name, ref) , reference <(ref)> name
 
@@ -125,4 +131,5 @@ using enable_if = std::conditional_t <B, T, std::nullptr_t>;
 #define RCGP_REFERENCE_FROM_ARG(arg) \
 	MACRO_IF(MACRO_IS_PAREN(arg))(RCGP_REFERENCE_FROM_PAREN arg, RCGP_REFERENCE_FROM_NAME(arg))
 #define REFERENCE_GENERATOR(ctx, arg) RCGP_REFERENCE_FROM_ARG(arg)
+
 #define $contracts(...) std::nullptr_t MAP(REFERENCE_GENERATOR, /* N/A */, __VA_ARGS__)

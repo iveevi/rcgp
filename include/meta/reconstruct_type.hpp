@@ -46,10 +46,18 @@ struct reconstructor_t <array_reflection <T, N>> {
 	}
 };
 
+template <>
+struct reconstructor_t <std::nullptr_t> {
+	static jems::handle main($location) {
+		return jems::handle();
+	}
+};
+
 template <typename Original, typename ... Args>
 struct reconstructor_t <aggregate_reflection <Original, Args...>> {
 	static void collect(AggregateType &aggregate, jems::handle handle) {
-		aggregate.emplace_back(handle);
+		if (handle)
+			aggregate.emplace_back(handle);
 	}
 
 	static jems::handle main($location) {

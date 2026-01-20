@@ -1,5 +1,7 @@
 #pragma once
 
+#include <tuple>
+
 #include "../dsl/jems.hpp"
 #include "../util/cti.hpp"
 #include "../util/tlist.hpp"
@@ -28,6 +30,8 @@ consteval vk::ShaderStageFlags stage_flags_of()
 // Entrypoint stages
 template <ShaderStage S, typename R, typename ... Args>
 struct shader_stage : SharedBlockReference {
+	using icontext = icontext_from_args_t <Args...>;
+
 	shader_stage(const SharedBlockReference &sbr)
 		: SharedBlockReference(sbr) {}
 
@@ -54,17 +58,34 @@ auto coerce_to_handle(const T &value)
 	return value;
 }
 
+inline auto coerce_to_handle(std::nullptr_t value)
+{
+	return jems::handle();
+}
+
 template <aggregate T>
 auto coerce_to_handle(const T &value)
 {
-	return constexpr_for(Is, T::reflection::field_count,
-		return jems::construct(
-			reconstruct_type <T> (),
-			coerce_to_handle(value.template
-				_rcgp_get <Is> ()
-			)...
+	auto args = constexpr_for(Is, T::reflection::field_count,
+		return std::tuple_cat(
+			([](const T &v) {
+				using field_t = typename T::reflection::template field_type <Is>;
+				if constexpr (std::is_same_v <field_t, std::nullptr_t>) {
+					return std::tuple <> ();
+				} else {
+					return std::tuple {
+						coerce_to_handle(v
+							.template _rcgp_get <Is> ()
+						)
+					};
+				}
+			} (value))...
 		)
 	);
+
+	return std::apply([&](auto &&... handles) {
+		return jems::construct(reconstruct_type <T> (), handles...);
+	}, args);
 }
 
 template <typename R, typename ... Args>
@@ -90,7 +111,9 @@ template <typename ... Ts, typename C, typename ... Us>
 auto filter_real_parameters(Tlist <Ts...> a, Tlist <C, Us...> processing)
 {
 	auto next = Tlist <Us...> {};
-	if constexpr (is_implicit_context_v <C> or is_reference_v <C>) {
+	if constexpr (is_implicit_context_v <C>
+			or is_reference_v <C>
+			or std::is_same_v <C, std::nullptr_t>) {
 		return filter_real_parameters(a, next);
 	} else {
 		auto b = Tlist <Ts..., C> {};

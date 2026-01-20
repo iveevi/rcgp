@@ -22,7 +22,9 @@ consteval auto icontext_concat(implicit_context <refs1...>, implicit_context <re
 
 template <typename T>
 using atomic_icontext = decltype([] {
-	if constexpr (is_reference_v <T>)
+	if constexpr (is_implicit_context_v <T>)
+		return T();
+	else if constexpr (is_reference_v <T>)
 		return implicit_context <T::handle> ();
 	else
 		return implicit_context <> ();

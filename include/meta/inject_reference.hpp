@@ -40,6 +40,12 @@ void inject_reference(StorageBuffer <T, L, A> &value, Reference ref)
 	return inject_reference(Tas <T &> (value), ref);
 }
 
+template <typename T, template <typename> typename L>
+void inject_reference(UniformBuffer <T, L> &value, Reference ref)
+{
+	return inject_reference(Tas <T &> (value), ref);
+}
+
 // Fallback with error reported
 template <typename T>
 void inject_reference(T &value, Reference ref)
