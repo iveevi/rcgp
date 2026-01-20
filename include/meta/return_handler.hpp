@@ -15,7 +15,7 @@ void return_handler(const TaskPayload <T> &, size_t &)
 	$tsb.context.task_payload_type = reconstruct_type <T> ();
 }
 
-// TODO: can we do ..., void>?
+// TODO: can we do ..., void> or is that partial specialization
 template <MeshPrimitive P, uint32_t MaxVertices, uint32_t MaxPrimitives, typename T>
 requires std::is_void_v <T>
 void return_handler(const MeshletPayload <P, MaxVertices, MaxPrimitives, T> &, size_t &)
@@ -45,6 +45,7 @@ void return_handler(const Interpolant <T, P> &ret, size_t &argi)
 		.argi = argi++;
 }
 
+// TODO: need to constrain by stage, because vertex shader outputs need to default to Smooth
 template <primitive T>
 void return_handler(const T &ret, size_t &argi)
 {
@@ -55,6 +56,7 @@ void return_handler(const T &ret, size_t &argi)
 	jems::store(jems::thread_output(tout), ret);
 }
 
+// TODO: this is the aggregate branch I think
 template <reflected T>
 requires (not primitive <T>)
 void return_handler(const T &ret, size_t &argi)
@@ -73,25 +75,4 @@ void return_handler(const std::tuple <Args...> &ret, size_t &argi)
 	constexpr_for(Is, sizeof...(Args),
 		(return_handler(std::get <Is> (ret), argi), ...)
 	);
-}
-
-// User-side interface with return mechanics
-template <typename R>
-struct _return_operator {};
-
-template <typename R, typename U>
-requires std::is_convertible_v <U, R>
-void operator<<(const _return_operator <R>, U value)
-{
-	// Force conversion to get expected behavior; only
-	// if necessary to avoid unexpected duplicate behaviour
-	auto cvted = [&]() -> R {
-		if constexpr (std::is_same_v <R, std::decay_t <U>>)
-			return value;
-		else
-			return R(value);
-	} ();
-
-	size_t argi = 0;
-	return_handler(cvted, argi);
 }
