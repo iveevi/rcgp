@@ -624,7 +624,8 @@ void statement(Context &ctx, Reference instruction)
 void emit_block_statements(Context &ctx, const Block &blk)
 {
 	for (auto &instr : blk) {
-		if (instr->is <Store> () || instr->is <Invocation> ()
+		if (instr->is <Store> ()
+			|| instr->is <Invocation> ()
 			|| instr->is <BuiltinIntrinsic> ()
 			|| instr->is <Branch> () || instr->is <Loop> ()
 			|| instr->is <Local> ())

@@ -9,6 +9,8 @@
 
 namespace resource_layout {
 
+// TODO: laayout engine is a bad name... also need an alias for naturally
+// aligned scaffold hints
 template <typename T>
 struct layout_engine {
 	static_error("resource_layout::layout_engine not implemented for type "_ss + $ss_type(T));

@@ -13,5 +13,4 @@
 #include "meta/resource_intrinsic.hpp"
 #include "meta/resource_translations.hpp"
 #include "meta/return_handler.hpp"
-#include "meta/vertex_buffer_for.hpp"
 #include "rcgp-rhi.hpp"

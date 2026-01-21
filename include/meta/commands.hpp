@@ -4,6 +4,7 @@
 #include <functional>
 
 #include "../rhi/command_buffer.hpp"
+#include "../rhi/timestamp_pool.hpp"
 #include "../util/cti.hpp"
 #include "../util/runtime_type_registry.hpp"
 #include "../util/timer.hpp"
@@ -12,7 +13,6 @@
 #include "pipeline/mesh_shading.hpp"
 #include "pipeline/rasterization.hpp"
 #include "static_string.hpp"
-#include "vertex_buffer_for.hpp"
 
 struct PipelineMappings {
 	vk::PipelineLayout layout;
@@ -313,8 +313,10 @@ auto bind_push_constants(const ResourceTypeFor <refs> &... constants)
 }
 
 template <auto &... refs>
-auto bind_vertex_buffers(const VertexBufferFor <refs> &... buffers)
+auto bind_vertex_buffers(const ResourceTypeFor <refs> &... buffers)
 {
+	static_assert((is_attribute_stream_v <reference_base_t <refs>> && ...));
+
 	auto binder = [...handles = buffers.handle](
 		const CommandBuffer &cmd,
 		SerializationContext &sctx
@@ -372,6 +374,28 @@ inline auto end_render_pass()
 {
 	auto binder = [](const CommandBuffer &cmd, SerializationContext &) {
 		cmd.endRenderPass();
+	};
+
+	return Commands <> { binder };
+}
+
+inline auto reset_query_pool(const TimestampQueryPool &tqpool, uint32_t first, uint32_t count)
+{
+	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
+		cmd.resetQueryPool(tqpool.handle, first, count);
+	};
+
+	return Commands <> { binder };
+}
+
+inline auto write_timestamp(
+	vk::PipelineStageFlagBits stage,
+	const TimestampQueryPool &tqpool,
+	uint32_t index
+)
+{
+	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
+		cmd.writeTimestamp(stage, tqpool.handle, index);
 	};
 
 	return Commands <> { binder };
