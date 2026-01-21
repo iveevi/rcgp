@@ -177,18 +177,11 @@ consteval vk::PrimitiveTopology translate_topology(Topology T)
 	return vk::PrimitiveTopology::eTriangleList;
 }
 
-template <auto T>
-struct marker {};
-
-template <auto T>
-static constexpr auto marker_v = marker <T> {};
-
-template <Topology T, typename ... Subpasses>
+template <Topology T>
 struct RasterizationCombinator {
-	const marker <T> &topology;
 	const Device &device;
 	const ShaderCompiler &compiler;
-	const RenderPass <Subpasses...> &render_pass;
+	const vk::RenderPass &render_pass;
 	RasterizationOptions options;
 
 	template <typename VRet, typename ... As, typename FRet, typename ... Bs>

@@ -334,16 +334,19 @@ auto bind_vertex_buffers(const ResourceTypeFor <refs> &... buffers)
 	return Commands <Resolvant <refs>...> { binder };
 }
 
-template <Topology T, typename I>
-inline auto bind_index_buffer(const IndexBuffer <T, I> &ibuffer)
+template <Topology T, reflected Symbolic>
+inline auto bind_index_buffer(const IndexMirrorBuffer <Symbolic, layouts::scalar> &ibuffer)
 {
 	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
-		if constexpr (std::same_as <I, uint32_t>)
+		if constexpr (std::is_same_v <Symbolic, array <vector <uint32_t, 3>>> ) {
+			static_assert(T == Topology::eTriangleList, "unexpected index topology");
 			cmd.bindIndexBuffer(ibuffer.handle, 0, vk::IndexType::eUint32);
-		else if constexpr (std::same_as <I, uint16_t>)
-			cmd.bindIndexBuffer(ibuffer.handle, 0, vk::IndexType::eUint16);
-		else
-			static_error("unsupported index buffer scalar type"_ss);
+		} else if constexpr (std::is_same_v <Symbolic, array <scalar <uint32_t>>> ) {
+			static_assert(T == Topology::eTriangleFan, "unexpected index topology");
+			cmd.bindIndexBuffer(ibuffer.handle, 0, vk::IndexType::eUint32);
+		} else {
+			static_error("unsupported index buffer type"_ss);
+		}
 	};
 
 	return Commands <ResolvantForIndexBuffer <T>> { binder };
