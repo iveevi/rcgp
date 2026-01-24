@@ -1,6 +1,6 @@
 #pragma once
 
-#include <glm/glm.hpp>
+#include "pod.hpp"
 
 #include "../../dsl/matrix.hpp"
 #include "../../dsl/scalar.hpp"
@@ -57,7 +57,7 @@ struct layout_engine <primitive_reflection <matrix <T, N, M>>> {
 	// TODO: equals the alignment of row vector
 	static constexpr size_t alignment = 16;
 	using hint = scaffold_hint <
-		glm::mat <M, N, T>,
+		pod::mat <M, N, T>,
 		alignment
 	>;
 };
@@ -75,7 +75,7 @@ struct layout_engine <primitive_reflection <vector <T, D>>> {
 	} ();
 
 	using hint = scaffold_hint <
-		glm::vec <D, T>,
+		pod::vec <D, T>,
 		alignment
 	>;
 };

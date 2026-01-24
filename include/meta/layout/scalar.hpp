@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include <glm/glm.hpp>
+#include "pod.hpp"
 
 #include "../../dsl/matrix.hpp"
 #include "../../dsl/scalar.hpp"
@@ -62,7 +62,7 @@ struct layout_engine <primitive_reflection <matrix <T, N, M>>> {
 	// Natural alignment: rely on the scalar's alignment, not padded vector width.
 	static constexpr size_t alignment = alignof(T);
 	using hint = scaffold_hint <
-		glm::mat <M, N, T>,
+		pod::mat <M, N, T>,
 		alignment
 	>;
 };
@@ -71,7 +71,7 @@ template <native_scalar T, size_t D>
 struct layout_engine <primitive_reflection <vector <T, D>>> {
 	static constexpr size_t alignment = alignof(T);
 	using hint = scaffold_hint <
-		glm::vec <D, T>,
+		pod::vec <D, T>,
 		alignment
 	>;
 };

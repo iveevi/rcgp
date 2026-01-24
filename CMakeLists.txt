@@ -9,86 +9,41 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter)
 find_package(Vulkan REQUIRED)
 find_package(glslang REQUIRED)
 
-# GLM external import
-if (NOT DEFINED RCGP_GLM_PATH)
-	message(FATAL_ERROR "RCGP_GLM_PATH must point to the directory containing glm headers")
-endif()
-
-set(RCGP_GLM_PATH_RELATIVE "${RCGP_GLM_PATH}")
-cmake_path(RELATIVE_PATH RCGP_GLM_PATH_RELATIVE
-	BASE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}")
-
-message(STATUS "RCGP GLM path provided ${RCGP_GLM_PATH}")
-include_directories("${RCGP_GLM_PATH_RELATIVE}")
 include_directories(include)
 
-set(RCGP_GENERATED_HEADERS
+set(RCGP_GENERATED
 	${CMAKE_CURRENT_LIST_DIR}/include/dsl/pygen_jems_instantiations.hpp
 	${CMAKE_CURRENT_LIST_DIR}/include/dsl/pygen_intrinsics_instantiations.hpp
 	${CMAKE_CURRENT_LIST_DIR}/include/dsl/pygen_arithmetic_instantiations.hpp
-)
-
-set(RCGP_GENERATED_SOURCES
+	${CMAKE_CURRENT_LIST_DIR}/include/dsl/pygen_macro_swizzle.hpp
 	${CMAKE_CURRENT_LIST_DIR}/source/dsl/pygen_jems_instantiations.cpp
 	${CMAKE_CURRENT_LIST_DIR}/source/dsl/pygen_intrinsics_arithmetic.cpp
 )
 
 add_custom_command(
-	OUTPUT ${RCGP_GENERATED_HEADERS} ${RCGP_GENERATED_SOURCES}
+	OUTPUT ${RCGP_GENERATED}
 	COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/include/dsl/generate_instantiations.py
+	COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/include/dsl/generate_macro_swizzle.py
+		${CMAKE_CURRENT_LIST_DIR}/include/dsl/pygen_macro_swizzle.hpp
 	DEPENDS ${CMAKE_CURRENT_LIST_DIR}/include/dsl/generate_instantiations.py
+		${CMAKE_CURRENT_LIST_DIR}/include/dsl/generate_macro_swizzle.py
 	COMMENT "Generating DSL instantiation headers/sources"
 )
 
-add_custom_target(rcgp_generate_instantiations
-	DEPENDS ${RCGP_GENERATED_HEADERS} ${RCGP_GENERATED_SOURCES}
+add_custom_target(rcgp_generated
+	DEPENDS ${RCGP_GENERATED}
 )
 
-set(RCGP_SWIZZLE_HEADER
-	${CMAKE_CURRENT_LIST_DIR}/include/dsl/pygen_macro_swizzle.hpp
-)
-
-add_custom_command(
-	OUTPUT ${RCGP_SWIZZLE_HEADER}
-	COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/include/dsl/generate_macro_swizzle.py ${RCGP_SWIZZLE_HEADER}
-	DEPENDS ${CMAKE_CURRENT_LIST_DIR}/include/dsl/generate_macro_swizzle.py
-	COMMENT "Generating DSL swizzle macros"
-)
-
-add_custom_target(rcgp_generate_swizzle
-	DEPENDS ${RCGP_SWIZZLE_HEADER}
+file(GLOB_RECURSE RCGP_LIBRARY_SOURCES CONFIGURE_DEPENDS
+	"${CMAKE_CURRENT_LIST_DIR}/source/**/*.cpp"
 )
 
 add_library(rcgp STATIC
-	${RCGP_GENERATED_SOURCES}
-	source/dsl/branching.cpp
-	source/dsl/generators_assembly.cpp
-	source/dsl/instruction_types.cpp
-	source/dsl/generators_glsl.cpp
-	source/dsl/instructions.cpp
-	source/dsl/looping.cpp
-	source/dsl/optimizer.cpp
-	source/dsl/primitives.cpp
-	source/rhi/buffer.cpp
-	source/rhi/command_pool.cpp
-	source/rhi/descriptor_pool.cpp
-	source/rhi/device.cpp
-	source/rhi/glfw.cpp
-	source/rhi/image.cpp
-	source/rhi/pipeline.cpp
-	source/rhi/queue.cpp
-	source/rhi/render_pass.cpp
-	source/rhi/session.cpp
-	source/rhi/shader_compiler.cpp
-	source/rhi/window.cpp
-	source/util/logging.cpp
-	source/util/timer.cpp
+	${RCGP_LIBRARY_SOURCES}
+	${RCGP_GENERATED}
 )
 
-add_dependencies(rcgp
-	rcgp_generate_instantiations
-	rcgp_generate_swizzle
-)
+add_dependencies(rcgp rcgp_generated)
 
 target_precompile_headers(rcgp PRIVATE <vulkan/vulkan.hpp>)
 target_link_libraries(rcgp PUBLIC
