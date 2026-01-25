@@ -1,5 +1,3 @@
-#include "util/logging.hpp"
-
 #include <cstdarg>
 #include <cstdio>
 #include <string>
@@ -7,6 +5,8 @@
 
 #include <fmt/color.h>
 #include <fmt/format.h>
+
+#include "util/logging.hpp"
 
 std::string format_with_va_list(const char *fmt_str, va_list args)
 {
@@ -61,7 +61,7 @@ void ok(const char *fmt_str, ...)
 {
 	va_list args;
 	va_start(args, fmt_str);
-	logv("ok", fmt::color::light_green, fmt_str, args);
+	logv("ok", fmt::color::green, fmt_str, args);
 	va_end(args);
 }
 

@@ -12,9 +12,11 @@ template <size_t D, typename T>
 struct vec {
 	T data[D];
 
+	constexpr vec() = default;
+
 #ifdef GLM_VERSION_MAJOR
 	template <glm::qualifier Q>
-	explicit vec(const glm::vec <D, T, Q> &rhs) {
+	vec(const glm::vec <D, T, Q> &rhs) {
 		for (size_t i = 0; i < D; ++i)
 			data[i] = rhs[i];
 	}
@@ -33,9 +35,11 @@ template <size_t C, size_t R, typename T>
 struct mat {
 	vec <R, T> data[C];
 
+	constexpr mat() = default;
+
 #ifdef GLM_VERSION_MAJOR
 	template <glm::qualifier Q>
-	explicit mat(const glm::mat <C, R, T, Q> &rhs) {
+	mat(const glm::mat <C, R, T, Q> &rhs) {
 		for (size_t c = 0; c < C; ++c) {
 			for (size_t r = 0; r < R; ++r)
 				data[c].data[r] = rhs[c][r];
