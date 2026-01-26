@@ -31,7 +31,10 @@ struct RasterizationCombinator {
 	const vk::RenderPass &render_pass;
 	RasterizationOptions options;
 
-	template <typename VRet, typename ... As, typename FRet, typename ... Bs>
+	template <
+		typename VRet, typename ... As,
+		typename FRet, typename ... Bs
+	>
 	auto operator()(
 		shader_stage <ShaderStage::eVertex, VRet, As...> &vertex,
 		shader_stage <ShaderStage::eFragment, FRet, Bs...> &fragment
@@ -117,7 +120,11 @@ struct MeshShadingCombinator {
 	const vk::RenderPass &render_pass;
 	RasterizationOptions options;
 
-	template <typename TRet, typename ... Ts, typename MRet, typename ... Ms, typename FRet, typename ... Fs>
+	template <
+		typename TRet, typename ... Ts,
+		typename MRet, typename ... Ms,
+		typename FRet, typename ... Fs
+	>
 	auto operator()(
 		shader_stage <ShaderStage::eTask, TRet, Ts...> &task,
 		shader_stage <ShaderStage::eMesh, MRet, Ms...> &mesh,

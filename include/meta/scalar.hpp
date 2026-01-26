@@ -1,20 +1,25 @@
 #pragma once
 
+#include <algorithm>
+
 #include "pod.hpp"
 
-#include "../../dsl/matrix.hpp"
-#include "../../dsl/scalar.hpp"
-#include "../../dsl/vector.hpp"
-#include "../../util/cti.hpp"
-#include "../reflection.hpp"
-#include "../scaffold.hpp"
-#include "../static_string.hpp"
+#include "../dsl/matrix.hpp"
+#include "../dsl/scalar.hpp"
+#include "../dsl/vector.hpp"
+#include "../util/cti.hpp"
+#include "reflection.hpp"
+#include "scaffold.hpp"
+#include "static_string.hpp"
 
-namespace std430_layout {
+namespace scalar_layout {
 
+// Mirrors GLSL's scalar block layout (GL_EXT_scalar_block_layout):
+// keep everything at its natural C++ alignment instead of rounding
+// vectors/matrices up to 16 bytes the way std430 does.
 template <typename T>
 struct layout_engine {
-	static_error("s::layout_engine not implemented for type "_ss + $ss_type(T));
+	static_error("scalar_layout::layout_engine not implemented for type "_ss + $ss_type(T));
 };
 
 template <typename Original, typename ... Ts>
@@ -45,7 +50,7 @@ struct layout_engine <array_reflection <T, N>> {
 
 template <typename T>
 struct layout_engine <array_reflection <T, -1>> {
-	static constexpr size_t alignment = layout_engine <T> ::alignment;
+	static constexpr size_t alignment = 0;
 	using hint = scaffold_hint <
 		unsized_array <typename layout_engine <T> ::hint>,
 		alignment
@@ -54,8 +59,8 @@ struct layout_engine <array_reflection <T, -1>> {
 
 template <native_scalar T, size_t N, size_t M>
 struct layout_engine <primitive_reflection <matrix <T, N, M>>> {
-	// TODO: equals the alignment of row vector
-	static constexpr size_t alignment = 16;
+	// Natural alignment: rely on the scalar's alignment, not padded vector width.
+	static constexpr size_t alignment = alignof(T);
 	using hint = scaffold_hint <
 		pod::mat <M, N, T>,
 		alignment
@@ -64,16 +69,7 @@ struct layout_engine <primitive_reflection <matrix <T, N, M>>> {
 
 template <native_scalar T, size_t D>
 struct layout_engine <primitive_reflection <vector <T, D>>> {
-	static constexpr size_t alignment = [] constexpr {
-		switch (D) {
-		case 4:
-		case 3:
-			return 16;
-		case 2:
-			return 8;
-		}
-	} ();
-
+	static constexpr size_t alignment = alignof(T);
 	using hint = scaffold_hint <
 		pod::vec <D, T>,
 		alignment
@@ -86,4 +82,11 @@ struct layout_engine <primitive_reflection <scalar <T>>> {
 	using hint = scaffold_hint <T, alignment>;
 };
 
-} // namespace std430_layout
+} // namespace scalar_layout
+
+namespace layouts {
+
+template <typename T>
+using scalar = scalar_layout::layout_engine <T>;
+
+} // namespace layouts;

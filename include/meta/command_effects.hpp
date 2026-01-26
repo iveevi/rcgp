@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../pipelines.hpp"
+#include "pipelines.hpp"
 
 // We have a dependency on ref
 template <auto &ref>

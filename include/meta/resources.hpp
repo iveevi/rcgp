@@ -3,12 +3,12 @@
 #include "../dsl/jems.hpp"
 #include "../dsl/primitives.hpp"
 #include "../util/cti.hpp"
-#include "layout/all.hpp"
 #include "reflection.hpp"
 #include "reflection_builder.hpp"
+#include "scalar.hpp"
+#include "std430.hpp"
 
 // Corresponds to vertex buffes
-// TODO: shoudl be more restrictive than reflected... at least must be static
 template <reflected T, template <typename> typename L = layouts::scalar, vk::VertexInputRate R = vk::VertexInputRate::eVertex>
 struct AttributeStream : T {
 	using reflection = attribute_stream_reflection <T, R>;

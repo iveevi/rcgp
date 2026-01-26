@@ -100,56 +100,37 @@ auto wrappers_to_dsls(const Device &device, const Tlist <Ts...> &)
 		return std::array { one_wrapper_to_dsl(device, Ts())... };
 }
 
-// TODO: merge the pcmap and pcrs methods
 template <typename ... Wrappers>
-auto wrappers_to_pcrs(const Tlist <Wrappers...> &)
+auto wrappers_to_pcs(const Tlist <Wrappers...> &)
 {
+	push_constant_allocation_map map;
 	if constexpr (sizeof...(Wrappers) == 0) {
-		return std::array <vk::PushConstantRange, 0> ();
+		std::array <vk::PushConstantRange, 0> ranges;
+		return std::tuple { ranges, map };
 	} else {
 		std::array <vk::PushConstantRange, sizeof...(Wrappers)> ranges {};
 
 		uint32_t offset = 0;
-		size_t index = 0;
+		uint32_t index = 0;
 
 		auto populate = [&] <typename W> () {
 			using T = ResourceTypeFor <W::handle>;
 
-			offset = static_cast <uint32_t> (
-				align_up(static_cast <size_t> (offset), alignof(T))
-			);
-			ranges[index++] = vk::PushConstantRange()
+			offset = align_up(static_cast <size_t> (offset), alignof(T));
+			
+			ranges[index] = vk::PushConstantRange()
 				.setOffset(offset)
 				.setSize(sizeof(T))
 				.setStageFlags(W::flags);
+
+			map.emplace(W::reference::address, PushConstantAllocation { index, offset });
+
 			offset += sizeof(T);
+			index++;
 		};
 
 		(populate.template operator() <Wrappers> (), ...);
 
-		return ranges;
+		return std::tuple { ranges, map };
 	}
-}
-
-template <typename ... Wrappers>
-auto wrappers_to_pcmap(const Tlist <Wrappers...> &)
-{
-	push_constant_allocation_map map;
-	if constexpr (sizeof...(Wrappers) > 0) {
-		uint32_t offset = 0;
-		uint32_t index = 0;
-
-		auto allocate = [&] <typename W> () {
-			using T = ResourceTypeFor <W::handle>;
-			offset = static_cast <uint32_t> (
-				align_up(static_cast <size_t> (offset), alignof(T))
-			);
-			map.emplace(W::reference::address, PushConstantAllocation { index++, offset });
-			offset += sizeof(T);
-		};
-
-		(allocate.template operator() <Wrappers> (), ...);
-	}
-
-	return map;
 }

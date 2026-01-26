@@ -1,6 +1,6 @@
 #pragma once
 
-#include "layout/all.hpp"
+#include "scalar.hpp"
 #include "mirror_buffer.hpp"
 
 enum class Topology {

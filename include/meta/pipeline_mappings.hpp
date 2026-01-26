@@ -2,8 +2,8 @@
 
 #include <map>
 
-#include "../pipelines.hpp"
-#include "../process_wrappers.hpp"
+#include "pipelines.hpp"
+#include "process_wrappers.hpp"
 
 struct PipelineMappings {
 	vk::PipelineLayout layout;

@@ -4,11 +4,19 @@
 #include "group_allocation.hpp"
 
 template <typename ... Ts>
-auto sequence_to_group_allocation(const Tlist <Ts...> &)
+auto wrappers_to_gamap(const Tlist <Ts...> &)
 {
-	return constexpr_for(Is, sizeof...(Ts),
+	auto alloc = constexpr_for(Is, sizeof...(Ts),
 		return Tlist <group_allocation_record <Ts::reference::handle, Is>...> {}
 	);
+	
+	auto gamap = [&] <typename ... Records> (Tlist <Records...>) {
+		return group_allocation_map {
+			{ Records::vptr, Records::index }...
+		};
+	} (alloc);
+
+	return std::tuple { alloc, gamap };
 }
 
 template <typename GVRs, typename ... Blocks>
@@ -17,15 +25,13 @@ auto apply_gvrs(const Device &device, const GVRs &, Blocks &... blocks)
 	using descriptor_gvrs = descriptable_resources_t <GVRs>;
 	using push_constant_gvrs = push_constant_resources_t <GVRs>;
 
-	auto alloc = sequence_to_group_allocation(descriptor_gvrs());
-	auto gamap = new_group_allocation_map(alloc);
+	auto [alloc, gamap] = wrappers_to_gamap(descriptor_gvrs());
 	(blocks->apply_group_allocation_map(gamap), ...);
 
-	auto pcmap = wrappers_to_pcmap(push_constant_gvrs());
+	auto [pcrs, pcmap] = wrappers_to_pcs(push_constant_gvrs());
 	(blocks->apply_push_constant_allocation_map(pcmap), ...);
 
 	auto dsls = wrappers_to_dsls(device, descriptor_gvrs());
-	auto pcrs = wrappers_to_pcrs(push_constant_gvrs());
 
 	auto layout_info = vk::PipelineLayoutCreateInfo().setSetLayouts(dsls);
 	if constexpr (push_constant_gvrs::size > 0)

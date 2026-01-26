@@ -1,6 +1,6 @@
 #pragma once
 
-#include "layout/all.hpp"
+#include "std430.hpp"
 #include "reflection.hpp"
 #include "expand_reflection.hpp"
 #include "static_string.hpp"

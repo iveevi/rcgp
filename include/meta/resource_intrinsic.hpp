@@ -3,10 +3,11 @@
 #include <type_traits>
 
 #include "../dsl/jems.hpp"
-#include "layout/all.hpp"
-#include "reflection.hpp"
-#include "reconstruct_type.hpp"
 #include "../util/cti.hpp"
+#include "reconstruct_type.hpp"
+#include "reflection.hpp"
+#include "scalar.hpp"
+#include "std430.hpp"
 
 // Layout detection
 template <template <typename> typename L>
