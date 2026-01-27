@@ -3,7 +3,6 @@
 #include <tuple>
 
 #include "../dsl/jems.hpp"
-#include "../rhi/shader_compiler.hpp"
 #include "../util/cti.hpp"
 #include "../util/tlist.hpp"
 #include "implicit_context.hpp"
@@ -86,7 +85,7 @@ template <aggregate T>
 auto coerce_to_handle(const T &value)
 {
 	auto field_handler = [&] <size_t I> () {
-		using field_t = typename T::reflection::template field_type <I>;
+		using field_t = typename T::fields::template get <I>;
 		if constexpr (std::is_same_v <field_t, std::nullptr_t>) {
 			return std::tuple <> ();
 		} else {
@@ -98,7 +97,7 @@ auto coerce_to_handle(const T &value)
 		}
 	};
 
-	auto args = constexpr_for(Is, T::reflection::field_count,
+	auto args = constexpr_for(Is, T::field_count,
 		return std::tuple_cat(
 			field_handler.template operator() <Is> ()...
 		)

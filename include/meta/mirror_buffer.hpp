@@ -7,6 +7,7 @@
 
 namespace rcgp {
 
+// TODO: move to dynamic.hpp
 template <typename T, template <typename> typename L>
 using dynamic_element_of_mirror = decltype([] {
 	TypeMirror <T, L> data;
@@ -17,8 +18,7 @@ using dynamic_element_of_mirror = decltype([] {
 template <typename T, template <typename> typename L, vk::BufferUsageFlagBits F>
 struct MirrorBuffer : Buffer {};
 
-template <typename T, template <typename> typename L, vk::BufferUsageFlagBits F>
-requires (is_static_v <T>)
+template <non_dynamic T, template <typename> typename L, vk::BufferUsageFlagBits F>
 struct MirrorBuffer <T, L, F> : Buffer {
 	using symbolic_type = T;
 	using value_type = TypeMirror <T, L>;
@@ -67,8 +67,7 @@ struct MirrorBuffer <T, L, F> : Buffer {
 	}
 };
 
-template <typename T, template <typename> typename L, vk::BufferUsageFlagBits F>
-requires (is_dynamic_v <T>)
+template <dynamic T, template <typename> typename L, vk::BufferUsageFlagBits F>
 struct MirrorBuffer <T, L, F> : Buffer {
 	using symbolic_type = T;
 	using value_type = TypeMirror <T, L>;

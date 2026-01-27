@@ -8,6 +8,7 @@
 #include "../dsl/scalar.hpp"
 #include "../dsl/vector.hpp"
 #include "../util/cti.hpp"
+#include "concepts.hpp"
 #include "pod.hpp"
 #include "scaffold.hpp"
 #include "static_string.hpp"
@@ -61,32 +62,12 @@ struct layout_rules {
 	static_error("layout_rules not implemented for type "_ss + $ss_type(T));
 };
 
-// TODO: is this necessary?
-template <typename T>
-struct is_dynamic_layout : std::false_type {};
-
-template <typename T>
-struct is_dynamic_layout <array <T, -1>> : std::true_type {};
-
-template <typename List>
-struct is_dynamic_fields;
-
-template <typename ... Ts>
-struct is_dynamic_fields <Tlist <Ts...>>
-	: std::bool_constant <(is_dynamic_layout <Ts> ::value || ...)> {};
-
-template <aggregate T>
-struct is_dynamic_layout <T> : is_dynamic_fields <typename T::fields> {};
-
-template <typename T>
-constexpr bool is_dynamic_layout_v = is_dynamic_layout <T> ::value;
-
 template <typename Policy, typename List>
 struct layout_rules_list;
 
 template <typename Policy, typename ... Ts>
 struct layout_rules_list <Policy, Tlist <Ts...>> {
-	static constexpr bool dynamic = (is_dynamic_layout_v <Ts> || ...);
+	static constexpr bool dynamic = (is_dynamic_v <Ts> || ...);
 	static constexpr size_t alignment = [] {
 		if constexpr (dynamic)
 			return 0;
