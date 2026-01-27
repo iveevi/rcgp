@@ -130,7 +130,7 @@ auto bind_vertex_buffers(const ResourceTypeFor <refs> &... buffers)
 	return Commands <Resolvant <refs>...> { binder };
 }
 
-template <Topology T, reflected Symbolic>
+template <Topology T, typename Symbolic>
 inline auto bind_index_buffer(const IndexMirrorBuffer <Symbolic, layouts::scalar> &ibuffer)
 {
 	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {

@@ -118,7 +118,7 @@ concept buffer_resource = requires(const T &resource) {
 	{ resource.descriptor_info() } -> std::same_as <vk::DescriptorBufferInfo>;
 };
 
-template <reflected T>
+template <typename T>
 consteval size_t buffer_bindings_for_group()
 {
 	using Structure = T::value_type;

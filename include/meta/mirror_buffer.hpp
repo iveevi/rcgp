@@ -7,17 +7,17 @@
 
 namespace rcgp {
 
-template <reflected T, template <typename> typename L>
+template <typename T, template <typename> typename L>
 using dynamic_element_of_mirror = decltype([] {
 	TypeMirror <T, L> data;
 	auto [dyn, offset] = dynamic_part <T> (data);
 	return typename std::decay_t <decltype(dyn)> ::value_type();
 } ());
 
-template <reflected T, template <typename> typename L, vk::BufferUsageFlagBits F>
+template <typename T, template <typename> typename L, vk::BufferUsageFlagBits F>
 struct MirrorBuffer : Buffer {};
 
-template <reflected T, template <typename> typename L, vk::BufferUsageFlagBits F>
+template <typename T, template <typename> typename L, vk::BufferUsageFlagBits F>
 requires (is_static_v <T>)
 struct MirrorBuffer <T, L, F> : Buffer {
 	using symbolic_type = T;
@@ -67,7 +67,7 @@ struct MirrorBuffer <T, L, F> : Buffer {
 	}
 };
 
-template <reflected T, template <typename> typename L, vk::BufferUsageFlagBits F>
+template <typename T, template <typename> typename L, vk::BufferUsageFlagBits F>
 requires (is_dynamic_v <T>)
 struct MirrorBuffer <T, L, F> : Buffer {
 	using symbolic_type = T;
@@ -133,27 +133,27 @@ struct MirrorBuffer <T, L, F> : Buffer {
 };
 
 // Aliases for specific kinds of buffers
-template <reflected T, template <typename> typename L>
+template <typename T, template <typename> typename L>
 using VertexMirrorBuffer = MirrorBuffer <T, L, vk::BufferUsageFlagBits::eVertexBuffer>;
 
-template <reflected T, template <typename> typename L>
+template <typename T, template <typename> typename L>
 using IndexMirrorBuffer = MirrorBuffer <T, L, vk::BufferUsageFlagBits::eIndexBuffer>;
 
-template <reflected T, template <typename> typename L>
+template <typename T, template <typename> typename L>
 using UniformMirrorBuffer = MirrorBuffer <T, L, vk::BufferUsageFlagBits::eUniformBuffer>;
 
-template <reflected T, template <typename> typename L>
+template <typename T, template <typename> typename L>
 using StorageMirrorBuffer = MirrorBuffer <T, L, vk::BufferUsageFlagBits::eStorageBuffer>;
 
 // Now we can add some specializations for resource translation
-template <reflected T, template <typename> typename L>
+template <typename T, template <typename> typename L>
 struct resource_translator <UniformBuffer <T, L>> {
 	using type = UniformMirrorBuffer <T, L>;
 	using value_type = type::value_type;
 	using element_type = std::nullptr_t;
 };
 
-template <reflected T, template <typename> typename L, GlobalResourceAccess A>
+template <typename T, template <typename> typename L, GlobalResourceAccess A>
 struct resource_translator <StorageBuffer <T, L, A>> {
 	using type = StorageMirrorBuffer <T, L>;
 	using value_type = type::value_type;

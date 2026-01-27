@@ -1,8 +1,8 @@
 #pragma once
 
-#include "reflection.hpp"
 #include "resources.hpp"
 
+// TODO: remove this file...
 namespace rcgp {
 
 template <typename T, size_t ... Is>
@@ -50,7 +50,7 @@ const auto &field_access(const ResourceGroup <T> &value)
 		return one;
 }
 
-template <reflected T>
+template <typename T>
 auto &field_access(T &value)
 {
 	return value;

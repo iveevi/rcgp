@@ -1,14 +1,13 @@
 #pragma once
 
 #include "layouts.hpp"
-#include "reflection.hpp"
 #include "static_string.hpp"
 #include "../util/cti.hpp"
 
 namespace rcgp {
 
 // Type mirrors
-template <reflected T, template <typename> typename L = layouts::std430>
+template <typename T, template <typename> typename L = layouts::std430>
 using TypeMirror = decltype([] {
 	using layout = L <T>;
 	using hint = layout::hint;

@@ -2,18 +2,15 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <string>
-#include <type_traits>
-#include <utility>
 
 #include "../dsl/array.hpp"
 #include "../dsl/jems.hpp"
 #include "../dsl/matrix.hpp"
 #include "../dsl/scalar.hpp"
 #include "../dsl/vector.hpp"
-#include "field_access.hpp"
-#include "static_string.hpp"
 #include "../util/cti.hpp"
+#include "concepts.hpp"
+#include "static_string.hpp"
 
 namespace rcgp {
 
@@ -80,13 +77,6 @@ struct reconstructor_t <T> {
 			(collect_field <Is> (aggregate, loc), ...)
 		);
 		return jems::type_loc(loc, aggregate);
-	}
-};
-
-template <typename T, size_t ... Is>
-struct reconstructor_t <field_trace <T, Is...>> {
-	static jems::handle main($location) {
-		return reconstructor_t <T> ::main(loc);
 	}
 };
 

@@ -13,6 +13,3 @@
 #include "rhi/shader_compiler.hpp"
 #include "rhi/timestamp_pool.hpp"
 #include "rhi/window.hpp"
-namespace rcgp {
-
-} // namespace rcgp

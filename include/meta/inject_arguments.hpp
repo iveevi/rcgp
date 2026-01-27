@@ -5,7 +5,6 @@
 #include "inject_reference.hpp"
 #include "reconstruct_type.hpp"
 #include "reference.hpp"
-#include "reflection.hpp"
 #include "stage_intrinsics.hpp"
 #include "static_string.hpp"
 
@@ -51,7 +50,7 @@ void inject_one_argument(TaskGroup <X, Y, Z> &, InjectionCounters &)
 }
 
 // TODO: check stage compatibility
-template <ShaderStage S1, GlobalIntrinsic G, ShaderStage S2, primitive T>
+template <ShaderStage S1, GlobalIntrinsic G, ShaderStage S2, typename T>
 void inject_one_argument(read_only_intrinsic <G, S2, T> &value, InjectionCounters &counters)
 {
 	if constexpr (S1 != S2) {
@@ -60,7 +59,7 @@ void inject_one_argument(read_only_intrinsic <G, S2, T> &value, InjectionCounter
 	}
 }
 
-template <ShaderStage S1, GlobalIntrinsic G, ShaderStage S2, primitive T>
+template <ShaderStage S1, GlobalIntrinsic G, ShaderStage S2, typename T>
 void inject_one_argument(write_only_intrinsic <G, S2, T> &value, InjectionCounters &counters)
 {
 	if constexpr (S1 != S2)
@@ -71,7 +70,7 @@ void inject_one_argument(write_only_intrinsic <G, S2, T> &value, InjectionCounte
 template <ShaderStage S, auto &... refs>
 void inject_one_argument(implicit_context <refs...> &value, InjectionCounters &counters) {}
 
-template <ShaderStage S, reflected T>
+template <ShaderStage S, typename T>
 void inject_one_argument(TaskPayload <T> &value, InjectionCounters &)
 {
 	static_assert(S == ShaderStage::eMesh, "TaskPayload is only valid for mesh shaders");
@@ -121,8 +120,7 @@ void inject_one_argument(reference <ref> &value, InjectionCounters &counters)
 		static_assert(S == ShaderStage::eVertex || S == ShaderStage::eSubroutine);
 
 		// Attribute streams for vertex shaders or subroutines
-		using reflection = R::reflection;
-		using T = reflection::value_type;
+		using T = R::value_type;
 
 		auto type = reconstruct_type <T> ();
 

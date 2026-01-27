@@ -2,148 +2,61 @@
 
 #include <type_traits>
 
-// Forward declarations
-namespace vk { enum class VertexInputRate; }
+#include "../util/tlist.hpp"
+#include "macro_hell.hpp"
+#include "scaffold.hpp"
+#include "this_injection.hpp"
 
-#include "../dsl/instruction_enums.hpp"
+// Helper aliases
+template <typename P, typename ... Ts>
+using snipped_tlist = rcgp::Tlist <Ts...>;
 
-namespace rcgp {
-namespace jems { class handle; }
+// Building the reflection for aggregates
+#define GEN_AGGREGATE_FIELD(T, field)	, decltype(field)
 
-// Reflection types
-template <typename T>
-struct primitive_reflection {};
+#define DEFINE_FIELD_TYPE_LIST(...)							\
+	using fields = snipped_tlist							\
+		<void MAP(GEN_AGGREGATE_FIELD, /* NA */ , __VA_ARGS__)>;		\
+	static constexpr size_t field_count = fields::size;
 
-// TODO: we only NEED reflection info for aggregates...
-// everything else can be inferred from the top level type
-template <typename Original, typename ... Ts>
-struct aggregate_reflection {
-	using original_type = Original;
+// Generating a tuple-like get method
+#define GEN_AGGREGATE_FIELD_REFERENCE(T, field)	\
+	else if constexpr (D == (__COUNTER__ - counter_base - 1)) { return field; }
 
-	template <size_t I>
-	using field_type = Ts...[I];
-	
-	static constexpr size_t field_count = sizeof...(Ts);
+// TODO: do we really need a ref get? we have override reference...
+#define DEFINE_FIELD_REFERENCE(R, ...)							\
+	template <size_t D>								\
+	auto &_rcgp_get() R {								\
+		static constexpr size_t counter_base = __COUNTER__;			\
+		if constexpr (false) {}							\
+		MAP(GEN_AGGREGATE_FIELD_REFERENCE, /* NA */, __VA_ARGS__)		\
+		else {									\
+			static_error("out of bounds field reference access of "_ss	\
+				+ $ss_type(This));					\
+			return _rcgp_get_fallback;					\
+		}									\
+	}										\
 
-	// TODO: static_assert check here to ensure at most
-	// one dynamic component (and finding the conflicting
-	// ones)
-};
+// Generating the override reference method
+#define GEN_OVERRIDE_FIELD_REFERENCE(T, field)	\
+	field.override_reference(jems::field_access(ref, __COUNTER__ - counter_base - 1));
 
-template <typename T, int64_t N>
-struct array_reflection {};
+#define DEFINE_OVERRIDE_REFERENCE(...)						\
+	void override_reference(const Reference &ref) {				\
+		static constexpr size_t counter_base = __COUNTER__;		\
+		MAP(GEN_OVERRIDE_FIELD_REFERENCE, /* ... */, __VA_ARGS__)	\
+	}									\
 
-template <auto &ref, typename T>
-struct reference_reflection {
-	using value_type = T;
-};
-
-template <typename R, typename ... Args>
-struct function_reflection {};
-
-template <typename T>
-struct resource_group_reflection {
-	using value_type = T;
-};
-
-// TODO: move resource reflections to another file?
-template <typename T, template <typename> typename L>
-struct push_constant_reflection {
-	static jems::handle intrinsic(uint32_t binding);
-};
-
-template <typename T, template <typename> typename L>
-struct uniform_buffer_reflection {
-	static jems::handle intrinsic(uint32_t binding);
-};
-
-template <typename T, template <typename> typename L, GlobalResourceAccess A>
-struct storage_buffer_reflection {
-	static jems::handle intrinsic(uint32_t binding);
-};
-
-template <typename T, size_t D>
-struct sampler_reflection {
-	static jems::handle intrinsic(uint32_t binding);
-};
-
-template <typename T, vk::VertexInputRate R>
-struct attribute_stream_reflection {
-	using value_type = T;
-};
-
-// Specific kinds of reflection
-// TODO: replace with type traits
-template <typename T>
-struct is_primitive_reflection : std::false_type {};
-
-template <typename U>
-struct is_primitive_reflection <primitive_reflection <U>> : std::true_type {};
-
-template <typename T>
-constexpr bool is_primitive_reflection_v = is_primitive_reflection <T> ::value;
-
-template <typename T>
-struct is_aggregate_reflection : std::false_type {};
-
-template <typename Original, typename ... Ts>
-struct is_aggregate_reflection <aggregate_reflection <Original, Ts...>> : std::true_type {};
-
-template <typename T>
-constexpr bool is_aggregate_reflection_v = is_aggregate_reflection <T> ::value;
-
-template <typename T>
-struct is_dynamic_reflection : std::false_type {};
-
-template <typename T>
-struct is_dynamic_reflection <array_reflection <T, -1>> : std::true_type {};
-
-template <typename Original, typename ... Ts>
-struct is_dynamic_reflection <aggregate_reflection <Original, Ts...>>
-	: std::bool_constant <(is_dynamic_reflection <Ts> ::value || ...)> {};
-
-template <typename T>
-constexpr bool is_dynamic_reflection_v = is_dynamic_reflection <T> ::value;
-
-template <typename T>
-constexpr bool is_static_reflection_v = not is_dynamic_reflection <T> ::value;
-
-// Querying reflection status
-template <typename T>
-constexpr bool has_reflection()
-{
-	return requires { T::_rcgp_has_reflection; };
-}
-
-template <typename T>
-constexpr bool has_aggregate_reflection()
-{
-	if constexpr (has_reflection <T> ())
-		return is_aggregate_reflection_v <typename T::reflection>;
-	else
-		return false;
-}
-
-template <typename T>
-constexpr bool has_primitive_reflection()
-{
-	if constexpr (has_reflection <T> ())
-		return is_primitive_reflection_v <typename T::reflection>;
-	else
-		return false;
-}
-
-template <typename T>
-concept reflected = has_reflection <T> ();
-
-template <typename T>
-concept aggregate = requires { typename T::_rcgp_aggregate; }
-	&& std::is_same_v <
-		typename T::_rcgp_aggregate,
-		std::type_identity <T>
-	>;
-
-template <typename T>
-concept primitive = has_primitive_reflection <T> ();
-
-} // namespace rcgp
+// Full reflection information for aggregates
+#define $reflection(...)					\
+	DEFINE_THIS();						\
+	using _rcgp_aggregate = std::type_identity <This>;	\
+								\
+	DEFINE_FIELD_TYPE_LIST(__VA_ARGS__);			\
+	DEFINE_SCAFFOLD(__VA_ARGS__);				\
+								\
+	static inline std::nullptr_t _rcgp_get_fallback {};	\
+	DEFINE_FIELD_REFERENCE(/*&*/, __VA_ARGS__);		\
+	DEFINE_FIELD_REFERENCE(const, __VA_ARGS__);		\
+								\
+	DEFINE_OVERRIDE_REFERENCE(__VA_ARGS__);

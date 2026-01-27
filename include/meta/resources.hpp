@@ -1,69 +1,51 @@
 #pragma once
 
 #include "../dsl/jems.hpp"
-#include "../dsl/primitives.hpp"
 #include "../util/cti.hpp"
-#include "reflection.hpp"
-#include "reflection_builder.hpp"
 #include "layouts.hpp"
 
 namespace rcgp {
 
 // Corresponds to vertex buffes
-template <reflected T, template <typename> typename L = layouts::scalar, vk::VertexInputRate R = vk::VertexInputRate::eVertex>
+template <typename T, template <typename> typename L = layouts::scalar, vk::VertexInputRate R = vk::VertexInputRate::eVertex>
 struct AttributeStream : T {
-	using reflection = attribute_stream_reflection <T, R>;
-	DEFINE_REFLECTION_STAMP();
+	using value_type = T;
 };
 
 // Resource groups
 // TODO: should not allow index/vertex buffers here
-template <reflected T>
+template <typename T>
 struct ResourceGroup : T {
 	using value_type = T;
-	using reflection = resource_group_reflection <T>;
-	DEFINE_REFLECTION_STAMP();
 };
 
 // Push constants
-template <reflected T, template <typename> typename L = layouts::std430>
-struct PushConstant : T {
-	using reflection = push_constant_reflection <T, L>;
-	DEFINE_REFLECTION_STAMP();
-};
+template <typename T, template <typename> typename L = layouts::std430>
+struct PushConstant : T {};
 
 // Uniform buffers
-template <reflected T, template <typename> typename L = layouts::std430>
-struct UniformBuffer : T {
-	using reflection = uniform_buffer_reflection <T, L>;
-	DEFINE_REFLECTION_STAMP();
-};
+template <typename T, template <typename> typename L = layouts::std430>
+struct UniformBuffer : T {};
 
 // TODO: Read/write flags and aliases...
-template <reflected T, template <typename> typename L = layouts::std430, GlobalResourceAccess A = GlobalResourceAccess::eReadWrite>
-struct StorageBuffer : T {
-	using reflection = storage_buffer_reflection <T, L, A>;
-	DEFINE_REFLECTION_STAMP();
-};
+template <typename T, template <typename> typename L = layouts::std430, GlobalResourceAccess A = GlobalResourceAccess::eReadWrite>
+struct StorageBuffer : T {};
 
 // TODO: aliases in a different header
-template <reflected T, template <typename> typename L = layouts::std430, GlobalResourceAccess A = GlobalResourceAccess::eReadWrite>
+template <typename T, template <typename> typename L = layouts::std430, GlobalResourceAccess A = GlobalResourceAccess::eReadWrite>
 using ArrayBuffer = StorageBuffer <array <T>, L, A>;
 
-template <reflected T, template <typename> typename L = layouts::std430>
+template <typename T, template <typename> typename L = layouts::std430>
 using RStorageBuffer = StorageBuffer <T, L, GlobalResourceAccess::eRead>;
 
-template <reflected T, template <typename> typename L = layouts::std430>
+template <typename T, template <typename> typename L = layouts::std430>
 using WStorageBuffer = StorageBuffer <T, L, GlobalResourceAccess::eWrite>;
 
-template <reflected T, template <typename> typename L = layouts::std430>
+template <typename T, template <typename> typename L = layouts::std430>
 using RWStorageBuffer = StorageBuffer <T, L, GlobalResourceAccess::eReadWrite>;
 
 template <native_scalar T, size_t D>
 struct Sampler : jems::handle {
-	using reflection = sampler_reflection <T, D>;
-	DEFINE_REFLECTION_STAMP();
-
 	auto sample(vector <T, D> x, $location) const
 	requires native_float_scalar <T> {
 		auto result = jems::builtin_intrinsic_loc(
@@ -82,11 +64,11 @@ using Sampler3D = Sampler <float, 3>;
 
 // Type traits for these resources
 TYPE_TRAIT(is_attribute_stream);
-	template <reflected T, template <typename> typename L, vk::VertexInputRate R>
+	template <typename T, template <typename> typename L, vk::VertexInputRate R>
 	TYPE_TRAIT_INCLUDES(is_attribute_stream, AttributeStream <T, L, R>);
 
 TYPE_TRAIT(is_resource_group);
-	template <reflected T>
+	template <typename T>
 	TYPE_TRAIT_INCLUDES(is_resource_group, ResourceGroup <T>);
 
 TYPE_TRAIT(is_push_constant);
@@ -102,7 +84,7 @@ TYPE_TRAIT(is_sampler);
 	TYPE_TRAIT_INCLUDES(is_sampler, Sampler <T, D>);
 
 TYPE_TRAIT(is_global_resource);
-	template <reflected T>
+	template <typename T>
 	TYPE_TRAIT_INCLUDES(is_global_resource, ResourceGroup <T>);
 
 	template <typename T, template <typename> typename L>

@@ -1,10 +1,8 @@
 #pragma once
 
 #include "../util/cti.hpp"
-#include "reflection.hpp"
-namespace rcgp {
 
-// #include "resources.hpp"
+namespace rcgp {
 
 template <auto &ref>
 using reference_base_t = std::decay_t <decltype(ref)>;
@@ -14,10 +12,6 @@ template <auto &ref>
 struct reference : reference_base_t <ref> {
 	static inline auto address = &ref;
 	static constexpr auto &handle = ref;
-
-	using reflection = reference_reflection <
-		ref, typename reference_base_t <ref> ::reflection
-	>;
 };
 
 TYPE_TRAIT(is_reference);

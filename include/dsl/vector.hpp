@@ -10,9 +10,6 @@ template <native_scalar T, size_t N>
 struct vector : public vector_base <T, N> {
 	using vector_base <T, N> ::vector_base;
 	
-	using reflection = primitive_reflection <vector <T, N>>;
-	DEFINE_REFLECTION_STAMP();
-	
 	static auto reinterpret(const jems::handle &h) {
 		return vector(h);
 	}
@@ -106,6 +103,7 @@ static_assert(sizeof(vector <int32_t, 2>) == sizeof(jems::handle));
 static_assert(sizeof(vector <uint32_t, 3>) == sizeof(jems::handle));
 static_assert(sizeof(vector <float, 4>) == sizeof(jems::handle));
 
+// TODO: separate header with all the specializations
 extern template struct vector <int32_t, 2>;
 extern template struct vector <int32_t, 3>;
 extern template struct vector <int32_t, 4>;

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "reflection.hpp"
-#include "static_string.hpp"
-#include "../util/tlist.hpp"
 #include "../util/cti.hpp"
+#include "../util/tlist.hpp"
+#include "concepts.hpp"
+#include "static_string.hpp"
 
 namespace rcgp {
 
@@ -13,7 +13,7 @@ namespace rcgp {
 #endif
 
 // Forward declarations
-template <reflected T, int64_t N>
+template <typename T, int64_t N>
 struct array;
 
 template <typename T>
@@ -92,7 +92,7 @@ struct scaffold_lookup <scaffold_hint <Tlist <Ts...>, Align>, View, AlignTopLeve
 };
 
 // Statically sized array types
-template <typename Element, size_t N1, size_t Align, reflected ElementView, int64_t N2, bool AlignTopLevel>
+template <typename Element, size_t N1, size_t Align, typename ElementView, int64_t N2, bool AlignTopLevel>
 struct scaffold_lookup <
 	scaffold_hint <std::array <Element, N1>, Align>,
 	array <ElementView, N2>,
@@ -107,7 +107,7 @@ struct scaffold_lookup <
 };
 
 // Dynamically sized array types
-template <typename Element, size_t Align, reflected ElementView, bool AlignTopLevel>
+template <typename Element, size_t Align, typename ElementView, bool AlignTopLevel>
 struct scaffold_lookup <
 	scaffold_hint <unsized_array <Element>, Align>,
 	array <ElementView, -1>,
@@ -162,7 +162,7 @@ struct scaffold_lookup <
 
 #define DEFINE_SCAFFOLD(...)							\
 	template <size_t Align, bool AlignTopLevel, typename ... Ts>		\
-	requires (sizeof...(Ts) == reflection::field_count)			\
+	requires (sizeof...(Ts) == field_count)					\
 	struct alignas(AlignTopLevel ? Align : 0) scaffold {			\
 		static constexpr size_t counter_base = __COUNTER__;		\
 		MAP(GEN_SCAFFOLD_FIELDS, This, __VA_ARGS__)			\

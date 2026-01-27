@@ -21,7 +21,7 @@ constexpr size_t number_of_bindings = [] constexpr {
 		return number_of_bindings <typename T::value_type>;
 	} else if constexpr (aggregate <T>) {
 		// TODO: need to iterate through the fields themself
-		return T::reflection::field_count;
+		return T::field_count;
 	} else {
 		return 1;
 	}
@@ -78,7 +78,7 @@ struct DescriptorWritePair {
 		static_assert(aggregate <Structure>);
 
 		auto bind_one = [&] <size_t I> () {
-			using Resource = Structure::reflection::template field_type <I>;
+			using Resource = Structure::fields::template get <I>;
 
 			set_descriptor_write_and_union <Resource, I> (
 				resource.template get <I> (),

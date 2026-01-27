@@ -1,23 +1,51 @@
 #pragma once
 
+#include "../dsl/array.hpp"
 #include "../util/array.hpp"
-#include "expand_reflection.hpp"
-#include "reflection.hpp"
+#include "../util/tlist.hpp"
 #include "field_access.hpp"
+#include "concepts.hpp"
 
 namespace rcgp {
 
 template <typename T>
-requires is_dynamic_reflection_v <T>
+struct is_dynamic_layout : std::false_type {};
+
+template <typename T>
+struct is_dynamic_layout <array <T, -1>> : std::true_type {};
+
+template <typename List>
+struct is_dynamic_fields;
+
+template <typename ... Ts>
+struct is_dynamic_fields <Tlist <Ts...>>
+	: std::bool_constant <(is_dynamic_layout <Ts> ::value || ...)> {};
+
+template <aggregate T>
+struct is_dynamic_layout <T> : is_dynamic_fields <typename T::fields> {};
+
+template <typename T>
+constexpr bool is_dynamic_layout_v = is_dynamic_layout <T> ::value;
+
+template <typename T>
+constexpr bool is_dynamic_v = is_dynamic_layout_v <T>;
+
+template <typename T>
+constexpr bool is_static_v = !is_dynamic_layout_v <T>;
+
+template <typename T>
 struct field_trace_of_dynamic {};
 
-template <typename Original, typename ... Ts>
-struct field_trace_of_dynamic <aggregate_reflection <Original, Ts...>> {
+template <typename List>
+struct field_trace_of_dynamic_list;
+
+template <typename ... Ts>
+struct field_trace_of_dynamic_list <Tlist <Ts...>> {
 	template <typename T, size_t ... Is>
 	using trace = decltype([] {
 		constexpr auto N = sizeof...(Ts);
 		constexpr auto dynamics = std::array <bool, N> {
-			is_dynamic_reflection_v <Ts>...
+			is_dynamic_layout_v <Ts>...
 		};
 
 		constexpr auto idx = first_on(dynamics);
@@ -29,8 +57,12 @@ struct field_trace_of_dynamic <aggregate_reflection <Original, Ts...>> {
 	} ());
 };
 
+template <aggregate T>
+struct field_trace_of_dynamic <T>
+	: field_trace_of_dynamic_list <typename T::fields> {};
+
 template <typename T>
-struct field_trace_of_dynamic <array_reflection <T, -1>> {
+struct field_trace_of_dynamic <array <T, -1>> {
 	template <typename U, size_t ... Is>
 	using trace = field_trace <U, Is...>;
 };
@@ -72,12 +104,11 @@ size_t field_trace_offset(field_trace <T>, auto &value)
 	return 0;
 }
 
-template <reflected T>
-requires is_dynamic_v <T>
+template <typename T>
+requires is_dynamic_layout_v <T>
 auto dynamic_part(const auto &value)
 {
-	using R = expand_reflection_t <T>;
-	using trace = field_trace_of_dynamic <R> ::template trace <R>;
+	using trace = field_trace_of_dynamic <T> ::template trace <T>;
 
 	auto &dyn = field_trace_get(trace(), value);
 	auto offset = field_trace_offset(trace(), value);

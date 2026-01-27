@@ -1,18 +1,13 @@
 #pragma once
 
-#include <concepts>
 #include <type_traits>
-#include <variant>
 
-#include "../util/logging.hpp"
 #include "../util/cti.hpp"
 #include "../dsl/array.hpp"
 #include "../dsl/aliases.hpp"
 #include "../dsl/projection.hpp"
 #include "reconstruct_type.hpp"
-#include "reflection.hpp"
 #include "inject_reference.hpp"
-#include "reflection_builder.hpp"
 
 namespace rcgp {
 
@@ -35,7 +30,7 @@ struct write_only_intrinsic {
 	}
 };
 
-template <GlobalIntrinsic G, ShaderStage S, reflected T>
+template <GlobalIntrinsic G, ShaderStage S, typename T>
 struct projection <read_only_intrinsic <G, S, T>> {
 	using type = T;
 };
@@ -97,11 +92,8 @@ template <primitive T>
 using NoPerspective = Interpolant <T, RateProperties::eNoPerspective>;
 
 // Required result of the task shader
-template <reflected T>
+template <typename T>
 struct TaskPayload : T {
-	using reflection = typename T::reflection;
-	DEFINE_REFLECTION_STAMP();
-
 	TaskPayload() {
 		inject_reference(static_cast <T &> (*this),
 			jems::global_intrinsic(GlobalIntrinsic::eTaskPayload)
@@ -238,21 +230,17 @@ struct MeshletPayload : T {
 	mesh_vertex_positions <vec4> positions;
 	mesh_primitive_triangles <uvec3> triangles;
 
-	using reflection = typename T::reflection;
-	DEFINE_REFLECTION_STAMP();
-
 	MeshletPayload()
 	{
 		if (Tracer::singleton.records.empty())
 			return;
 
-		using R = typename T::reflection;
-		static_assert(is_aggregate_reflection_v <R>,
+		static_assert(aggregate <T>,
 			"MeshletPayload extra outputs must be an aggregate");
 
-		constexpr_for(Is, R::field_count,
+		constexpr_for(Is, T::field_count,
 			([&] {
-				using Field = R::template field_type <Is>;
+				using Field = T::fields::template get <Is>;
 				using Unwrapped = unwrap_output_type_t <Field>;
 				constexpr bool perprimitive = is_perprimitive_output_v <Field>;
 				constexpr bool pervertex = is_pervertex_output_v <Field>;

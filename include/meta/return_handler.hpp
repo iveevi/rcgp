@@ -9,9 +9,6 @@
 namespace rcgp {
 
 template <typename T>
-void return_handler(const T &ret, size_t &argi) {}
-
-template <reflected T>
 void return_handler(const TaskPayload <T> &, size_t &)
 {
 	$tsb.context.task_payload_type = reconstruct_type <T> ();
@@ -27,7 +24,7 @@ void return_handler(const MeshletPayload <P, MaxVertices, MaxPrimitives, T> &, s
 	$tsb.context.mesh_primitive_kind = P;
 }
 
-template <MeshPrimitive P, uint32_t MaxVertices, uint32_t MaxPrimitives, reflected T>
+template <MeshPrimitive P, uint32_t MaxVertices, uint32_t MaxPrimitives, typename T>
 void return_handler(const MeshletPayload <P, MaxVertices, MaxPrimitives, T> &, size_t &)
 {
 	$tsb.context.mesh_max_vertices = MaxVertices;
@@ -35,7 +32,7 @@ void return_handler(const MeshletPayload <P, MaxVertices, MaxPrimitives, T> &, s
 	$tsb.context.mesh_primitive_kind = P;
 }
 
-template <primitive T, RateProperties P>
+template <typename T, RateProperties P>
 void return_handler(const Interpolant <T, P> &ret, size_t &argi)
 {
 	auto type = reconstruct_type <T> ();
@@ -48,7 +45,7 @@ void return_handler(const Interpolant <T, P> &ret, size_t &argi)
 }
 
 // TODO: need to constrain by stage, because vertex shader outputs need to default to Smooth
-template <primitive T>
+template <typename T>
 void return_handler(const T &ret, size_t &argi)
 {
 	auto type = reconstruct_type <T> ();
@@ -58,9 +55,7 @@ void return_handler(const T &ret, size_t &argi)
 	jems::store(jems::thread_output(tout), ret);
 }
 
-// TODO: this is the aggregate branch I think
-template <reflected T>
-requires (not primitive <T>)
+template <aggregate T>
 void return_handler(const T &ret, size_t &argi)
 {
 	auto type = reconstruct_type <T> ();

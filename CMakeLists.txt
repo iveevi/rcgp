@@ -35,7 +35,9 @@ add_custom_target(rcgp_generated
 )
 
 file(GLOB_RECURSE RCGP_LIBRARY_SOURCES CONFIGURE_DEPENDS
-	"${CMAKE_CURRENT_LIST_DIR}/source/**/*.cpp"
+	"${CMAKE_CURRENT_LIST_DIR}/source/dsl/*.cpp"
+	"${CMAKE_CURRENT_LIST_DIR}/source/rhi/*.cpp"
+	"${CMAKE_CURRENT_LIST_DIR}/source/util/*.cpp"
 )
 
 add_library(rcgp STATIC

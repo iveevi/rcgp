@@ -12,8 +12,7 @@
 #include "scaffold.hpp"
 #include "static_string.hpp"
 
-namespace rcgp {
-namespace layouts {
+namespace rcgp::layouts {
 
 namespace detail {
 
@@ -66,7 +65,7 @@ struct layout_rules {
 template <typename T>
 struct is_dynamic_layout : std::false_type {};
 
-template <reflected T>
+template <typename T>
 struct is_dynamic_layout <array <T, -1>> : std::true_type {};
 
 template <typename List>
@@ -104,7 +103,7 @@ struct layout_rules_list <Policy, Tlist <Ts...>> {
 template <typename Policy, aggregate T>
 struct layout_rules <Policy, T> : layout_rules_list <Policy, typename T::fields> {};
 
-template <typename Policy, reflected T, int64_t N>
+template <typename Policy, typename T, int64_t N>
 requires (N > 0)
 struct layout_rules <Policy, array <T, N>> {
 	static constexpr size_t alignment = layout_rules <Policy, T> ::alignment;
@@ -114,7 +113,7 @@ struct layout_rules <Policy, array <T, N>> {
 	>;
 };
 
-template <typename Policy, reflected T>
+template <typename Policy, typename T>
 struct layout_rules <Policy, array <T, -1>> {
 	static constexpr size_t alignment = Policy::template unsized_array_alignment <T>(
 		layout_rules <Policy, T> ::alignment
@@ -157,5 +156,4 @@ using std430 = detail::layout_rules <detail::std430_policy, T>;
 template <typename T>
 using scalar = detail::layout_rules <detail::scalar_policy, T>;
 
-} // namespace layouts
-} // namespace rcgp
+} // namespace rcpg::layouts

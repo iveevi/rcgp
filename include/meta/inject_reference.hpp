@@ -3,7 +3,6 @@
 #include <type_traits>
 
 #include "../dsl/jems.hpp"
-#include "reflection.hpp"
 #include "resources.hpp"
 #include "static_string.hpp"
 
@@ -24,7 +23,7 @@ void inject_reference(T &value, Reference ref)
 	size_t field_counter = 0;
 
 	auto field_handler = [&] <size_t I> () {
-		using field_t = typename T::reflection::template field_type <I>;
+		using field_t = typename T::fields::template get <I>;
 		if constexpr (not std::is_same_v <field_t, std::nullptr_t>) {
 			inject_reference(
 				value.template _rcgp_get <I> (),
@@ -33,7 +32,7 @@ void inject_reference(T &value, Reference ref)
 		}
 	};
 
-	constexpr_for(Is, T::reflection::field_count,
+	constexpr_for(Is, T::field_count,
 		(field_handler.template operator() <Is> (), ...)
 	);
 }

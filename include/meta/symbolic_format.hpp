@@ -1,13 +1,12 @@
 #pragma once
 
-#include "reflection.hpp"
 #include "static_string.hpp"
-#include "../dsl/primitives.hpp"
+#include "../dsl/aliases.hpp"
 #include "../util/cti.hpp"
 
 namespace rcgp {
 
-template <reflected T>
+template <typename T>
 struct symbolic_format {
 	static_error("bad"_ss);
 };

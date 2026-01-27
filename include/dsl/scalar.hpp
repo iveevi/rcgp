@@ -3,8 +3,6 @@
 #include <source_location>
 #include <stdfloat>
 
-#include "../meta/reflection.hpp"
-#include "../meta/reflection_builder.hpp"
 #include "jems.hpp"
 #include "local.hpp"
 #include "primitives_concepts.hpp"
@@ -16,9 +14,6 @@ template <native_scalar T>
 class scalar : public jems::handle {
 	explicit scalar(const jems::handle &h) : handle(h) {}
 public:
-	using reflection = primitive_reflection <scalar <T>>;
-	DEFINE_REFLECTION_STAMP();
-
 	using native_scalar_type = T;
 
 	scalar() {
@@ -98,6 +93,7 @@ public:
 	}
 };
 
+// TODO: goes to aliases.hpp
 using boolean = scalar <bool>;
 using i32 = scalar <int32_t>;
 using u32 = scalar <uint32_t>;

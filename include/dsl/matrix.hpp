@@ -11,9 +11,6 @@ template <native_scalar T, size_t N, size_t M>
 class matrix : public jems::handle {
 	explicit matrix(const jems::handle &h) : handle(h) {}
 public:
-	using reflection = primitive_reflection <matrix <T, N, M>>;
-	DEFINE_REFLECTION_STAMP();
-
 	matrix() {
 		if (Tracer::singleton.records.empty())
 			return;
