@@ -27,33 +27,28 @@ template <ShaderStage S>
 // TODO: must be invocable
 auto trace(auto ftn)
 {
+	TSCOPE("JIT tracing DSL code");
+
 	using F = decltype(infer_shader_signature <S> (std::function(ftn)));
 
 	auto result = F::stage::alloc();
 
-	// NOTE: Globally defined shaders will be traced before main()
-	// so we cannot rely on the user to add the callback in time
-	TimerToken::add_default_callback();
-	{
-		TSCOPE("JIT tracing DSL code");
-		result->context.model = S;
-		if (auto s = jems::scope(result)) {
-			TSCOPE("primary trace");
-			typename F::args args;
-			inject_arguments <S> (args);
-			
-			// TODO: check void...
-			if constexpr (std::is_same_v <typename F::returns, void>) {
-				std::apply(ftn, args);
-			} else {
-				auto returns = std::apply(ftn, args);
-				// TODO: provide stage
-				size_t argi = 0;
-				return_handler(returns, argi);
-			}
+	result->context.model = S;
+	if (auto s = jems::scope(result)) {
+		TSCOPE("primary trace");
+		typename F::args args;
+		inject_arguments <S> (args);
+		
+		// TODO: check void...
+		if constexpr (std::is_same_v <typename F::returns, void>) {
+			std::apply(ftn, args);
+		} else {
+			auto returns = std::apply(ftn, args);
+			// TODO: provide stage
+			size_t argi = 0;
+			return_handler(returns, argi);
 		}
 	}
-	TimerToken::remove_callback("default");
 
 	return result;
 }
