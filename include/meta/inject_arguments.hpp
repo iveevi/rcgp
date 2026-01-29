@@ -117,7 +117,10 @@ void inject_one_argument(reference <ref> &value, InjectionCounters &counters)
 
 	if constexpr (is_attribute_stream_v <R>) {
 		// TODO: move to the else branch with a false static assert
-		static_assert(S == ShaderStage::eVertex || S == ShaderStage::eSubroutine);
+		static_assert(
+			S == ShaderStage::eVertex || S == ShaderStage::eSubroutine,
+			"AttributeStream is only valid for vertex or subroutine shaders"
+		);
 
 		// Attribute streams for vertex shaders or subroutines
 		using T = R::value_type;

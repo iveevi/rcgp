@@ -1,0 +1,28 @@
+In file included from include/meta/../rhi/render_pass.hpp:9,
+                 from include/meta/../rhi/device.hpp:7,
+                 from include/meta/combinators.hpp:4,
+                 from include/rcgp.hpp:11,
+                 from source/test/compile/vertex_fragment_interface_mismatch.cpp:1:
+include/meta/stage_interface.hpp: In instantiation of ‘constexpr void rcgp::detail::validate_interface_types() [with Outputs = rcgp::Tlist<rcgp::vector<float, 3> >; Inputs = rcgp::Tlist<rcgp::vector<float, 4> >; long unsigned int I = 0]’:
+include/meta/stage_interface.hpp:83:48:   required from ‘constexpr const bool rcgp::vertex_fragment_interface<rcgp::Interpolant<rcgp::vector<float, 3>, rcgp::RateProperties::eSmooth>, rcgp::vector<float, 4> >::value’
+   83 |         validate_interface_types <Outputs, Inputs, 0> ();
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+include/meta/combinators.hpp:48:46:   required from ‘auto rcgp::RasterizationCombinator<T>::operator()(rcgp::shader_stage<rcgp::ShaderStage::eVertex, VRet, As ...>&, rcgp::shader_stage<rcgp::ShaderStage::eFragment, FRet, Bs ...>&) const [with VRet = rcgp::Interpolant<rcgp::vector<float, 3>, rcgp::RateProperties::eSmooth>; As = {std::nullptr_t, rcgp::reference<position>, rcgp::write_only_intrinsic<rcgp::GlobalIntrinsic::eClipPosition, rcgp::ShaderStage::eVertex, rcgp::vector<float, 4> >}; FRet = rcgp::vector<float, 4>; Bs = {rcgp::vector<float, 4>}; rcgp::Topology T = rcgp::Topology::eTriangleList]’
+   48 |                         vertex_fragment_interface <VRet, Bs...> ::value;
+      |                                                                   ^~~~~
+source/test/compile/vertex_fragment_interface_mismatch.cpp:38:6:   required from here
+   38 |         comb(vs, fs);
+      |         ~~~~^~~~~~~~
+include/meta/stage_interface.hpp:93:93:   in ‘constexpr’ expansion of ‘rcgp::detail::validate_vertex_fragment_interface<rcgp::Tlist<rcgp::vector<float, 3> >, rcgp::Tlist<rcgp::vector<float, 4> > >()’
+include/meta/../rhi/../util/cti.hpp:15:45: error: static assertion failed: vertex/fragment interface mismatch at location 0: vertex outputs vector<float, 3> but fragment expects vector<float, 4>
+   15 | #define static_error(sstring) static_assert(false, (sstring).view())
+      |                                             ^~~~~
+include/meta/stage_interface.hpp:58:25: note: in expansion of macro ‘static_error’
+   58 |                         static_error(
+      |                         ^~~~~~~~~~~~
+include/meta/../rhi/../util/cti.hpp:15:45: note: ‘false’ evaluates to false
+   15 | #define static_error(sstring) static_assert(false, (sstring).view())
+      |                                             ^~~~~
+include/meta/stage_interface.hpp:58:25: note: in expansion of macro ‘static_error’
+   58 |                         static_error(
+      |                         ^~~~~~~~~~~~

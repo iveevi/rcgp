@@ -1,0 +1,27 @@
+In file included from include/meta/../rhi/render_pass.hpp:9,
+                 from include/meta/../rhi/device.hpp:7,
+                 from include/meta/combinators.hpp:4,
+                 from include/rcgp.hpp:11,
+                 from source/test/compile/vertex_fragment_interface_count_mismatch.cpp:1:
+include/meta/stage_interface.hpp: In instantiation of ‘constexpr bool rcgp::detail::validate_vertex_fragment_interface() [with Outputs = rcgp::Tlist<rcgp::vector<float, 3>, rcgp::vector<float, 3> >; Inputs = rcgp::Tlist<rcgp::vector<float, 3> >]’:
+include/meta/stage_interface.hpp:93:93:   required from ‘constexpr const bool rcgp::vertex_fragment_interface<std::tuple<rcgp::Interpolant<rcgp::vector<float, 3>, rcgp::RateProperties::eSmooth>, rcgp::Interpolant<rcgp::vector<float, 3>, rcgp::RateProperties::eSmooth> >, rcgp::vector<float, 3> >::value’
+   93 |         static constexpr bool value = detail::validate_vertex_fragment_interface <outputs, inputs> ();
+      |                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+include/meta/combinators.hpp:48:46:   required from ‘auto rcgp::RasterizationCombinator<T>::operator()(rcgp::shader_stage<rcgp::ShaderStage::eVertex, VRet, As ...>&, rcgp::shader_stage<rcgp::ShaderStage::eFragment, FRet, Bs ...>&) const [with VRet = std::tuple<rcgp::Interpolant<rcgp::vector<float, 3>, rcgp::RateProperties::eSmooth>, rcgp::Interpolant<rcgp::vector<float, 3>, rcgp::RateProperties::eSmooth> >; As = {std::nullptr_t, rcgp::reference<position>, rcgp::write_only_intrinsic<rcgp::GlobalIntrinsic::eClipPosition, rcgp::ShaderStage::eVertex, rcgp::vector<float, 4> >}; FRet = rcgp::vector<float, 4>; Bs = {rcgp::vector<float, 3>}; rcgp::Topology T = rcgp::Topology::eTriangleList]’
+   48 |                         vertex_fragment_interface <VRet, Bs...> ::value;
+      |                                                                   ^~~~~
+source/test/compile/vertex_fragment_interface_count_mismatch.cpp:37:6:   required from here
+   37 |         comb(vs, fs);
+      |         ~~~~^~~~~~~~
+include/meta/../rhi/../util/cti.hpp:15:45: error: static assertion failed: vertex/fragment interface mismatch: fragment expects 1 inputs but vertex outputs 2
+   15 | #define static_error(sstring) static_assert(false, (sstring).view())
+      |                                             ^~~~~
+include/meta/stage_interface.hpp:75:17: note: in expansion of macro ‘static_error’
+   75 |                 static_error(
+      |                 ^~~~~~~~~~~~
+include/meta/../rhi/../util/cti.hpp:15:45: note: ‘false’ evaluates to false
+   15 | #define static_error(sstring) static_assert(false, (sstring).view())
+      |                                             ^~~~~
+include/meta/stage_interface.hpp:75:17: note: in expansion of macro ‘static_error’
+   75 |                 static_error(
+      |                 ^~~~~~~~~~~~

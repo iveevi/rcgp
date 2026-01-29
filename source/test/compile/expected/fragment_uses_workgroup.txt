@@ -1,0 +1,29 @@
+In file included from include/meta/function_construction.hpp:8,
+                 from include/rcgp.hpp:15,
+                 from source/test/compile/fragment_uses_workgroup.cpp:1:
+include/meta/inject_arguments.hpp: In instantiation of ‘void rcgp::inject_one_argument(WorkGroup<X, Y, Z>&, InjectionCounters&) [with ShaderStage S = rcgp::ShaderStage::eFragment; unsigned int X = 8; unsigned int Y = 1; unsigned int Z = 1]’:
+include/meta/inject_arguments.hpp:174:2:   required from ‘rcgp::inject_arguments<rcgp::ShaderStage::eFragment, WorkGroup<8, 1, 1>, vector<float, 4> >(std::tuple<WorkGroup<8, 1, 1>, vector<float, 4> >&)::<lambda(std::index_sequence<Is ...>)> [with long unsigned int ...Is = {0, 1}; std::index_sequence<Is ...> = std::integer_sequence<long unsigned int, 0, 1>]’
+  175 |                 (inject_one_argument <S> (std::get <Is> (args), counters), ...)
+      |                  ^~~~~~~~~~~~~~~~~~~~~~~
+include/meta/inject_arguments.hpp:174:2:   required from ‘void rcgp::inject_arguments(std::tuple<_Elements ...>&) [with ShaderStage S = rcgp::ShaderStage::eFragment; Args = {WorkGroup<8, 1, 1>, vector<float, 4>}]’
+    7 |         [&] <size_t ... name> (std::index_sequence <name...>) { \
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    8 |                 __VA_ARGS__;                                    \
+      |                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    9 |         } (std::make_index_sequence <N> ())
+      |         ~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+include/meta/function_construction.hpp:40:24:   required from ‘auto rcgp::trace(auto:82) [with ShaderStage S = rcgp::ShaderStage::eFragment; auto:82 = <lambda(WorkGroup<8, 1, 1>, vec4)>]’
+   40 |                 inject_arguments <S> (args);
+      |                 ~~~~~~~~~~~~~~~~~~~~~^~~~~~
+include/meta/function_construction.hpp:64:26:   required from ‘auto rcgp::operator<<(_fn_tag<S>, auto:83) [with ShaderStage S = rcgp::ShaderStage::eFragment; auto:83 = <lambda(WorkGroup<8, 1, 1>, vec4)>]’
+   64 |         auto result = trace <S> (lambda);
+      |                       ~~~~~~~~~~^~~~~~~~
+source/test/compile/fragment_uses_workgroup.cpp:12:1:   required from here
+   12 | };
+      | ^
+include/meta/inject_arguments.hpp:36:17: error: static assertion failed: WorkGroup is only valid for compute/mesh shaders
+   35 |                 S == ShaderStage::eCompute
+      |                 ~~~~~~~~~~~~~~~~~~~~~~~~~~
+   36 |                 || S == ShaderStage::eMesh,
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~
+include/meta/inject_arguments.hpp:36:17: note: ‘((rcgp::ShaderStage::eFragment == rcgp::ShaderStage::eCompute) || (rcgp::ShaderStage::eFragment == rcgp::ShaderStage::eMesh))’ evaluates to false

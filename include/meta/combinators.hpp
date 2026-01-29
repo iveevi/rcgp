@@ -11,6 +11,7 @@
 #include "process_gvrs.hpp"
 #include "resources_collect.hpp"
 #include "shader_stage.hpp"
+#include "stage_interface.hpp"
 
 namespace rcgp {
 
@@ -42,6 +43,9 @@ struct RasterizationCombinator {
 		shader_stage <ShaderStage::eFragment, FRet, Bs...> &fragment
 	) const {
 		TSCOPE("rasterization combinator");
+
+		[[maybe_unused]] constexpr bool interface_ok =
+			vertex_fragment_interface <VRet, Bs...> ::value;
 
 		using vertex_icontext = icontext_from_args_t <As...>;
 		using fragment_icontext = icontext_from_args_t <Bs...>;
