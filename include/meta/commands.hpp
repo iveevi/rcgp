@@ -5,8 +5,8 @@
 #include <vector>
 
 #include "../rhi/command_buffer.hpp"
-#include "../util/cti.hpp"
 #include "../util/timer.hpp"
+#include "command_normalization.hpp"
 
 namespace rcgp {
 
@@ -44,11 +44,13 @@ struct Commands : std::vector <command_operator> {
 
 	template <typename ... Es>
 	friend auto operator|(const Commands &a, const Commands <Es...> &b) {
-		// TODO: normalize <...>
-		auto cmd = Commands <Effects..., Es...> {};
-		cmd.append_range(a);
-		cmd.append_range(b);
-		return cmd;
+		using combined = Tlist <Effects..., Es...>;
+		using normalized = detail::normalize_effects_t <combined>;
+		using cmds = typename normalized::template invoke <Commands>;
+		cmds result;
+		result.append_range(a);
+		result.append_range(b);
+		return result;
 	}
 
 	friend auto operator|(const std::nullptr_t &, const Commands &x) {

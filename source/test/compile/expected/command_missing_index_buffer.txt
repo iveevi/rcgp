@@ -1,0 +1,37 @@
+In file included from include/meta/../rhi/render_pass.hpp:9,
+                 from include/meta/../rhi/device.hpp:7,
+                 from include/meta/combinators.hpp:4,
+                 from include/rcgp.hpp:11,
+                 from source/test/compile/command_missing_index_buffer.cpp:3:
+include/meta/command_normalization.hpp: In instantiation of ‘consteval auto rcgp::detail::normalize_step(Map, Indicators, Effect) [with Map = rcgp::Tlist<effect_entry<key_index<rcgp::Topology::eTriangleList>, tag_dep, no_bar> >; Indicators = rcgp::Tlist<>; Effect = rcgp::DependencySentinel]’:
+include/meta/command_normalization.hpp:239:49:   required by substitution of ‘template<class Map, class Indicators, class Effect> using rcgp::detail::normalize_step_t = decltype (rcgp::detail::normalize_step(Map(), Indicators(), Effect())) [with Map = rcgp::Tlist<rcgp::detail::effect_entry<rcgp::detail::key_index<rcgp::Topology::eTriangleList>, rcgp::detail::tag_dep, rcgp::detail::no_bar> >; Indicators = rcgp::Tlist<>; Effect = rcgp::DependencySentinel]’
+  239 | using normalize_step_t = decltype(normalize_step(Map(), Indicators(), Effect()));
+      |                                   ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+include/meta/command_normalization.hpp:255:8:   recursively required from ‘struct rcgp::detail::normalize_fold<rcgp::Tlist<>, rcgp::Tlist<rcgp::detail::key_index<rcgp::Topology::eTriangleList> >, rcgp::DependencyEnforcerForIndexBuffer, rcgp::DependencySentinel>’
+  255 |         using map = typename normalize_fold <next_map, next_indicators, Tail...> ::map;
+      |               ^~~
+include/meta/command_normalization.hpp:255:8:   required from ‘struct rcgp::detail::normalize_fold<rcgp::Tlist<>, rcgp::Tlist<>, rcgp::DependencyIndicatorForIndexBuffer<rcgp::Topology::eTriangleList>, rcgp::DependencyEnforcerForIndexBuffer, rcgp::DependencySentinel>’
+include/meta/command_normalization.hpp:321:8:   required from ‘struct rcgp::detail::normalize_effects<rcgp::Tlist<rcgp::DependencyIndicatorForIndexBuffer<rcgp::Topology::eTriangleList>, rcgp::DependencyEnforcerForIndexBuffer, rcgp::DependencySentinel> >’
+  321 |         using map = typename normalize_fold <Tlist <>, Tlist <>, Effects...> ::map;
+      |               ^~~
+include/meta/command_normalization.hpp:326:7:   required by substitution of ‘template<class List> using rcgp::detail::normalize_effects_t = typename rcgp::detail::normalize_effects::type [with List = rcgp::Tlist<rcgp::DependencyIndicatorForIndexBuffer<rcgp::Topology::eTriangleList>, rcgp::DependencyEnforcerForIndexBuffer, rcgp::DependencySentinel>]’
+  326 | using normalize_effects_t = typename normalize_effects <List> ::type;
+      |       ^~~~~~~~~~~~~~~~~~~
+include/meta/commands.hpp:48:9:   required from ‘auto rcgp::operator|(const Commands<Effects>&, const Commands<Es ...>&) [with Es = {DependencyEnforcerForIndexBuffer, DependencySentinel}; Effects = {DependencyIndicatorForIndexBuffer<rcgp::Topology::eTriangleList>}]’
+   48 |                 using normalized = detail::normalize_effects_t <combined>;
+      |                       ^~~~~~~~~~
+source/test/compile/command_missing_index_buffer.cpp:29:54:   required from here
+   29 |         auto cmds = bind_pipeline(pipeline) | draw_indexed(3);
+      |                                                             ^
+include/meta/../rhi/../util/cti.hpp:15:45: error: static assertion failed: command recording has unresolved dependencies
+   15 | #define static_error(sstring) static_assert(false, (sstring).view())
+      |                                             ^~~~~
+include/meta/command_normalization.hpp:195:25: note: in expansion of macro ‘static_error’
+  195 |                         static_error("command recording has unresolved dependencies"_ss);
+      |                         ^~~~~~~~~~~~
+include/meta/../rhi/../util/cti.hpp:15:45: note: ‘false’ evaluates to false
+   15 | #define static_error(sstring) static_assert(false, (sstring).view())
+      |                                             ^~~~~
+include/meta/command_normalization.hpp:195:25: note: in expansion of macro ‘static_error’
+  195 |                         static_error("command recording has unresolved dependencies"_ss);
+      |                         ^~~~~~~~~~~~

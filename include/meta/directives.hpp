@@ -218,7 +218,7 @@ inline auto barriers(const Barrier <refs, SrcPhases, DstPhases> &... barriers)
 		cmd.pipelineBarrier2(vk::DependencyInfo().setBufferMemoryBarriers(buffer_barriers));
 	};
 
-	return Commands <Sync <refs, DstPhases>...> { binder };
+	return Commands <BarrierEffect <refs, SrcPhases, DstPhases>...> { binder };
 }
 
 template <typename ... Es, auto &ref, typename SrcPhase, typename DstPhase>

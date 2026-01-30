@@ -5,6 +5,7 @@
 
 using namespace rcgp;
 
+// TODO: switch to pytest for compile tests?
 int main()
 {
 	test_recording_scalar_constant();

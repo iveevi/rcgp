@@ -6,33 +6,55 @@ namespace rcgp {
 
 // We have a dependency on ref
 template <auto &ref>
-struct Dependency {};
+struct Dependency {
+	static constexpr auto &handle = ref;
+};
 
 // We *might have a dependency for an index buffer for topology T
 template <Topology T>
-struct DependencyIndicatorForIndexBuffer {};
+struct DependencyIndicatorForIndexBuffer {
+	static constexpr auto topology = T;
+};
 
 // We *have a dependency for an index buffer as needed (unknown topology)
 struct DependencyEnforcerForIndexBuffer {};
 
 // We *have a dependency for an index buffer for topology T
 template <Topology T>
-struct DependencyForIndexBuffer {};
+struct DependencyForIndexBuffer {
+	static constexpr auto topology = T;
+};
 
 // We are granted a handle for ref
 template <auto &ref>
-struct Resolvant {};
+struct Resolvant {
+	static constexpr auto &handle = ref;
+};
 
 // We are granted a handle for an index buffer for topology T
 template <Topology T>
-struct ResolvantForIndexBuffer {};
+struct ResolvantForIndexBuffer {
+	static constexpr auto topology = T;
+};
 
 // We need all previous dependencies to be resolved
 struct DependencySentinel {};
 
 // We have synchronized ref
+// TODO: this is useless now?
 template <auto &ref, typename Phase>
-struct Sync {};
+struct Sync {
+	static constexpr auto &handle = ref;
+	using phase = Phase;
+};
+
+// Phase transition effect for ref
+template <auto &ref, typename SrcPhase, typename DstPhase>
+struct BarrierEffect {
+	static constexpr auto &handle = ref;
+	using src_phase = SrcPhase;
+	using dst_phase = DstPhase;
+};
 
 // Dependency sequences for pipelines
 template <auto &... refs>
