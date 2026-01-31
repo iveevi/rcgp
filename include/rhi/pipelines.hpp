@@ -6,8 +6,10 @@ namespace rcgp {
 
 struct RasterizationOptions {
 	// TODO: dynamic extent or fixed extent
-	const vk::Extent2D &extent;
+	vk::Extent2D extent;
 	bool depth_test;
+	vk::CullModeFlags cull_mode;
+	vk::PolygonMode polygon_mode;
 };
 
 vk::Pipeline compile_rasterization_pipeline(

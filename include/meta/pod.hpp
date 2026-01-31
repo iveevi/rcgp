@@ -2,7 +2,7 @@
 
 #include <cstddef>
 
-#ifdef GLM_VERSION_MAJOR
+#ifdef RCGP_SUPPORT_GLM
 #include <glm/glm.hpp>
 #endif
 
@@ -14,7 +14,7 @@ struct vec {
 
 	constexpr vec() = default;
 
-#ifdef GLM_VERSION_MAJOR
+#ifdef RCGP_SUPPORT_GLM
 	vec(const glm::vec <D, T> &rhs) {
 		for (size_t i = 0; i < D; ++i)
 			data[i] = rhs[i];
@@ -35,7 +35,7 @@ struct mat {
 
 	constexpr mat() = default;
 
-#ifdef GLM_VERSION_MAJOR
+#ifdef RCGP_SUPPORT_GLM
 	mat(const glm::mat <C, R, T> &rhs) {
 		for (size_t c = 0; c < C; ++c) {
 			for (size_t r = 0; r < R; ++r)

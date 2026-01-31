@@ -1,17 +1,17 @@
 #pragma once
 
 #include <array>
-#include <span>
 #include <type_traits>
 
+#include "../rhi/command_buffer.hpp"
 #include "../rhi/timestamp_pool.hpp"
 #include "../util/runtime_type_registry.hpp"
 #include "barrier.hpp"
-#include "descriptor.hpp"
-#include "static_string.hpp"
 #include "command_effects.hpp"
 #include "commands.hpp"
+#include "descriptor.hpp"
 #include "pipeline_mappings.hpp"
+#include "static_string.hpp"
 
 namespace rcgp {
 
@@ -164,7 +164,7 @@ inline auto draw_indexed(uint32_t count)
 inline auto draw_mesh_tasks(uint32_t x, uint32_t y = 1, uint32_t z = 1)
 {
 	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
-		cmd.drawMeshTasks(x, y, z);
+		cmd.draw_mesh_tasks(x, y, z);
 	};
 
 	return Commands <DependencySentinel> { binder };
@@ -201,9 +201,31 @@ inline auto write_timestamp(
 	return Commands <> { binder };
 }
 
+inline auto transition_image_layout(Image *image, vk::ImageLayout new_layout)
+{
+	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
+		cmd.transition_image_layout(*image, new_layout);
+	};
+
+	return Commands <> { binder };
+}
+
+inline auto copy_image(const Image *const src, const Image *const dst)
+{
+	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
+		cmd.copy_image(*src, *dst);
+	};
+
+	return Commands <> { binder };
+}
+
 inline auto manual_commands(auto F)
 {
-	return Commands <> { F };
+	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
+		F(cmd);
+	};
+
+	return Commands <> { binder };
 }
 
 template <auto &... refs, typename ... SrcPhases, typename ... DstPhases>

@@ -75,17 +75,17 @@ struct CommandBuffer : vk::CommandBuffer {
 
 	const vk::detail::DispatchLoaderDynamic *loader = nullptr;
 
-	CommandBuffer &begin() {
+	auto &begin() const {
 		super::begin(vk::CommandBufferBeginInfo());
 		return *this;
 	}
 
-	CommandBuffer &begin(const vk::CommandBufferBeginInfo &info) {
+	auto &begin(const vk::CommandBufferBeginInfo &info) const {
 		super::begin(info);
 		return *this;
 	}
 
-	CommandBuffer &transitionImageLayout(Image &image, vk::ImageLayout new_layout) {
+	auto &transition_image_layout(Image &image, vk::ImageLayout new_layout) const {
 		auto [
 			src_stage, src_access,
 			dst_stage, dst_access
@@ -108,7 +108,7 @@ struct CommandBuffer : vk::CommandBuffer {
 		return *this;
 	}
 
-	CommandBuffer &copyBufferToImage(const Buffer &staging, const Image &image) {
+	auto &copy_buffer_to_image(const Buffer &staging, const Image &image) const {
 		auto copy = vk::BufferImageCopy()
 			.setImageSubresource(image.layers())
 			.setImageExtent(image.extent());
@@ -118,13 +118,30 @@ struct CommandBuffer : vk::CommandBuffer {
 		return *this;
 	}
 
-	CommandBuffer &end() {
+	auto &copy_image(const Image &src, const Image &dst) const {
+		auto copy = vk::ImageCopy()
+			.setSrcSubresource(src.layers())
+			.setDstSubresource(dst.layers())
+			.setExtent(src.extent());
+
+		super::copyImage(
+			src.handle,
+			src.layout,
+			dst.handle,
+			dst.layout,
+			copy
+		);
+
+		return *this;
+	}
+
+	auto &end() const {
 		super::end();
 		return *this;
 	}
 
-	const CommandBuffer &drawMeshTasks(uint32_t x, uint32_t y = 1, uint32_t z = 1) const {
-		assertion(loader != nullptr, "drawMeshTasks requires a dynamic loader");
+	auto &draw_mesh_tasks(uint32_t x, uint32_t y = 1, uint32_t z = 1) const {
+		assertion(loader != nullptr, "draw_mesh_tasks requires a dynamic loader");
 		loader->vkCmdDrawMeshTasksEXT(*this, x, y, z);
 		return *this;
 	}

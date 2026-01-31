@@ -59,8 +59,8 @@ vk::Pipeline compile_rasterization_pipeline(
 	auto rasterization = vk::PipelineRasterizationStateCreateInfo()
 		.setDepthClampEnable(false)
 		.setRasterizerDiscardEnable(false)
-		.setPolygonMode(vk::PolygonMode::eFill)
-		.setCullMode(vk::CullModeFlagBits::eBack)
+		.setPolygonMode(options.polygon_mode)
+		.setCullMode(options.cull_mode)
 		.setFrontFace(vk::FrontFace::eCounterClockwise)
 		.setDepthBiasEnable(false)
 		.setLineWidth(1.0f);
@@ -181,8 +181,8 @@ vk::Pipeline compile_mesh_shading_pipeline(
 	auto rasterization = vk::PipelineRasterizationStateCreateInfo()
 		.setDepthClampEnable(false)
 		.setRasterizerDiscardEnable(false)
-		.setPolygonMode(vk::PolygonMode::eFill)
-		.setCullMode(vk::CullModeFlagBits::eBack)
+		.setPolygonMode(options.polygon_mode)
+		.setCullMode(options.cull_mode)
 		.setFrontFace(vk::FrontFace::eCounterClockwise)
 		.setDepthBiasEnable(false)
 		.setLineWidth(1.0f);

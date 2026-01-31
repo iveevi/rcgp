@@ -37,6 +37,8 @@ struct GenericPipeline {
 	vk::PipelineLayout layout;
 	std::array <vk::DescriptorSetLayout, set_count> dsls;
 
+	GenericPipeline() = default;
+
 	GenericPipeline(
 		const vk::Device &device_,
 		const vk::Pipeline &handle_,
@@ -62,6 +64,9 @@ template <Topology T, typename AS, typename GAMAP, typename GRCs>
 struct RasterizationPipeline : GenericPipeline <GAMAP, GRCs> {
 	using GenericPipeline <GAMAP, GRCs> ::GenericPipeline;
 };
+
+#define $rasterization_pipeline_t(T, vs, fs) \
+	decltype(std::declval <RasterizationCombinator <Topology::T>> ()(vs, fs));
 
 template <typename GAMAP, typename GRCs>
 struct ComputePipeline : GenericPipeline <GAMAP, GRCs> {
