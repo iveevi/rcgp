@@ -91,9 +91,6 @@ struct Window {
 	void on_cursor_move(CursorMoveHandler handler);
 	void on_drag(MouseButton button, DragHandler handler);
 
-	Image &image(size_t index);
-	const Image &image(size_t index) const;
-
 	struct Options {
 		uint32_t width;
 		uint32_t height;

@@ -127,16 +127,6 @@ void Window::on_drag(MouseButton button, DragHandler handler)
 	ht.drag[idx].push_back(std::move(handler));
 }
 
-Image &Window::image(size_t index)
-{
-	return images[index];
-}
-
-const Image &Window::image(size_t index) const
-{
-	return images[index];
-}
-
 Window Window::from(const Session &session, const Device &device, const Options &options)
 {
 	auto &ldev = device.logical;
@@ -169,7 +159,10 @@ Window Window::from(const Session &session, const Device &device, const Options 
 		.setMinImageCount(surface_capabilities.minImageCount)
 		.setOldSwapchain(nullptr)
 		.setPresentMode(options.present_mode)
-		.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
+		.setImageUsage(
+			vk::ImageUsageFlagBits::eColorAttachment
+			| vk::ImageUsageFlagBits::eTransferDst
+		)
 		.setSurface(surface);
 
 	result.swapchain = ldev.createSwapchainKHR(swapchain_info);

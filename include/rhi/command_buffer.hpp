@@ -7,15 +7,36 @@
 namespace rcgp {
 
 constexpr auto layout_to_stage_and_access(vk::ImageLayout layout)
-	-> std::pair <vk::PipelineStageFlagBits2, vk::AccessFlags2>
+	-> std::pair <vk::PipelineStageFlags2, vk::AccessFlags2>
 {
 	using enum vk::ImageLayout;
 
 	switch (layout) {
+	case eTransferSrcOptimal:
+		return {
+			vk::PipelineStageFlagBits2::eTransfer,
+			vk::AccessFlagBits2::eTransferRead
+		};
 	case eTransferDstOptimal:
 		return {
 			vk::PipelineStageFlagBits2::eTransfer,
 			vk::AccessFlagBits2::eTransferWrite
+		};
+	case eColorAttachmentOptimal:
+		return {
+			vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+			vk::AccessFlagBits2::eColorAttachmentWrite
+		};
+	case eDepthStencilAttachmentOptimal:
+		return {
+			vk::PipelineStageFlagBits2::eEarlyFragmentTests
+			| vk::PipelineStageFlagBits2::eLateFragmentTests,
+			vk::AccessFlagBits2::eDepthStencilAttachmentWrite
+		};
+	case ePresentSrcKHR:
+		return {
+			vk::PipelineStageFlagBits2::eBottomOfPipe,
+			vk::AccessFlagBits2::eNone
 		};
 	case eShaderReadOnlyOptimal:
 		return {

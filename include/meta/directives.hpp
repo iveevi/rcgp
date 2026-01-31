@@ -16,11 +16,12 @@
 namespace rcgp {
 
 // TODO: later encode the number of attachments, and subpass progression
+template <size_t N>
 inline auto begin_render_pass(
 	const vk::RenderPass &render_pass,
 	const vk::Framebuffer &framebuffer,
 	const vk::Rect2D &render_area,
-	const std::span <vk::ClearValue> &clear_values
+	std::array <vk::ClearValue, N> clear_values
 )
 {
 	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
