@@ -1,43 +1,18 @@
-#include <rcgp.hpp>
-
-#include "../block_diff.cpp"
-#include "../suite.cpp"
+#include "common.hpp"
 
 using namespace rcgp;
 
-std::string clean(const std::string &input)
-{
-	auto lines = split_lines(input);
+struct View {
+	float4x4 model;
+	float4x4 view;
+	float4x4 proj;
 
-	lines = std::vector(lines.begin() + 1, lines.end() - 1);
+	$reflection(model, view, proj);
+};
 
-	std::string result;
-	for (size_t i = 0; i < lines.size(); i++) {
-		size_t off = 0;
-		if (lines[i][0] == '\t')
-			off++;
+PushConstant <View> view;
 
-		result += lines[i].substr(off);
-		if (i + 1 <  lines.size())
-			result += '\n';
-	}
-
-	return result;
-}
-
-void assert_assembly_match(const SharedBlockReference &block, const std::string &str)
-{
-	auto expected = clean(str);
-	auto act = generate_assembly(block);
-	if (act != expected) {
-		print_block_diff(expected, act);
-		// TODO: --gt flag for testing to display ground truth
-		// auto style = fmt::fg(fmt::color::gray)
-		// 	| fmt::emphasis::italic;
-		// fmt::print(style, "copy:\n{}\n", act);
-		mark_fail;
-	}
-}
+AttributeStream <float3> position;
 
 add_test(vs_empty)
 {
@@ -85,9 +60,8 @@ add_test(vs_louts)
 	auto vs = $shader(vertex)()
 	{
 		return std::tuple {
-			// TODO: CTAD to infer, like Smooth { float3(1.0) }
-			Smooth <float3> { float3(1.0) },
-			Flat <uint2> { uint2(1, 4) },
+			Smooth { float3(1.0) },
+			Flat { uint2(1, 4) },
 		};
 	};
 
@@ -111,17 +85,113 @@ add_test(vs_louts)
 	  store $7 $6
 	  $8 = u32
 	  $9 = local $8
-	  $10 = 1
+	  $10 = 4
 	  store $9 $10
 	  $11 = local $8
-	  $12 = 4
+	  $12 = 1
 	  store $11 $12
 	  $1 = uint2
-	  $13 = new $1($9, $11)
+	  $13 = new $1($11, $9)
 	  $14 = local $1
 	  store $14 $13
 	  $15 = thread out($1, 1, flat)
 	  store $15 $14
+	}
+	)");
+};
+
+add_test(vs_stream)
+{
+	auto vs = $shader(vertex)(
+		$contracts(position),
+		ClipPosition cpos
+	) -> float3
+	{
+		cpos = float4(position, 1);
+		return position;
+	};
+
+	assert_assembly_match(vs, R"(
+	block {
+	  context {
+	    model: vertex shader,
+	    name: main,
+	    thread in 0: $0,
+	    thread out 0: $0 (-),
+	  }
+	  $1 = float4
+	  $2 = f32
+	  $0 = float3
+	  $3 = local $0
+	  $4 = thread in($0, 0)
+	  $5 = local $2
+	  $6 = 1
+	  store $5 $6
+	  $7 = new $1($4, $5)
+	  $8 = local $1
+	  store $8 $7
+	  $9 = SVPosition
+	  store $9 $8
+	  $10 = thread out($0, 0, -)
+	  store $10 $4
+	}
+	)");
+};
+
+add_test(vs_push_constant)
+{
+	auto vs = $shader(vertex)(
+		$contracts(view, position),
+		ClipPosition cpos
+	) -> float3
+	{
+		float4 wpos = view.model * float4(position, 1);
+		cpos = view.proj * view.view * wpos;
+		return float3(wpos);
+	};
+
+	assert_assembly_match(vs, R"(
+	block {
+	  context {
+	    model: vertex shader,
+	    name: main,
+	    thread in 0: $0,
+	    thread out 0: $0 (-),
+	    resource: {$1},
+	  }
+	  $2 = float4
+	  $3 = f32
+	  $0 = float3
+	  $4 = local $0
+	  $5 = float4x4
+	  $6 = local $5
+	  $7 = local $5
+	  $8 = local $5
+	  $9 = local $5
+	  $10 = local $5
+	  $11 = local $5
+	  $12 = View($5, $5, $5)
+	  $1 = push_constant($12, nil:0, Std430)
+	  $13 = field $1:0
+	  $14 = field $1:1
+	  $15 = field $1:2
+	  $16 = thread in($0, 0)
+	  $17 = local $3
+	  $18 = 1
+	  store $17 $18
+	  $19 = new $2($16, $17)
+	  $20 = local $2
+	  store $20 $19
+	  $21 = mul($13, $20)
+	  $22 = mul($15, $14)
+	  $23 = mul($22, $21)
+	  $24 = SVPosition
+	  store $24 $23
+	  $25 = new $0($21)
+	  $26 = local $0
+	  store $26 $25
+	  $27 = thread out($0, 0, -)
+	  store $27 $26
 	}
 	)");
 };

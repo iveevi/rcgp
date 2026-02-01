@@ -2,10 +2,11 @@
 #include <cstddef>
 #include <string>
 #include <string_view>
-#include <vector>
 
 #include <fmt/color.h>
 #include <fmt/printf.h>
+
+#include "common.hpp"
 
 enum class DiffKind {
 	Equal,
@@ -79,7 +80,7 @@ std::vector <DiffOp> diff_lines(
 	return ops;
 }
 
-void print_block_diff(const std::string &expected_str, const std::string &actual_str)
+void show_diff(const std::string &expected_str, const std::string &actual_str)
 {
 	auto expected_lines = split_lines(expected_str);
 	auto actual_lines = split_lines(actual_str);
@@ -125,5 +126,41 @@ void print_block_diff(const std::string &expected_str, const std::string &actual
 			fmt::print("\n");
 			break;
 		}
+	}
+}
+
+std::string clean(const std::string &input)
+{
+	auto lines = split_lines(input);
+
+	lines = std::vector(lines.begin() + 1, lines.end() - 1);
+
+	std::string result;
+	for (size_t i = 0; i < lines.size(); i++) {
+		size_t off = 0;
+		if (lines[i][0] == '\t')
+			off++;
+
+		result += lines[i].substr(off);
+		if (i + 1 <  lines.size())
+			result += '\n';
+	}
+
+	return result;
+}
+
+void assert_assembly_match(const SharedBlockReference &block, const std::string &str)
+{
+	auto expected = clean(str);
+	auto act = generate_assembly(block);
+	if (act != expected) {
+		show_diff(expected, act);
+		if (g_suite.show_ground_truth) {
+			auto style = fmt::fg(fmt::color::gray)
+				| fmt::emphasis::italic;
+			fmt::print(style, "{}\n", act);
+		}
+
+		mark_fail;
 	}
 }

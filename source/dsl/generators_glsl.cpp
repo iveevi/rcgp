@@ -13,7 +13,7 @@
 
 namespace rcgp {
 
-struct Context {
+struct GLSLContext {
 	const Block &block;
 
 	std::vector <std::string> thread_inputs;
@@ -62,7 +62,7 @@ std::string sanitize_identifier(std::string_view name)
 	return out;
 }
 
-std::string subroutine_name(Context &ctx, const Block *blk)
+std::string subroutine_name(GLSLContext &ctx, const Block *blk)
 {
 	auto it = ctx.subroutine_names.find(blk);
 	if (it != ctx.subroutine_names.end())
@@ -181,7 +181,7 @@ struct TypeRepr {
 	std::string suffix;
 };
 
-TypeRepr type_repr(Context &ctx, const Reference &ref)
+TypeRepr type_repr(GLSLContext &ctx, const Reference &ref)
 {
 	// TODO: each reference should have an assembly dump (with tabs);
 	// in fact we should overhaul the current assembly generator
@@ -254,7 +254,7 @@ bool contains_unsized_array(const AggregateType &agg)
 	return false;
 }
 
-std::string reference_local(Context &ctx, Reference ref)
+std::string reference_local(GLSLContext &ctx, Reference ref)
 {
 	auto ptr = ref.get();
 	auto it = ctx.local_names.find(ptr);
@@ -275,7 +275,7 @@ std::string resource_base_name(const GlobalResource &grsrc)
 	return fmt::format("r{}_i{}", group, index);
 }
 
-std::string reference(Context &ctx, GlobalIntrinsic gi)
+std::string reference(GLSLContext &ctx, GlobalIntrinsic gi)
 {
 	switch (gi) {
 	case GlobalIntrinsic::eClipPosition: return "gl_Position";
@@ -291,7 +291,7 @@ std::string reference(Context &ctx, GlobalIntrinsic gi)
 	}
 }
 
-std::string reference(Context &ctx, GlobalResource grsrc)
+std::string reference(GLSLContext &ctx, GlobalResource grsrc)
 {
 	if (grsrc.kind == GlobalResourceKind::ePushConstant) {
 		auto idx = grsrc.push_constant_index.value_or(0);
@@ -312,7 +312,7 @@ std::string reference(Context &ctx, GlobalResource grsrc)
 	return base + ".value";
 }
 
-std::string reference(Context &ctx, ThreadOutput tout)
+std::string reference(GLSLContext &ctx, ThreadOutput tout)
 {
 	if (ctx.active_block
 		&& ctx.active_block->context.model == ShaderStage::eSubroutine
@@ -323,17 +323,17 @@ std::string reference(Context &ctx, ThreadOutput tout)
 	return fmt::format("lout{}", tout.argi);
 }
 
-std::string reference(Context &ctx, Argument arg)
+std::string reference(GLSLContext &ctx, Argument arg)
 {
 	if (arg.argi < ctx.argument_names.size())
 		return ctx.argument_names[arg.argi];
 	return fmt::format("arg{}", arg.argi);
 }
 
-std::string expression(Context &ctx, Reference expr);
+std::string expression(GLSLContext &ctx, Reference expr);
 
 // TODO: rebrand to lvalue
-std::string reference(Context &ctx, Reference ref)
+std::string reference(GLSLContext &ctx, Reference ref)
 {
 	auto &value = *ref;
 	vswitch (value) {
@@ -361,7 +361,7 @@ std::string reference(Context &ctx, Reference ref)
 	std::abort();
 }
 
-std::string expression(Context &ctx, Reference expr)
+std::string expression(GLSLContext &ctx, Reference expr)
 {
 	auto &value = *expr;
 	vswitch (value) {
@@ -534,7 +534,7 @@ std::string expression(Context &ctx, Reference expr)
 	return "?";
 }
 
-void statement(Context &ctx, Reference instruction)
+void statement(GLSLContext &ctx, Reference instruction)
 {
 	auto &value = *instruction;
 	vswitch (value) {
@@ -635,7 +635,7 @@ void statement(Context &ctx, Reference instruction)
 	ctx.result += fmt::format("{}?\n", ctx.indent);
 }
 
-void emit_block_statements(Context &ctx, const Block &blk)
+void emit_block_statements(GLSLContext &ctx, const Block &blk)
 {
 	for (auto &instr : blk) {
 		if (instr->is <Store> ()
@@ -647,12 +647,12 @@ void emit_block_statements(Context &ctx, const Block &blk)
 	}
 }
 
-void set_active_block(Context &ctx, const Block &blk)
+void set_active_block(GLSLContext &ctx, const Block &blk)
 {
 	ctx.active_block = &blk;
 }
 
-void reset_state(Context &ctx)
+void reset_state(GLSLContext &ctx)
 {
 	ctx.result.clear();
 	ctx.aggregate_names.clear();
@@ -666,7 +666,7 @@ void reset_state(Context &ctx)
 	set_active_block(ctx, ctx.block);
 }
 
-void collect_blocks(const Context &ctx, std::vector <const Block *> &blocks)
+void collect_blocks(const GLSLContext &ctx, std::vector <const Block *> &blocks)
 {
 	std::set <const Block *> visited;
 
@@ -701,9 +701,8 @@ void collect_blocks(const Context &ctx, std::vector <const Block *> &blocks)
 	visit(visit, ctx.block);
 }
 
-void emit_preamble(Context &ctx)
+void emit_preamble(GLSLContext &ctx)
 {
-	ctx.result = "// Preamble\n";
 	ctx.result += "#version 460\n\n";
 	ctx.result += "#extension GL_EXT_scalar_block_layout : require\n";
 	if (ctx.block.context.model == ShaderStage::eTask
@@ -738,10 +737,8 @@ void emit_preamble(Context &ctx)
 	}
 }
 
-void emit_aggregate_decls(Context &ctx)
+void emit_aggregate_decls(GLSLContext &ctx)
 {
-	ctx.result += "// Types\n";
-
 	// TODO: this pattern is common enough,
 	// make an abstraction out of it with
 	// an instruction emitter
@@ -793,21 +790,18 @@ void emit_aggregate_decls(Context &ctx)
 	ctx.result += "\n";
 }
 
-void emit_task_payload(Context &ctx)
+void emit_task_payload(GLSLContext &ctx)
 {
 	if (!ctx.block.context.task_payload_type.has_value())
 		return;
 
 	auto decl = type_repr(ctx, ctx.block.context.task_payload_type.value());
-	ctx.result += "// Task Payload\n";
 	ctx.result += fmt::format("taskPayloadSharedEXT {} task_payload{};\n\n",
 		decl.base, decl.suffix);
 }
 
-void emit_thread_inputs(Context &ctx)
+void emit_thread_inputs(GLSLContext &ctx)
 {
-	ctx.result += "// Inputs\n";
-
 	ctx.thread_inputs.reserve(ctx.block.context.thread_inputs.size());
 	for (auto &tin : ctx.block.context.thread_inputs) {
 		ctx.thread_inputs.push_back(fmt::format("lin{}", tin.argi));
@@ -822,10 +816,8 @@ void emit_thread_inputs(Context &ctx)
 		ctx.result += "\n";
 }
 
-void emit_thread_outputs(Context &ctx)
+void emit_thread_outputs(GLSLContext &ctx)
 {
-	ctx.result += "// Outputs\n";
-
 	std::map <uint32_t, ThreadOutput> outputs;
 	std::vector <const Block *> blocks;
 	collect_blocks(ctx, blocks);
@@ -924,7 +916,7 @@ std::string resource_instance_name(const GlobalResource &grsrc)
 	return resource_base_name(grsrc);
 }
 
-void emit_buffer_fields(Context &ctx, const AggregateType &agg)
+void emit_buffer_fields(GLSLContext &ctx, const AggregateType &agg)
 {
 	for (size_t i = 0; i < agg.size(); i++) {
 		if (contains_unsized_array(agg[i]) && (i + 1 < agg.size())) {
@@ -936,7 +928,7 @@ void emit_buffer_fields(Context &ctx, const AggregateType &agg)
 	}
 }
 
-void emit_resource_decl(Context &ctx, GlobalResource &grsrc)
+void emit_resource_decl(GLSLContext &ctx, GlobalResource &grsrc)
 {
 	if (grsrc.kind == GlobalResourceKind::eSampler) {
 		auto group = grsrc.group.value_or(0);
@@ -996,15 +988,13 @@ void emit_resource_decl(Context &ctx, GlobalResource &grsrc)
 	ctx.result += fmt::format("}} {};\n\n", instance);
 }
 
-void emit_global_resources(Context &ctx)
+void emit_global_resources(GLSLContext &ctx)
 {
 	std::vector <const Block *> blocks;
 	collect_blocks(ctx, blocks);
 
 	std::map <void *, uint32_t> pc_indices;
 	collect_push_constant_indices(blocks, pc_indices);
-
-	ctx.result += "// Resources\n";
 
 	std::set <std::string> emitted;
 	for (auto *blk : blocks) {
@@ -1023,7 +1013,7 @@ void emit_global_resources(Context &ctx)
 	ctx.result += "\n";
 }
 
-std::string subroutine_return_type(Context &ctx, const Block &blk, uint32_t &out_argi)
+std::string subroutine_return_type(GLSLContext &ctx, const Block &blk, uint32_t &out_argi)
 {
 	// TODO: should have proper returns (and proper parameters instead of thread index)
 	out_argi = 0;
@@ -1041,7 +1031,7 @@ std::string subroutine_return_type(Context &ctx, const Block &blk, uint32_t &out
 	return repr.base + repr.suffix;
 }
 
-void emit_subroutine_function(Context &ctx, const Block &blk, const std::string &name)
+void emit_subroutine_function(GLSLContext &ctx, const Block &blk, const std::string &name)
 {
 	set_active_block(ctx, blk);
 	ctx.argument_names.clear();
@@ -1089,10 +1079,8 @@ void emit_subroutine_function(Context &ctx, const Block &blk, const std::string 
 	set_active_block(ctx, ctx.block);
 }
 
-void emit_subroutine_functions(Context &ctx)
+void emit_subroutine_functions(GLSLContext &ctx)
 {
-	ctx.result += "// Subroutines\n";
-
 	std::vector <const Block *> order;
 	std::set <const Block *> visited;
 
@@ -1126,9 +1114,8 @@ void emit_subroutine_functions(Context &ctx)
 	}
 }
 
-void emit_main_function(Context &ctx)
+void emit_main_function(GLSLContext &ctx)
 {
-	ctx.result += "// Main\n";
 	ctx.result += "void main()\n";
 	ctx.result += "{\n";
 
@@ -1137,7 +1124,7 @@ void emit_main_function(Context &ctx)
 	ctx.result += "}";
 }
 
-std::string generate(Context &ctx, size_t tabs)
+std::string generate(GLSLContext &ctx, size_t tabs)
 {
 	reset_state(ctx);
 
@@ -1163,7 +1150,7 @@ std::string generate(Context &ctx, size_t tabs)
 std::string generate_glsl(const SharedBlockReference &sbr)
 {
 	TSCOPE("generating glsl code");
-	auto ctx = Context { .block = *sbr.get() };
+	auto ctx = GLSLContext { .block = *sbr.get() };
 	return generate(ctx, 0);
 }
 

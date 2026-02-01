@@ -5,7 +5,6 @@
 
 namespace rcgp {
 
-// TODO: move to arithmetic
 template <native_scalar T, size_t N, size_t M>
 vector <T, M> operator*(const matrix <T, N, M> &m, const vector <T, N> &v)
 {
