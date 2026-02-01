@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include <fmt/format.h>
+
 #include "instruction_enums.hpp"
 #include "instruction_types.hpp"
 
@@ -32,7 +34,7 @@ struct Operation {
 	Reference b;
 
 	std::string repr() const {
-		return "Operation";
+		return fmt::format("Operation({})", rcgp::repr(code));
 	}
 };
 
@@ -132,8 +134,6 @@ struct Swizzle {
 		return "Swizzle";
 	}
 };
-
-std::string swizzle_string(SwizzleCode code);
 
 struct FieldAccess {
 	Reference value;

@@ -292,6 +292,7 @@ std::string stringify(Context &ctx, BuiltinIntrinsic x, Reference ref)
 {
 	std::string ftn = "?";
 	switch (x.code) {
+	case BuiltinIntrinsicCode::eAbs: ftn = "abs"; break;
 	case BuiltinIntrinsicCode::eCross: ftn = "cross"; break;
 	case BuiltinIntrinsicCode::eDFdx: ftn = "dFdx"; break;
 	case BuiltinIntrinsicCode::eDFdy: ftn = "dFdy"; break;
@@ -325,7 +326,7 @@ std::string stringify(Context &ctx, BuiltinIntrinsic x, Reference ref)
 std::string stringify(Context &ctx, Swizzle x, Reference ref)
 {
 	return $assign fmt::format("swizzle({}, {})",
-		stringify(ctx, x.value), swizzle_string(x.code));
+		stringify(ctx, x.value), repr(x.code));
 }
 
 std::string stringify(Context &ctx, Branch x, Reference ref)

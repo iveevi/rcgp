@@ -2,43 +2,6 @@
 
 namespace rcgp {
 
-std::string swizzle_string(SwizzleCode code)
-{
-	static constexpr char letters[] = "xyzw";
-
-	auto raw = std::to_underlying(code);
-	if (raw < 0)
-		return "?";
-
-	int length = 1;
-	int offset = 0;
-	int count = 4;
-	while (length <= 4 && raw >= offset + count) {
-		offset += count;
-		count *= 4;
-		length++;
-	}
-
-	if (length > 4 || raw < offset)
-		return "?";
-
-	int index = raw - offset;
-	int divisor = 1;
-	for (int i = 1; i < length; i++)
-		divisor *= 4;
-
-	std::string result;
-	result.reserve(length);
-	for (int i = 0; i < length; i++) {
-		int digit = index / divisor;
-		index %= divisor;
-		result.push_back(letters[digit]);
-		divisor /= 4;
-	}
-
-	return result;
-}
-
 template <typename T>
 Reference Block::add(const T &sub, const Debug aux)
 {

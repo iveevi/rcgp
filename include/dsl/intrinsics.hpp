@@ -9,6 +9,18 @@ namespace rcgp {
 
 // TODO: move to builtin
 
+template <native_scalar T>
+scalar <T> abs(const scalar <T> &v)
+{
+	return scalar <T> ::reinterpret(jems::builtin_intrinsic(BuiltinIntrinsicCode::eAbs, v));
+}
+
+template <native_scalar T, size_t N>
+vector <T, N> abs(const vector <T, N> &v)
+{
+	return vector <T, N> ::reinterpret(jems::builtin_intrinsic(BuiltinIntrinsicCode::eAbs, v));
+}
+
 template <typename T, typename U>
 requires projectively_equivalent <T, U>
 // TODO: needs to be a scalar? (or vector/matrix)

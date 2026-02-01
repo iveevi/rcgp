@@ -355,7 +355,7 @@ std::string reference(Context &ctx, Reference ref)
 		break;
 	}
 
-	std::println(std::cerr, "unhandled reference:\n{}", ref->repr());
+	std::println(std::cerr, "unhandled reference: {}", ref->repr());
 	std::abort();
 }
 
@@ -459,7 +459,7 @@ std::string expression(Context &ctx, Reference expr)
 	}
 	vcase(Swizzle): {
 		auto &swizzle = value.as <Swizzle> ();
-		return fmt::format("{}.{}", expression(ctx, swizzle.value), swizzle_string(swizzle.code));
+		return fmt::format("{}.{}", expression(ctx, swizzle.value), repr(swizzle.code));
 	}
 	vcase(GlobalResource):
 		return reference(ctx, value.as <GlobalResource> ());
@@ -489,6 +489,7 @@ std::string expression(Context &ctx, Reference expr)
 		std::string out = "?";
 
 		switch (intrinsic.code) {
+		case BuiltinIntrinsicCode::eAbs: out = "abs"; break;
 		case BuiltinIntrinsicCode::eCross: out = "cross"; break;
 		case BuiltinIntrinsicCode::eDFdx: out = "dFdx"; break;
 		case BuiltinIntrinsicCode::eDFdxFine: out = "dFdxFine"; break;

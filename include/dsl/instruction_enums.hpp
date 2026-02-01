@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string_view>
+
 namespace rcgp {
 
 enum class OperationCode {
@@ -25,6 +27,8 @@ enum class OperationCode {
 	eShiftRight,
 };
 
+std::string_view repr(OperationCode value);
+
 enum class GlobalResourceKind {
 	ePushConstant,
 	eUniformBuffer,
@@ -32,17 +36,23 @@ enum class GlobalResourceKind {
 	eSampler,
 };
 
+std::string_view repr(GlobalResourceKind value);
+
 enum class GlobalResourceLayout {
 	eNone,
 	eScalar,
 	eStd430,
 };
 
+std::string_view repr(GlobalResourceLayout value);
+
 enum class GlobalResourceAccess {
 	eRead,
 	eWrite,
 	eReadWrite,
 };
+
+std::string_view repr(GlobalResourceAccess value);
 
 enum class GlobalIntrinsic {
 	eClipPosition,
@@ -56,6 +66,8 @@ enum class GlobalIntrinsic {
 	ePrimitiveTriangleIndices,
 };
 
+std::string_view repr(GlobalIntrinsic value);
+
 enum class RateProperties {
 	eNone,
 	eSmooth,
@@ -63,11 +75,16 @@ enum class RateProperties {
 	eNoPerspective,
 };
 
+std::string_view repr(RateProperties value);
+
 enum class MeshPrimitive {
 	eTriangles,
 };
 
+std::string_view repr(MeshPrimitive value);
+
 enum class BuiltinIntrinsicCode {
+	eAbs,
 	eCos,
 	eCross,
 	eDFdx,
@@ -89,6 +106,8 @@ enum class BuiltinIntrinsicCode {
 	eSetMeshOutputsEXT,
 	eEmitMeshTasksEXT,
 };
+
+std::string_view repr(BuiltinIntrinsicCode value);
 
 enum class SwizzleCode {
 	// Level 1
@@ -128,6 +147,8 @@ enum class SwizzleCode {
 	eWWXX, eWWXY, eWWXZ, eWWXW, eWWYX, eWWYY, eWWYZ, eWWYW, eWWZX, eWWZY, eWWZZ, eWWZW, eWWWX, eWWWY, eWWWZ, eWWWW,
 };
 
+std::string_view repr(SwizzleCode value);
+
 enum class ShaderStage {
 	eSubroutine,
 	eVertex,
@@ -137,9 +158,13 @@ enum class ShaderStage {
 	eMesh,
 };
 
+std::string_view repr(ShaderStage value);
+
 enum class LoopKind {
 	eWhile,
 	eFor,
 };
+
+std::string_view repr(LoopKind value);
 
 } // namespace rcgp
