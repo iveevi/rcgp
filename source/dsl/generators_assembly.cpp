@@ -212,9 +212,9 @@ std::string stringify(AsmContext &ctx, GlobalResource x, Reference ref)
 		stringify(ctx, x.type), opint(x.group), opint(x.index), repr(x.layout));
 }
 
-std::string stringify(AsmContext &ctx, ThreadInput x, Reference ref)
+std::string stringify(AsmContext &ctx, StageInput x, Reference ref)
 {
-	return $assign fmt::format("thread in({}, {})",
+	return $assign fmt::format("stage in({}, {})",
 		stringify(ctx, x.type), x.argi);
 }
 
@@ -232,9 +232,9 @@ std::string stringify_rate_properties(RateProperties properties)
 	return "?";
 }
 
-std::string stringify(AsmContext &ctx, ThreadOutput x, Reference ref)
+std::string stringify(AsmContext &ctx, StageOutput x, Reference ref)
 {
-	return $assign fmt::format("thread out({}, {}, {})",
+	return $assign fmt::format("stage out({}, {}, {})",
 		stringify(ctx, x.type), x.argi,
 		stringify_rate_properties(x.properties));
 }
@@ -526,13 +526,13 @@ std::string generate(AsmContext &ctx)
 			arg.argi, stringify(ctx, arg.type));
 	}
 
-	for (auto tin : ctx.sbr->thread_inputs) {
-		result += fmt::format("    thread in {}: {},\n",
+	for (auto tin : ctx.sbr->stage_inputs) {
+		result += fmt::format("    stage in {}: {},\n",
 			tin.argi, stringify(ctx, tin.type));
 	}
 
-	for (auto tout : ctx.sbr->thread_outputs) {
-		result += fmt::format("    thread out {}: {} ({}),\n",
+	for (auto tout : ctx.sbr->stage_outputs) {
+		result += fmt::format("    stage out {}: {} ({}),\n",
 			tout.argi, stringify(ctx, tout.type),
 			stringify_rate_properties(tout.properties));
 	}

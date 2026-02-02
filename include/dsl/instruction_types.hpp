@@ -10,6 +10,7 @@
 
 namespace rcgp {
 
+// TODO: one single instruction_nodes.hpp header...
 struct Block;
 struct Instruction;
 

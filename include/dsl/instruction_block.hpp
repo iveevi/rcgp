@@ -18,13 +18,15 @@ using group_allocation_map = std::map <void *, uint32_t>;
 using push_constant_allocation_map = std::map <void *, uint32_t>;
 
 struct Block : std::vector <Reference> {
+	// TODO: None option for loops and branches...
 	ShaderStage model = ShaderStage::eSubroutine;
+
 	std::string name;
 
 	std::vector <Argument> arguments;
 	// TODO: should refactor to stage inputs/outputs
-	std::vector <ThreadInput> thread_inputs;
-	std::vector <ThreadOutput> thread_outputs;
+	std::vector <StageInput> stage_inputs;
+	std::vector <StageOutput> stage_outputs;
 	std::map <void *, Reference> global_resources;
 	std::optional <std::array <uint32_t, 3>> workgroup_size;
 	std::optional <Reference> task_payload_type;
@@ -35,8 +37,8 @@ struct Block : std::vector <Reference> {
 	uint32_t mesh_output_counter = 0;
 	
 	void add_argument(const Argument &arg);
-	void add_thread_input(const ThreadInput &tin);
-	void add_thread_output(const ThreadOutput &tout);
+	void add_stage_input(const StageInput &tin);
+	void add_stage_output(const StageOutput &tout);
 	void add_global_resource(void *addr, const Reference &resource);
 	void set_workgroup_size(uint32_t x, uint32_t y, uint32_t z);
 	void apply_group_allocation_map(const group_allocation_map &map);
@@ -66,8 +68,8 @@ extern template Reference Block::add <Local> (const Local &sub, Debug aux);
 extern template Reference Block::add <Operation> (const Operation &sub, Debug aux);
 extern template Reference Block::add <Store> (const Store &sub, Debug aux);
 extern template Reference Block::add <Swizzle> (const Swizzle &sub, Debug aux);
-extern template Reference Block::add <ThreadInput> (const ThreadInput &sub, Debug aux);
-extern template Reference Block::add <ThreadOutput> (const ThreadOutput &sub, Debug aux);
+extern template Reference Block::add <StageInput> (const StageInput &sub, Debug aux);
+extern template Reference Block::add <StageOutput> (const StageOutput &sub, Debug aux);
 extern template Reference Block::add <Type> (const Type &sub, Debug aux);
 
 } // namespace rcgp

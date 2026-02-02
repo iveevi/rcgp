@@ -25,11 +25,17 @@ struct GlobalResource {
 	}
 };
 
-// TODO: separate one for subroutine arguments...
-
-struct ThreadInput {
+struct Argument {
 	Reference type;
-	// corresponds to actual order
+	uint32_t argi;
+
+	std::string repr() const {
+		return "Argument";
+	}
+};
+
+struct StageInput {
+	Reference type;
 	uint32_t argi;
 
 	std::string repr() const {
@@ -37,7 +43,7 @@ struct ThreadInput {
 	}
 };
 
-struct ThreadOutput {
+struct StageOutput {
 	Reference type;
 	uint32_t argi;
 

@@ -24,8 +24,8 @@ struct Instruction : variant <
 	Operation,
 	Store,
 	Swizzle,
-	ThreadInput,
-	ThreadOutput,
+	StageInput,
+	StageOutput,
 	Type
 > {
 	Debug debug_info;

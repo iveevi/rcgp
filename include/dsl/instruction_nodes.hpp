@@ -5,6 +5,7 @@
 #include <source_location>
 #include <string>
 #include <vector>
+#include <print>
 
 #include <fmt/format.h>
 
@@ -97,16 +98,6 @@ struct Local {
 
 	std::string repr() const {
 		return "Local";
-	}
-};
-
-struct Argument {
-	Reference type;
-	uint32_t argi;
-
-	std::string repr() const {
-		// TODO: display reference of self
-		return "Argument";
 	}
 };
 

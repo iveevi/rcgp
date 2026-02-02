@@ -74,7 +74,7 @@ struct Interpolant : jems::handle {
 	template <typename U>
 	requires std::is_convertible_v <U, T>
 	Interpolant(const U &value, $location)
-		: handle(jems::thread_output_loc(loc,
+		: handle(jems::stage_output_loc(loc,
 			reconstruct_type <T> (), 0, P
 		))
 	{
@@ -269,11 +269,11 @@ struct MeshletPayload : T {
 				auto type = reconstruct_type <array <Unwrapped, count>> ();
 				auto &counter = $tsb.mesh_output_counter;
 				auto tout = ThreadOutput(type, counter++, Field::properties);
-				$tsb.add_thread_output(tout);
+				$tsb.add_stage_output(tout);
 				$tsb.mesh_perprimitive_outputs.emplace(tout.argi, perprimitive);
 
 				auto &field = this->template _rcgp_get <Is> ();
-				inject_reference(field, jems::thread_output(tout));
+				inject_reference(field, jems::stage_output(tout));
 			}(), ...)
 		);
 	}

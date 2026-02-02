@@ -38,11 +38,11 @@ template <typename T, RateProperties P>
 void interpolation_return_handler(const Interpolant <T, P> &ret, size_t &argi)
 {
 	auto type = reconstruct_type <T> ();
-	auto tout = ThreadOutput(type, argi, P);
-	$tsb.add_thread_output(tout);
+	auto sout = StageOutput(type, argi, P);
+	$tsb.add_stage_output(sout);
 
 	// Fix the argument index of the original value
-	ret._ref->template as <ThreadOutput> ().argi = argi++;
+	ret._ref->template as <StageOutput> ().argi = argi++;
 }
 
 // TODO: shorten using type traits
@@ -74,26 +74,26 @@ void return_handler(const T &ret, size_t &argi)
 	// or some other pathway for subroutines
 	auto type = reconstruct_type <T> ();
 
-	auto tout = ThreadOutput(type, argi++,
+	auto sout = StageOutput(type, argi++,
 		(S == ShaderStage::eVertex)
 		? RateProperties::eSmooth // default value
 		: RateProperties::eNone);
 
-	$tsb.add_thread_output(tout);
+	$tsb.add_stage_output(sout);
 
-	jems::store(jems::thread_output(tout), ret);
+	jems::store(jems::stage_output(sout), ret);
 }
 
-template <ShaderStage S, aggregate T>
-void return_handler(const T &ret, size_t &argi)
-{
-	// TODO: restrict to only subroutines?
-	auto type = reconstruct_type <T> ();
-	auto tout = ThreadOutput(type, argi++, RateProperties::eNone);
-	$tsb.add_thread_output(tout);
-
-	jems::store(jems::thread_output(tout), coerce_to_handle(ret));
-}
+// template <ShaderStage S, aggregate T>
+// void return_handler(const T &ret, size_t &argi)
+// {
+// 	// TODO: restrict to only subroutines?
+// 	auto type = reconstruct_type <T> ();
+// 	auto tout = ThreadOutput(type, argi++, RateProperties::eNone);
+// 	$tsb.add_stage_output(tout);
+//
+// 	jems::store(jems::stage_output(tout), coerce_to_handle(ret));
+// }
 
 template <ShaderStage S, typename ... Args>
 void return_handler(const std::tuple <Args...> &ret, size_t &argi)

@@ -66,8 +66,8 @@ def gen_jems_instantiations() -> tuple[list[str], list[str]]:
     # argument/thread_input/thread_output and loc
     for name, arg in [
         ('argument', 'Argument'),
-        ('thread_input', 'ThreadInput'),
-        ('thread_output', 'ThreadOutput'),
+        ('stage_input', 'StageInput'),
+        ('stage_output', 'StageOutput'),
     ]:
         add_extern(name, arg)
         add_extern(name + '_loc', arg)

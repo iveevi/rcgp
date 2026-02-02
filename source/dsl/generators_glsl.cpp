@@ -153,8 +153,8 @@ struct GLSLEmitter {
 // 		return reference(ctx, value.as <GlobalResource> ());
 // 	vcase(GlobalIntrinsic):
 // 		return reference(ctx, value.as <GlobalIntrinsic> ());
-// 	vcase(ThreadOutput):
-// 		return reference(ctx, value.as <ThreadOutput> ());
+// 	vcase(StageOutput):
+// 		return reference(ctx, value.as <StageOutput> ());
 // 	vcase(Argument):
 // 		return reference(ctx, value.as <Argument> ());
 // 	vcase(Invocation): {
@@ -684,8 +684,8 @@ std::string grsrc_name(const GlobalResource &grsrc)
 std::string lval_repr(const GLSLEmitter &em, const Reference &ref)
 {
 	vswitch (*ref) {
-	vcase(ThreadOutput): {
-		auto &tout = ref->as <ThreadOutput> ();
+	vcase(StageOutput): {
+		auto &tout = ref->as <StageOutput> ();
 		return std::format("lout{}", tout.argi);
 	}
 	vcase(GlobalIntrinsic): {
@@ -819,8 +819,8 @@ std::string expr_repr(const GLSLEmitter &em, const Reference &ref)
 	vcase(Local): {
 		return lval_repr(em, ref);
 	}
-	vcase(ThreadInput): {
-		auto &tin = ref->as <ThreadInput> ();
+	vcase(StageInput): {
+		auto &tin = ref->as <StageInput> ();
 		return fmt::format("lin{}", tin.argi);
 	}
 	vcase(Operation): {
@@ -948,7 +948,7 @@ auto collect_extensions()
 
 void emit_stage_io(GLSLEmitter &em)
 {
-	auto &tins = em.sbr->thread_inputs;
+	auto &tins = em.sbr->stage_inputs;
 	for (auto &tin : tins) {
 		auto repr = type_repr(em, tin.type);
 		em.emit_fmt_line("layout (location = {}) in {} lin{}{};",
@@ -958,7 +958,7 @@ void emit_stage_io(GLSLEmitter &em)
 	if (tins.size())
 		em.emit_newline();
 
-	auto &touts = em.sbr->thread_outputs;
+	auto &touts = em.sbr->stage_outputs;
 	for (auto &tout : touts) {
 		auto repr = type_repr(em, tout.type);
 		auto rate = g_rate_strings.at(std::to_underlying(tout.properties));

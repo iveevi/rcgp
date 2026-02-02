@@ -133,9 +133,9 @@ void inject_one_argument(reference <ref> &value, InjectionCounters &counters)
 			$tsb.add_argument(arg);
 			inject_reference(Tas <T &> (value), jems::argument(arg));
 		} else {
-			auto tin = ThreadInput(type, counters.threadidx++);
-			$tsb.add_thread_input(tin);
-			inject_reference(Tas <T &> (value), jems::thread_input(tin));
+			auto tin = StageInput(type, counters.threadidx++);
+			$tsb.add_stage_input(tin);
+			inject_reference(Tas <T &> (value), jems::stage_input(tin));
 		}
 	} else {
 		// Regular case
@@ -151,9 +151,9 @@ void inject_one_argument(T &value, InjectionCounters &counters)
 	if constexpr (S == ShaderStage::eFragment) {
 		// TODO: aggregate case is a bit different
 		// Varying attribute
-		auto tin = ThreadInput(type, counters.threadidx++);
-		$tsb.add_thread_input(tin);
-		inject_reference(value, jems::thread_input(tin));
+		auto tin = StageInput(type, counters.threadidx++);
+		$tsb.add_stage_input(tin);
+		inject_reference(value, jems::stage_input(tin));
 	} else if constexpr (S == ShaderStage::eSubroutine) {
 		// Function argument
 		auto arg = Argument(type, counters.argidx++);

@@ -41,27 +41,27 @@ void Block::add_argument(const Argument &arg)
 	}
 }
 
-void Block::add_thread_input(const ThreadInput &tin)
+void Block::add_stage_input(const StageInput &sin)
 {
-	if (thread_inputs.size() > tin.argi) {
+	if (stage_inputs.size() > sin.argi) {
 		// already registered
 		__builtin_trap();
 	} else {
-		thread_inputs.resize(tin.argi + 1);
-		thread_inputs[tin.argi] = tin;
+		stage_inputs.resize(sin.argi + 1);
+		stage_inputs[sin.argi] = sin;
 	}
 }
 
-void Block::add_thread_output(const ThreadOutput &tout)
+void Block::add_stage_output(const StageOutput &sout)
 {
-	if (thread_outputs.size() > tout.argi) {
+	if (stage_outputs.size() > sout.argi) {
 		// already registered
 		// TODO: this is fine, just make sure its the same or
 		// its uninitialized...
 		__builtin_trap();
 	} else {
-		thread_outputs.resize(tout.argi + 1);
-		thread_outputs[tout.argi] = tout;
+		stage_outputs.resize(sout.argi + 1);
+		stage_outputs[sout.argi] = sout;
 	}
 }
 
@@ -96,8 +96,8 @@ template Reference Block::add <Local> (const Local &sub, Debug aux);
 template Reference Block::add <Operation> (const Operation &sub, Debug aux);
 template Reference Block::add <Store> (const Store &sub, Debug aux);
 template Reference Block::add <Swizzle> (const Swizzle &sub, Debug aux);
-template Reference Block::add <ThreadInput> (const ThreadInput &sub, Debug aux);
-template Reference Block::add <ThreadOutput> (const ThreadOutput &sub, Debug aux);
+template Reference Block::add <StageInput> (const StageInput &sub, Debug aux);
+template Reference Block::add <StageOutput> (const StageOutput &sub, Debug aux);
 template Reference Block::add <Type> (const Type &sub, Debug aux);
 
 } // namespace rcgp

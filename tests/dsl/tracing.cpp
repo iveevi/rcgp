@@ -72,8 +72,8 @@ add_test(vs_louts)
 	  context {
 	    model: vertex shader,
 	    name: main,
-	    thread out 0: $0 (smooth),
-	    thread out 1: $1 (flat),
+	    stage out 0: $0 (smooth),
+	    stage out 1: $1 (flat),
 	  }
 	  $2 = f32
 	  $3 = local $2
@@ -83,7 +83,7 @@ add_test(vs_louts)
 	  $5 = new $0($3, $3, $3)
 	  $6 = local $0
 	  store $6 $5
-	  $7 = thread out($0, 0, smooth)
+	  $7 = stage out($0, 0, smooth)
 	  store $7 $6
 	  $8 = u32
 	  $9 = local $8
@@ -96,7 +96,7 @@ add_test(vs_louts)
 	  $13 = new $1($11, $9)
 	  $14 = local $1
 	  store $14 $13
-	  $15 = thread out($1, 1, flat)
+	  $15 = stage out($1, 1, flat)
 	  store $15 $14
 	}
 	)");
@@ -118,14 +118,14 @@ add_test(vs_stream)
 	  context {
 	    model: vertex shader,
 	    name: main,
-	    thread in 0: $0,
-	    thread out 0: $0 (smooth),
+	    stage in 0: $0,
+	    stage out 0: $0 (smooth),
 	  }
 	  $1 = float4
 	  $2 = f32
 	  $0 = float3
 	  $3 = local $0
-	  $4 = thread in($0, 0)
+	  $4 = stage in($0, 0)
 	  $5 = local $2
 	  $6 = 1
 	  store $5 $6
@@ -134,7 +134,7 @@ add_test(vs_stream)
 	  store $8 $7
 	  $9 = SVPosition
 	  store $9 $8
-	  $10 = thread out($0, 0, smooth)
+	  $10 = stage out($0, 0, smooth)
 	  store $10 $4
 	}
 	)");
@@ -157,8 +157,8 @@ add_test(vs_push_constant)
 	  context {
 	    model: vertex shader,
 	    name: main,
-	    thread in 0: $0,
-	    thread out 0: $0 (smooth),
+	    stage in 0: $0,
+	    stage out 0: $0 (smooth),
 	    resource: {$1},
 	  }
 	  $2 = float4
@@ -177,7 +177,7 @@ add_test(vs_push_constant)
 	  $13 = field $1:0
 	  $14 = field $1:1
 	  $15 = field $1:2
-	  $16 = thread in($0, 0)
+	  $16 = stage in($0, 0)
 	  $17 = local $3
 	  $18 = 1
 	  store $17 $18
@@ -192,7 +192,7 @@ add_test(vs_push_constant)
 	  $25 = new $0($21)
 	  $26 = local $0
 	  store $26 $25
-	  $27 = thread out($0, 0, smooth)
+	  $27 = stage out($0, 0, smooth)
 	  store $27 $26
 	}
 	)");
