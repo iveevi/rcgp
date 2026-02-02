@@ -33,7 +33,7 @@ auto trace(auto ftn)
 
 	auto result = F::stage::alloc();
 
-	result->context.model = S;
+	result->model = S;
 	if (auto s = jems::scope(result)) {
 		TSCOPE("primary trace");
 		typename F::args args;
@@ -62,7 +62,7 @@ template <ShaderStage S>
 auto operator<<(_fn_tag <S> tag, auto lambda)
 {
 	auto result = trace <S> (lambda);
-	result->context.name = tag.name;
+	result->name = tag.name;
 	return result;
 }
 

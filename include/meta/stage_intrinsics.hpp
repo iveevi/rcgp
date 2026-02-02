@@ -267,10 +267,10 @@ struct MeshletPayload : T {
 
 				constexpr auto count = perprimitive ? MaxPrimitives : MaxVertices;
 				auto type = reconstruct_type <array <Unwrapped, count>> ();
-				auto &counter = $tsb.context.mesh_output_counter;
+				auto &counter = $tsb.mesh_output_counter;
 				auto tout = ThreadOutput(type, counter++, Field::properties);
-				$tsb.context.add_thread_output(tout);
-				$tsb.context.mesh_perprimitive_outputs.emplace(tout.argi, perprimitive);
+				$tsb.add_thread_output(tout);
+				$tsb.mesh_perprimitive_outputs.emplace(tout.argi, perprimitive);
 
 				auto &field = this->template _rcgp_get <Is> ();
 				inject_reference(field, jems::thread_output(tout));

@@ -11,7 +11,7 @@ template <ShaderStage S, typename T>
 void return_handler(const TaskPayload <T> &, size_t &)
 {
 	static_assert(S == ShaderStage::eTask);
-	$tsb.context.task_payload_type = reconstruct_type <T> ();
+	$tsb.task_payload_type = reconstruct_type <T> ();
 }
 
 // TODO: can we do ..., void> or is that partial specialization
@@ -20,18 +20,18 @@ requires std::is_void_v <T>
 void return_handler(const MeshletPayload <P, MaxVertices, MaxPrimitives, T> &, size_t &)
 {
 	static_assert(S == ShaderStage::eMesh);
-	$tsb.context.mesh_max_vertices = MaxVertices;
-	$tsb.context.mesh_max_primitives = MaxPrimitives;
-	$tsb.context.mesh_primitive_kind = P;
+	$tsb.mesh_max_vertices = MaxVertices;
+	$tsb.mesh_max_primitives = MaxPrimitives;
+	$tsb.mesh_primitive_kind = P;
 }
 
 template <ShaderStage S, MeshPrimitive P, uint32_t MaxVertices, uint32_t MaxPrimitives, typename T>
 void return_handler(const MeshletPayload <P, MaxVertices, MaxPrimitives, T> &, size_t &)
 {
 	static_assert(S == ShaderStage::eMesh);
-	$tsb.context.mesh_max_vertices = MaxVertices;
-	$tsb.context.mesh_max_primitives = MaxPrimitives;
-	$tsb.context.mesh_primitive_kind = P;
+	$tsb.mesh_max_vertices = MaxVertices;
+	$tsb.mesh_max_primitives = MaxPrimitives;
+	$tsb.mesh_primitive_kind = P;
 }
 
 template <typename T, RateProperties P>
@@ -39,7 +39,7 @@ void interpolation_return_handler(const Interpolant <T, P> &ret, size_t &argi)
 {
 	auto type = reconstruct_type <T> ();
 	auto tout = ThreadOutput(type, argi, P);
-	$tsb.context.add_thread_output(tout);
+	$tsb.add_thread_output(tout);
 
 	// Fix the argument index of the original value
 	ret._ref->template as <ThreadOutput> ().argi = argi++;
@@ -79,7 +79,7 @@ void return_handler(const T &ret, size_t &argi)
 		? RateProperties::eSmooth // default value
 		: RateProperties::eNone);
 
-	$tsb.context.add_thread_output(tout);
+	$tsb.add_thread_output(tout);
 
 	jems::store(jems::thread_output(tout), ret);
 }
@@ -90,7 +90,7 @@ void return_handler(const T &ret, size_t &argi)
 	// TODO: restrict to only subroutines?
 	auto type = reconstruct_type <T> ();
 	auto tout = ThreadOutput(type, argi++, RateProperties::eNone);
-	$tsb.context.add_thread_output(tout);
+	$tsb.add_thread_output(tout);
 
 	jems::store(jems::thread_output(tout), coerce_to_handle(ret));
 }

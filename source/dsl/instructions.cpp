@@ -13,22 +13,24 @@ Reference Block::add(const T &sub, const Debug aux)
 void Block::apply_group_allocation_map(const group_allocation_map &map)
 {
 	for (auto &[addr, group] : map) {
-		auto &ref = context.global_resources[addr];
-		ref->as <GlobalResource> ().group = group;
+		if (global_resources.contains(addr)) {
+			auto &ref = global_resources.at(addr);
+			ref->as <GlobalResource> ().group = group;
+		}
 	}
 }
 
 void Block::apply_push_constant_allocation_map(const push_constant_allocation_map &map)
 {
 	for (auto &[addr, layout] : map) {
-		auto &ref = context.global_resources[addr];
+		auto &ref = global_resources[addr];
 		auto &grsrc = ref->as <GlobalResource> ();
 		grsrc.push_constant_index = layout.index;
 		grsrc.push_constant_offset = layout.offset;
 	}
 }
 
-void Block::Context::add_argument(const Argument &arg)
+void Block::add_argument(const Argument &arg)
 {
 	if (arguments.size() > arg.argi) {
 		// already registered
@@ -39,7 +41,7 @@ void Block::Context::add_argument(const Argument &arg)
 	}
 }
 
-void Block::Context::add_thread_input(const ThreadInput &tin)
+void Block::add_thread_input(const ThreadInput &tin)
 {
 	if (thread_inputs.size() > tin.argi) {
 		// already registered
@@ -50,7 +52,7 @@ void Block::Context::add_thread_input(const ThreadInput &tin)
 	}
 }
 
-void Block::Context::add_thread_output(const ThreadOutput &tout)
+void Block::add_thread_output(const ThreadOutput &tout)
 {
 	if (thread_outputs.size() > tout.argi) {
 		// already registered
@@ -63,12 +65,12 @@ void Block::Context::add_thread_output(const ThreadOutput &tout)
 	}
 }
 
-void Block::Context::add_global_resource(void *addr, const Reference &resource)
+void Block::add_global_resource(void *addr, const Reference &resource)
 {
 	global_resources.emplace(addr, resource);
 }
 
-void Block::Context::set_workgroup_size(uint32_t x, uint32_t y, uint32_t z)
+void Block::set_workgroup_size(uint32_t x, uint32_t y, uint32_t z)
 {
 	auto size = std::array <uint32_t, 3> { x, y, z };
 	if (workgroup_size.has_value() && workgroup_size.value() != size) {

@@ -26,7 +26,8 @@ struct GlobalResource {
 	std::optional <uint32_t> push_constant_offset;
 
 	std::string repr() const {
-		return "GlobalResource";
+		return std::format("GlobalResource({}, {})",
+			rcgp::repr(kind), rcgp::repr(layout));
 	}
 };
 

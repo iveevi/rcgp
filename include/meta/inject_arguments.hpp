@@ -36,7 +36,7 @@ void inject_one_argument(WorkGroup <X, Y, Z> &, InjectionCounters &)
 		|| S == ShaderStage::eMesh,
 		"WorkGroup is only valid for compute/mesh shaders"
 	);
-	$tsb.context.set_workgroup_size(X, Y, Z);
+	$tsb.set_workgroup_size(X, Y, Z);
 }
 
 template <ShaderStage S, uint32_t X, uint32_t Y, uint32_t Z>
@@ -46,7 +46,7 @@ void inject_one_argument(TaskGroup <X, Y, Z> &, InjectionCounters &)
 		S == ShaderStage::eTask,
 		"TaskGroup is only valid for task shaders"
 	);
-	$tsb.context.set_workgroup_size(X, Y, Z);
+	$tsb.set_workgroup_size(X, Y, Z);
 }
 
 // TODO: check stage compatibility
@@ -74,7 +74,7 @@ template <ShaderStage S, typename T>
 void inject_one_argument(TaskPayload <T> &value, InjectionCounters &)
 {
 	static_assert(S == ShaderStage::eMesh, "TaskPayload is only valid for mesh shaders");
-	$tsb.context.task_payload_type = reconstruct_type <T> ();
+	$tsb.task_payload_type = reconstruct_type <T> ();
 	inject_reference(Tas <T &> (value), jems::global_intrinsic(GlobalIntrinsic::eTaskPayload));
 }
 
@@ -85,7 +85,7 @@ void inject_resource_group_element(void *addr, T &value)
 	using R = std::decay_t <decltype(field)>;
 
 	auto grsrc = resource_intrinsic(R(), I);
-	$tsb.context.add_global_resource(addr, grsrc);
+	$tsb.add_global_resource(addr, grsrc);
 	inject_reference(field, grsrc);
 }
 
@@ -101,7 +101,7 @@ void inject_resource_reference(reference <ref> &value)
 	} else if constexpr (is_global_resource_v <T>) {
 		// Global resources
 		auto grsrc = resource_intrinsic(T(), 0);
-		$tsb.context.add_global_resource(&ref, grsrc);
+		$tsb.add_global_resource(&ref, grsrc);
 		inject_reference(Tas <T &> (value), grsrc);
 	} else {
 		// Unknown cases
@@ -130,11 +130,11 @@ void inject_one_argument(reference <ref> &value, InjectionCounters &counters)
 		// TODO: this can be a method; similar for argument, if its used many times
 		if constexpr (S == ShaderStage::eSubroutine) {
 			auto arg = Argument(type, counters.argidx++);
-			$tsb.context.add_argument(arg);
+			$tsb.add_argument(arg);
 			inject_reference(Tas <T &> (value), jems::argument(arg));
 		} else {
 			auto tin = ThreadInput(type, counters.threadidx++);
-			$tsb.context.add_thread_input(tin);
+			$tsb.add_thread_input(tin);
 			inject_reference(Tas <T &> (value), jems::thread_input(tin));
 		}
 	} else {
@@ -152,12 +152,12 @@ void inject_one_argument(T &value, InjectionCounters &counters)
 		// TODO: aggregate case is a bit different
 		// Varying attribute
 		auto tin = ThreadInput(type, counters.threadidx++);
-		$tsb.context.add_thread_input(tin);
+		$tsb.add_thread_input(tin);
 		inject_reference(value, jems::thread_input(tin));
 	} else if constexpr (S == ShaderStage::eSubroutine) {
 		// Function argument
 		auto arg = Argument(type, counters.argidx++);
-		$tsb.context.add_argument(arg);
+		$tsb.add_argument(arg);
 		inject_reference(value, jems::argument(arg));
 	} else {
 		// Not supported

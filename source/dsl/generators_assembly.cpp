@@ -3,8 +3,9 @@
 #include <iostream>
 #include <map>
 #include <print>
-#include <vector>
+#include <set>
 #include <source_location>
+#include <vector>
 
 #include <fmt/format.h>
 
@@ -374,8 +375,8 @@ std::string stringify(AsmContext &ctx, Local x, Reference ref)
 std::string stringify(AsmContext &ctx, Invocation x, Reference ref)
 {
 	std::string result;
-	if (!x.sbr->context.name.empty())
-		result = fmt::format("@{}(", x.sbr->context.name);
+	if (!x.sbr->name.empty())
+		result = fmt::format("@{}(", x.sbr->name);
 	else
 		result = fmt::format("@{}(", (void *) x.sbr.get());
 	
@@ -519,27 +520,27 @@ std::string generate(AsmContext &ctx)
 	if (ctx.debug)
 		result += fmt::format("    blkid: {},\n", (void *) ctx.sbr.get());
 
-	result += "    model: " + stringify(ctx.sbr->context.model) + ",\n";
-	if (!ctx.sbr->context.name.empty())
-		result += fmt::format("    name: {},\n", ctx.sbr->context.name);
+	result += "    model: " + stringify(ctx.sbr->model) + ",\n";
+	if (!ctx.sbr->name.empty())
+		result += fmt::format("    name: {},\n", ctx.sbr->name);
 
-	for (auto arg : ctx.sbr->context.arguments) {
+	for (auto arg : ctx.sbr->arguments) {
 		result += fmt::format("    argument {}: {},\n",
 			arg.argi, stringify(ctx, arg.type));
 	}
 
-	for (auto tin : ctx.sbr->context.thread_inputs) {
+	for (auto tin : ctx.sbr->thread_inputs) {
 		result += fmt::format("    thread in {}: {},\n",
 			tin.argi, stringify(ctx, tin.type));
 	}
 
-	for (auto tout : ctx.sbr->context.thread_outputs) {
+	for (auto tout : ctx.sbr->thread_outputs) {
 		result += fmt::format("    thread out {}: {} ({}),\n",
 			tout.argi, stringify(ctx, tout.type),
 			stringify_rate_properties(tout.properties));
 	}
 
-	for (auto [k, v] : ctx.sbr->context.global_resources) {
+	for (auto [k, v] : ctx.sbr->global_resources) {
 		if (ctx.debug)
 			result += fmt::format("    resource {}: {},\n", k, stringify(ctx, v));
 		else

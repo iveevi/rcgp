@@ -1,5 +1,6 @@
 #include <iostream>
 #include <print>
+#include <set>
 
 #include "dsl/generators.hpp"
 #include "dsl/instructions.hpp"
@@ -9,18 +10,22 @@
 #define assert(c) 							\
 	if (not (c)) {							\
 		std::println(std::cerr, "assertion failed: {}", #c);	\
+		std::flush(std::cerr);					\
 		__builtin_trap();					\
 	}
 
-#define fatal(...)							\
-	std::println(std::cerr, __VA_ARGS__);				\
-	__builtin_trap()
+#define fatal(...) {							\
+		std::println(std::cerr, __VA_ARGS__);			\
+		std::flush(std::cerr);					\
+		__builtin_trap();					\
+	}
 
 namespace rcgp {
 
 // TODO: separate cpp file for this...
 static auto g_rate_strings = std::array {
-	"?",
+	// "?",
+	"", // TODO: sync the rate properties from outputs of vs/mesh and fragment shader?
 	"smooth",
 	"flat",
 	"noperspective",
@@ -50,21 +55,46 @@ static auto g_operation_code = std::array {
 	"*",
 	"/",
 	"==",
-	// eNotEqual,
-	// eLess,
-	// eLessEqual,
-	// eGreater,
-	// eGreaterEqual,
-	// eLogicalAnd,
-	// eLogicalOr,
-	// eLogicalXor,
-	// eLogicalNot,
-	// eBitAnd,
-	// eBitOr,
-	// eBitXor,
-	// eBitNot,
-	// eShiftLeft,
-	// eShiftRight,
+	"!=",
+	"<",
+	"<=",
+	">",
+	">=",
+	"&&",
+	"||",
+	"^",
+	"!",
+	"&",
+	"|",
+	"^",
+	"~",
+	"<<",
+	">>",
+};
+
+static auto g_intrinsic_code = std::array {
+	// TODO: also use @glsl trick...
+	"abs",
+	"cos",
+	"cross",
+	"dFdx",
+	"dFdxFine",
+	"dFdy",
+	"dFdyFine",
+	"dot",
+	"inverse",
+	"length",
+	"max",
+	"pow",
+	"float",
+	"min",
+	"normalize",
+	"texture",
+	"sin",
+	"tan",
+	"transpose",
+	"SetMeshOutputsEXT",
+	"EmitMeshTasksEXT",
 };
 
 struct GLSLEmitter {
@@ -93,69 +123,7 @@ struct GLSLEmitter {
 		result += "\n";
 	}
 };
-//
-// bool contains_unsized_array(Reference type)
-// {
-// 	if (not type or not type->is <Type> ())
-// 		return false;
-//
-// 	auto &t = type->as <Type> ();
-// 	if (t.is <ArrayType> ()) {
-// 		auto &arr = t.as <ArrayType> ();
-// 		if (arr.size <= 0)
-// 			return true;
-// 		return contains_unsized_array(arr.base);
-// 	}
-//
-// 	if (t.is <AggregateType> ()) {
-// 		auto &agg = t.as <AggregateType> ();
-// 		for (auto &field : agg) {
-// 			if (contains_unsized_array(field))
-// 				return true;
-// 		}
-// 	}
-//
-// 	return false;
-// }
-//
-// bool contains_unsized_array(const AggregateType &agg)
-// {
-// 	for (auto &field : agg) {
-// 		if (contains_unsized_array(field))
-// 			return true;
-// 	}
-// 	return false;
-// }
-//
-// std::string resource_base_name(const GlobalResource &grsrc)
-// {
-// 	auto group = grsrc.group.value_or(0);
-// 	auto index = grsrc.index.value_or(0);
-// 	if (grsrc.kind == GlobalResourceKind::eSampler)
-// 		return fmt::format("s{}_i{}", group, index);
-// 	return fmt::format("r{}_i{}", group, index);
-// }
-//
-// std::string reference(GLSLContext &ctx, GlobalResource grsrc)
-// {
-// 	if (grsrc.kind == GlobalResourceKind::ePushConstant) {
-// 		auto idx = grsrc.push_constant_index.value_or(0);
-// 		return fmt::format("pc{}", idx);
-// 	}
-//
-// 	auto base = resource_base_name(grsrc);
-// 	if (grsrc.kind == GlobalResourceKind::eSampler)
-// 		return base;
-//
-// 	if (!grsrc.type || !grsrc.type->is <Type> ())
-// 		return base;
-//
-// 	auto &type = grsrc.type->as <Type> ();
-// 	if (type.is <AggregateType> ())
-// 		return base;
-//
-// 	return base + ".value";
-// }
+
 //
 // std::string expression(GLSLContext &ctx, Reference expr)
 // {
@@ -198,45 +166,6 @@ struct GLSLEmitter {
 // 		auto nargs = invocation.args.size();
 // 		for (size_t i = 0; i < nargs; i++) {
 // 			out += expression(ctx, invocation.args[i]);
-// 			if (i + 1 < nargs)
-// 				out += ", ";
-// 		}
-//
-// 		return out + ")";
-// 	}
-// 	vcase(BuiltinIntrinsic): {
-// 		auto &intrinsic = value.as <BuiltinIntrinsic> ();
-// 		std::string out = "?";
-//
-// 		switch (intrinsic.code) {
-// 		case BuiltinIntrinsicCode::eAbs: out = "abs"; break;
-// 		case BuiltinIntrinsicCode::eCross: out = "cross"; break;
-// 		case BuiltinIntrinsicCode::eDFdx: out = "dFdx"; break;
-// 		case BuiltinIntrinsicCode::eDFdxFine: out = "dFdxFine"; break;
-// 		case BuiltinIntrinsicCode::eDFdy: out = "dFdy"; break;
-// 		case BuiltinIntrinsicCode::eDFdyFine: out = "dFdyFine"; break;
-// 		case BuiltinIntrinsicCode::eDot: out = "dot"; break;
-// 		case BuiltinIntrinsicCode::eLength: out = "length"; break;
-// 		case BuiltinIntrinsicCode::eSin: out = "sin"; break;
-// 		case BuiltinIntrinsicCode::eToFloat: out = "float"; break;
-// 		case BuiltinIntrinsicCode::eInverse: out = "inverse"; break;
-// 		case BuiltinIntrinsicCode::eMax: out = "max"; break;
-// 		case BuiltinIntrinsicCode::ePow: out = "pow"; break;
-// 		case BuiltinIntrinsicCode::eMin: out = "min"; break;
-// 		case BuiltinIntrinsicCode::eNormalize: out = "normalize"; break;
-// 		case BuiltinIntrinsicCode::eSample: out = "texture"; break;
-// 		case BuiltinIntrinsicCode::eTranspose: out = "transpose"; break;
-// 		case BuiltinIntrinsicCode::eSetMeshOutputsEXT: out = "SetMeshOutputsEXT"; break;
-// 		case BuiltinIntrinsicCode::eEmitMeshTasksEXT: out = "EmitMeshTasksEXT"; break;
-// 		default:
-// 			break;
-// 		}
-//
-// 		out += "(";
-//
-// 		auto nargs = intrinsic.args.size();
-// 		for (size_t i = 0; i < nargs; i++) {
-// 			out += expression(ctx, intrinsic.args[i]);
 // 			if (i + 1 < nargs)
 // 				out += ", ";
 // 		}
@@ -353,23 +282,6 @@ struct GLSLEmitter {
 // 	ctx.result += fmt::format("{}?\n", ctx.indent);
 // }
 //
-// void emit_block_statements(GLSLContext &ctx, const Block &blk)
-// {
-// 	for (auto &instr : blk) {
-// 		if (instr->is <Store> ()
-// 			|| instr->is <Invocation> ()
-// 			|| instr->is <BuiltinIntrinsic> ()
-// 			|| instr->is <Branch> () || instr->is <Loop> ()
-// 			|| instr->is <Local> ())
-// 			statement(ctx, instr);
-// 	}
-// }
-//
-// void set_active_block(GLSLContext &ctx, const Block &blk)
-// {
-// 	ctx.active_block = &blk;
-// }
-
 // void emit_preamble(GLSLContext &ctx)
 // {
 // 	ctx.result += "#version 460\n\n";
@@ -735,6 +647,40 @@ struct GLSLEmitter {
 // 	return std::vector(visited.begin(), visited.end());
 // }
 
+bool is_unsized_type(const Type &type)
+{
+	vswitch (type) {
+	vcase(ArrayType): {
+		auto &array = type.as <ArrayType> ();
+		auto &base = array.base->as <Type> ();
+		return (array.size <= 0)
+			? true
+			: is_unsized_type(base);
+	}
+	vcase(AggregateType): {
+		auto &agg = type.as <AggregateType> ();
+		for (auto &field : agg) {
+			auto &ftype = field->as <Type> ();
+			if (is_unsized_type(ftype))
+				return true;
+		}
+
+		break;
+	}
+	default:
+		break;
+	}
+
+	return false;
+}
+
+std::string grsrc_name(const GlobalResource &grsrc)
+{
+	auto group = grsrc.group.value_or(0);
+	auto index = grsrc.index.value_or(0);
+	return fmt::format("r{}b{}", group, index);
+}
+
 std::string lval_repr(const GLSLEmitter &em, const Reference &ref)
 {
 	vswitch (*ref) {
@@ -746,16 +692,27 @@ std::string lval_repr(const GLSLEmitter &em, const Reference &ref)
 		auto gintr = ref->as <GlobalIntrinsic> ();
 		return g_global_intrinsics.at(std::to_underlying(gintr));
 	}
+	vcase(GlobalResource): {
+		auto &grsrc = ref->as <GlobalResource> ();
+		if (grsrc.kind == GlobalResourceKind::ePushConstant)
+			return "pc";
+
+		auto base = grsrc_name(grsrc);
+		if (grsrc.kind == GlobalResourceKind::eSampler)
+			return base;
+
+		auto &type = grsrc.type->as <Type> ();
+		return type.is <AggregateType> ()
+			? base
+			: base + ".value";
+	}
 	default:
 		break;
 	}
 
 	auto ptr = ref.get();
-	if (not em.ids.contains(ptr)) {
-		fmt::println("no id entry for {}", ref->repr());
-		for (auto &[k, v] : em.ids)
-			fmt::println("  {} -> {}", v, k->repr());
-	}
+	if (not em.ids.contains(ptr))
+		fatal("no lval id entry for {}", ref->repr());
 
 	return std::format("lvar{}", em.ids.at(ptr));
 }
@@ -809,6 +766,12 @@ TypeRepr type_repr(const GLSLEmitter &em, const Reference &ref)
 	vcase(AggregateType): {
 		auto &agg = type.as <AggregateType> ();
 		return { agg.name, "" };
+	}
+	vcase(ArrayType): {
+		auto &array = type.as <ArrayType> ();
+		auto size = array.size > 0 ? std::format("[{}]", array.size) : "[]";
+		auto repr = type_repr(em, array.base);
+		return { repr.base, repr.suffix + size };
 	}
 	default:
 		break;
@@ -869,10 +832,22 @@ std::string expr_repr(const GLSLEmitter &em, const Reference &ref)
 		return std::format("{}.f{}", expr_repr(em, facc.value), facc.fidx);
 	}
 	vcase(GlobalResource): {
-		auto &grsrc = ref->as <GlobalResource> ();
-		if (grsrc.kind == GlobalResourceKind::ePushConstant)
-			return "pc";
-		break;
+		return lval_repr(em, ref);
+	}
+	vcase(BuiltinIntrinsic): {
+		auto &bintr = ref->as <BuiltinIntrinsic> ();
+		auto ftn = g_intrinsic_code.at(std::to_underlying(bintr.code));
+		return std::format("{}({})", ftn, args(bintr.args));
+	}
+	vcase(Swizzle): {
+		auto &swz = ref->as <Swizzle> ();
+		return std::format("{}.{}", expr_repr(em, swz.value), repr(swz.code));
+	}
+	vcase(ArrayAccess): {
+		auto &aacc = ref->as <ArrayAccess> ();
+		return std::format("{}[{}]",
+			expr_repr(em, aacc.value),
+			expr_repr(em, aacc.index));
 	}
 	default:
 		break;
@@ -880,6 +855,8 @@ std::string expr_repr(const GLSLEmitter &em, const Reference &ref)
 
 	fatal("unhandled case for expr_repr: {}", ref->repr());
 }
+
+void emit_body(GLSLEmitter &em, const SharedBlockReference &sbr);
 
 void emit_statement(GLSLEmitter &em, const Reference &ref)
 {
@@ -896,10 +873,35 @@ void emit_statement(GLSLEmitter &em, const Reference &ref)
 		auto src = expr_repr(em, store.source);
 		return em.emit_fmt_line("{} = {};", dst, src);
 	}
+	vcase(BuiltinIntrinsic): {
+		return em.emit_line(expr_repr(em, ref) + ";");
+	}
+	vcase(Loop): {
+		auto &loop = ref->as <Loop> ();
+
+		if (loop.kind == LoopKind::eFor and loop.init)
+			emit_body(em, *loop.init);
+
+		em.emit_line("for (;;) {");
+		em.indentation++;
+
+		// TODO: loop.cond vs cond_value?? need to check out...
+		em.emit_fmt_line("if (!({})) break;", expr_repr(em, loop.cond_value));
+		emit_body(em, loop.body);
+		
+		if (loop.kind == LoopKind::eFor and loop.step)
+			emit_body(em, *loop.step);
+		
+		em.indentation--;
+		em.emit_line("}");
+
+		return em.emit_newline();
+	}
 	default:
-		em.emit_line("?");
 		break;
 	}
+	
+	fatal("unhandled case for emit_statement: {}", ref->repr());
 }
 
 void emit_body(GLSLEmitter &em, const SharedBlockReference &sbr)
@@ -911,6 +913,7 @@ void emit_body(GLSLEmitter &em, const SharedBlockReference &sbr)
 		vswitch (*instr) {
 		vcase(Branch):
 		vcase(BuiltinIntrinsic):
+			// TODO: skip those without side effects
 		vcase(Invocation):
 		vcase(Local):
 		vcase(Loop):
@@ -945,7 +948,7 @@ auto collect_extensions()
 
 void emit_stage_io(GLSLEmitter &em)
 {
-	auto &tins = em.sbr->context.thread_inputs;
+	auto &tins = em.sbr->thread_inputs;
 	for (auto &tin : tins) {
 		auto repr = type_repr(em, tin.type);
 		em.emit_fmt_line("layout (location = {}) in {} lin{}{};",
@@ -955,7 +958,7 @@ void emit_stage_io(GLSLEmitter &em)
 	if (tins.size())
 		em.emit_newline();
 
-	auto &touts = em.sbr->context.thread_outputs;
+	auto &touts = em.sbr->thread_outputs;
 	for (auto &tout : touts) {
 		auto repr = type_repr(em, tout.type);
 		auto rate = g_rate_strings.at(std::to_underlying(tout.properties));
@@ -984,6 +987,9 @@ void emit_structs(GLSLEmitter &em)
 		if (not type.is <AggregateType> ())
 			continue;
 
+		if (is_unsized_type(type))
+			continue;
+
 		auto &agg = type.as <AggregateType> ();
 		structs.insert(agg);
 	}
@@ -997,10 +1003,28 @@ void emit_structs(GLSLEmitter &em)
 		}
 		em.indentation--;
 		em.emit_line("};");
+		em.emit_newline();
+	}
+}
+
+std::string buffer_access(const GlobalResource &grsrc)
+{
+	switch (grsrc.kind) {
+	case GlobalResourceKind::eUniformBuffer: return "uniform";
+	case GlobalResourceKind::eStorageBuffer:
+		switch (grsrc.access) {
+		case GlobalResourceAccess::eRead: return "readonly buffer";
+		case GlobalResourceAccess::eWrite: return "writeonly buffer";
+		case GlobalResourceAccess::eReadWrite: return "buffer";
+		default: return "buffer";
+		}
+		break;
+	// TODO: buffer reference
+	default:
+		break;
 	}
 
-	if (structs.size())
-		em.emit_newline();
+	fatal("unhandled case for buffer_access: {}", grsrc.repr());
 }
 
 void emit_whole(GLSLEmitter &em)
@@ -1022,13 +1046,14 @@ void emit_whole(GLSLEmitter &em)
 
 	// Global shader resources
 	// NOTE: Top-level is sufficient because of context inheritence
-	for (auto &[_, ref] : em.sbr->context.global_resources) {
+	for (auto &[_, ref] : em.sbr->global_resources) {
 		auto &grsrc = ref->as <GlobalResource> ();
 
+		// TODO: emit_resource method
+		auto layout = g_resource_layouts.at(std::to_underlying(grsrc.layout));
 		if (grsrc.kind == GlobalResourceKind::ePushConstant) {
 			auto offset = grsrc.push_constant_offset.value_or(0);
 			auto repr = type_repr(em, grsrc.type);
-			auto layout = g_resource_layouts.at(std::to_underlying(grsrc.layout));
 
 			em.emit_fmt_line("layout ({}, push_constant) uniform PC {{", layout);
 			em.indentation++;
@@ -1036,7 +1061,49 @@ void emit_whole(GLSLEmitter &em)
 			em.indentation--;
 			em.emit_line("};");
 			em.emit_newline();
+			continue;
 		}
+
+		auto group = grsrc.group.value_or(0);
+		auto index = grsrc.index.value_or(0);
+		auto name = grsrc_name(grsrc);
+		if (grsrc.kind == GlobalResourceKind::eSampler) {
+			em.emit_fmt_line(
+				"layout (set = {}, binding = {}) "
+				"uniform sampler2D {};",
+				group, index, name
+			);
+			em.emit_newline();
+			continue;
+		}
+
+		// Rest are buffer types
+		auto access = buffer_access(grsrc);
+
+		em.emit_fmt_line(
+			"layout ({}, set = {}, binding = {}) "
+			"{} Buffer{}x{} {{",
+			layout, group, index,
+			access, group, index
+		);
+
+		auto &type = grsrc.type->as <Type> ();
+
+		em.indentation++;
+		if (type.is <AggregateType> ()) {
+			auto &agg = type.as <AggregateType> ();
+			for (const auto &[i, f] : std::views::enumerate(agg)) {
+				auto repr = type_repr(em, f);
+				em.emit_fmt_line("{} f{}{};", repr.base, i, repr.suffix);
+			}
+		} else {
+			auto repr = type_repr(em, grsrc.type);
+			em.emit_fmt_line("{} value{};", repr.base, repr.suffix);
+		}
+		em.indentation--;
+
+		em.emit_fmt_line("}} {};", name);
+		em.emit_newline();
 	}
 
 	// Main method

@@ -30,9 +30,7 @@ struct Constant : variant <
 };
 
 struct Operation {
-	using Code = OperationCode;
-	Code code;
-
+	OperationCode code;
 	Reference a;
 	Reference b;
 
@@ -113,28 +111,25 @@ struct Argument {
 };
 
 struct BuiltinIntrinsic {
-	using Code = BuiltinIntrinsicCode;
-	Code code;
+	BuiltinIntrinsicCode code;
 
 	std::vector <Reference> args;
 	
 	template <typename ... Args>
-	BuiltinIntrinsic(Code code_, Args ... args_)
+	BuiltinIntrinsic(BuiltinIntrinsicCode code_, Args ... args_)
 		: code(code_), args { args_ ... } {}
 
 	std::string repr() const {
-		return "BuiltinIntrinsic";
+		return std::format("BuiltinIntrinsic({})", rcgp::repr(code));
 	}
 };
 
 struct Swizzle {
-	using Code = SwizzleCode;
-	Code code;
-
+	SwizzleCode code;
 	Reference value;
 
 	std::string repr() const {
-		return "Swizzle";
+		return std::format("Swizzle({})", rcgp::repr(code));
 	}
 };
 
