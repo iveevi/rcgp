@@ -9,25 +9,13 @@ struct RecordingPair {
 	$reflection(x, y);
 };
 
-auto operator*(std::nullptr_t, std::function <void ()> &&fn)
-{
-	Tracer::singleton.type_cache.clear();
-	auto sbr = std::make_shared <Block> ();
-	{
-		jems::scope scope(sbr);
-		fn();
-	}
-	return sbr;
-}
-
-#define record nullptr * [&]
-
 add_test(scalar_constant)
 {
 	auto sbr = record {
 		i32 a = 3;
 	};
 
+	// TODO: match source location as well eventually
 	assert_assembly_match(sbr, R"(
 	block {
 	  context {
@@ -234,6 +222,7 @@ add_test(field_access)
 		inject_reference(p, jems::local(type));
 		auto x = p.x;
 		auto y = p.y;
+		f32 z = x + y;
 	};
 
 	assert_assembly_match(sbr, R"(
@@ -249,6 +238,9 @@ add_test(field_access)
 	  $5 = local $4
 	  $6 = field $5:0
 	  $7 = field $5:1
+	  $8 = local $0
+	  $9 = 2
+	  store $8 $9
 	}
 	)");
 };
@@ -275,6 +267,72 @@ add_test(array_access)
 	  $5 = 2
 	  store $4 $5
 	  $6 = index($2, $4)
+	}
+	)");
+};
+
+add_test(for_loop)
+{
+	auto sbr = record {
+		StorageBuffer <array <vec2>> buffer;
+		buffer.override_reference(resource_intrinsic(buffer, 0));
+
+		f32 sum = 0;
+		$for (i32 i = 0, i < 10, i++) {
+			auto v = buffer[i];
+			// TODO: += and etc.
+			sum = sum + v.x * v.y;
+		};
+	};
+	
+	assert_assembly_match(sbr, R"(
+	block {
+	  context {
+	    model: subroutine,
+	  }
+	  $0 = float2
+	  $1 = array($0, -1)
+	  $2 = storage_buffer($1, nil:0, Std430)
+	  $3 = f32
+	  $4 = local $3
+	  $5 = 0
+	  store $4 $5
+	  $6 = i32
+	  $7 = local $6
+	  $8 = 0
+	  store $7 $8
+	  $9 = block {
+	      $6 = i32
+	      $10 = local $6
+	      $11 = 10
+	      store $10 $11
+	      $12 = lt($7, $10)
+	  }
+	  $13 = block {
+	      $6 = i32
+	      $14 = local $6
+	      $15 = 1
+	      store $14 $15
+	      $16 = add($7, $14)
+	      store $7 $16
+	  }
+	  $17 = block {
+	      $3 = f32
+	      $0 = float2
+	      $18 = local $0
+	      $19 = index($2, $7)
+	      $20 = swizzle($19, y)
+	      $21 = swizzle($19, x)
+	      $22 = mul($21, $20)
+	      $23 = add($4, $22)
+	      store $4 $23
+	  }
+	  $24 = loop(
+	    kind: for
+	    cond: $9,
+	    step: $13,
+	    body: $17
+	  )
 	}
 	)");
 };

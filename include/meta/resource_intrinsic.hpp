@@ -4,8 +4,9 @@
 
 #include "../dsl/jems.hpp"
 #include "../util/cti.hpp"
-#include "reconstruct_type.hpp"
 #include "layouts.hpp"
+#include "reconstruct_type.hpp"
+#include "resources.hpp"
 
 namespace rcgp {
 

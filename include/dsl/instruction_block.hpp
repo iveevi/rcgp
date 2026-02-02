@@ -1,7 +1,6 @@
 #pragma once
 
 #include <array>
-#include <cstddef>
 #include <cstdint>
 #include <map>
 #include <optional>
@@ -12,14 +11,11 @@
 
 namespace rcgp {
 
-using group_allocation_map = std::map <void *, size_t>;
+// GRV to group index
+using group_allocation_map = std::map <void *, uint32_t>;
 
-struct PushConstantAllocation {
-	uint32_t index;
-	uint32_t offset;
-};
-
-using push_constant_allocation_map = std::map <void *, PushConstantAllocation>;
+// Push constant to offset
+using push_constant_allocation_map = std::map <void *, uint32_t>;
 
 struct Block : std::vector <Reference> {
 	ShaderStage model = ShaderStage::eSubroutine;

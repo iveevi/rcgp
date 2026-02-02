@@ -37,5 +37,18 @@ inline auto operator<<(test_collection &s, const test &item)
 
 #define add_test(name) static auto name = tests << test(SUITE, #name, nullptr) * []
 
+inline auto operator*(std::nullptr_t, std::function <void ()> &&fn)
+{
+	Tracer::singleton.type_cache.clear();
+	auto sbr = std::make_shared <Block> ();
+	{
+		jems::scope scope(sbr);
+		fn();
+	}
+	return sbr;
+}
+
+#define record nullptr * [&]
+
 void assert_assembly_match(const SharedBlockReference &block, const std::string &str);
 void assert_glsl_match(const SharedBlockReference &block, const std::string &str);

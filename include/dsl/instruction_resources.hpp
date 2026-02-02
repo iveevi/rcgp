@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <print>
 
 #include "instruction_enums.hpp"
 #include "instruction_types.hpp"
@@ -10,20 +11,13 @@ namespace rcgp {
 
 struct GlobalResource {
 	Reference type;
-	using Kind = GlobalResourceKind;
-	using Layout = GlobalResourceLayout;
-	Kind kind;
-	Layout layout;
+	GlobalResourceKind kind;
+	GlobalResourceLayout layout;
 	GlobalResourceAccess access = GlobalResourceAccess::eReadWrite;
 
-	// group := descriptor set index
 	std::optional <uint32_t> group;
-	// index := descriptor binding
 	std::optional <uint32_t> index;
-	// push constants use this to disambiguate multiple blocks
-	std::optional <uint32_t> push_constant_index;
-	// push constants use this to determine offset within the shared block
-	std::optional <uint32_t> push_constant_offset;
+	std::optional <uint32_t> offset;
 
 	std::string repr() const {
 		return std::format("GlobalResource({}, {})",

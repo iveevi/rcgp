@@ -19,6 +19,7 @@ struct AsmContext {
 	std::map <intptr_t, uint32_t> ids;
 	bool debug;
 
+	// TODO: store lines and then add with any added debug information (aux)
 	std::string auxiliary(const std::string &text, const std::source_location &origin) const {
 		if (debug) {
 			auto rel = std::filesystem::relative(origin.file_name());
@@ -430,11 +431,7 @@ std::string generate_block_body(AsmContext &ctx, const SharedBlockReference &blk
 		auto str = std::visit([&](auto x) {
 			return stringify(ctx, x, instr);
 		}, *instr);
-		auto loc = instr->debug_info.origin;
-		auto rel = std::filesystem::relative(loc.file_name());
-		result += fmt::format("{}{} ; from {}:{}\n",
-			prefix, fmt::format("{:<{}}", str, pad_width),
-			rel.string(), loc.line());
+		result += ctx.auxiliary(prefix + str, instr->debug_info.origin);
 	}
 
 	result += indent + "}";

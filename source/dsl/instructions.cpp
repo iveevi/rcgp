@@ -22,11 +22,11 @@ void Block::apply_group_allocation_map(const group_allocation_map &map)
 
 void Block::apply_push_constant_allocation_map(const push_constant_allocation_map &map)
 {
-	for (auto &[addr, layout] : map) {
-		auto &ref = global_resources[addr];
-		auto &grsrc = ref->as <GlobalResource> ();
-		grsrc.push_constant_index = layout.index;
-		grsrc.push_constant_offset = layout.offset;
+	for (auto &[addr, offset] : map) {
+		if (global_resources.contains(addr)) {
+			auto &ref = global_resources.at(addr);
+			ref->as <GlobalResource> ().offset = offset;
+		}
 	}
 }
 

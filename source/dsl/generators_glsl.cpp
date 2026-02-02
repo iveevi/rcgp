@@ -1027,6 +1027,62 @@ std::string buffer_access(const GlobalResource &grsrc)
 	fatal("unhandled case for buffer_access: {}", grsrc.repr());
 }
 
+void emit_resource(GLSLEmitter &em, const GlobalResource &grsrc)
+{
+	auto layout = g_resource_layouts.at(std::to_underlying(grsrc.layout));
+	if (grsrc.kind == GlobalResourceKind::ePushConstant) {
+		auto offset = grsrc.offset.value_or(0);
+		auto repr = type_repr(em, grsrc.type);
+
+		em.emit_fmt_line("layout ({}, push_constant) uniform PC {{", layout);
+		em.indentation++;
+		em.emit_fmt_line("layout (offset = {}) {} pc{};", offset, repr.base, repr.suffix);
+		em.indentation--;
+		em.emit_line("};");
+		return em.emit_newline();
+	}
+
+	auto group = grsrc.group.value_or(0);
+	auto index = grsrc.index.value_or(0);
+	auto name = grsrc_name(grsrc);
+	if (grsrc.kind == GlobalResourceKind::eSampler) {
+		em.emit_fmt_line(
+			"layout (set = {}, binding = {}) "
+			"uniform sampler2D {};",
+			group, index, name
+		);
+		return em.emit_newline();
+	}
+
+	// Rest are buffer types
+	auto access = buffer_access(grsrc);
+
+	em.emit_fmt_line(
+		"layout ({}, set = {}, binding = {}) "
+		"{} Buffer{}x{} {{",
+		layout, group, index,
+		access, group, index
+	);
+
+	auto &type = grsrc.type->as <Type> ();
+
+	em.indentation++;
+	if (type.is <AggregateType> ()) {
+		auto &agg = type.as <AggregateType> ();
+		for (const auto &[i, f] : std::views::enumerate(agg)) {
+			auto repr = type_repr(em, f);
+			em.emit_fmt_line("{} f{}{};", repr.base, i, repr.suffix);
+		}
+	} else {
+		auto repr = type_repr(em, grsrc.type);
+		em.emit_fmt_line("{} value{};", repr.base, repr.suffix);
+	}
+	em.indentation--;
+
+	em.emit_fmt_line("}} {};", name);
+	return em.emit_newline();
+}
+
 void emit_whole(GLSLEmitter &em)
 {
 	// Preamble section
@@ -1048,62 +1104,7 @@ void emit_whole(GLSLEmitter &em)
 	// NOTE: Top-level is sufficient because of context inheritence
 	for (auto &[_, ref] : em.sbr->global_resources) {
 		auto &grsrc = ref->as <GlobalResource> ();
-
-		// TODO: emit_resource method
-		auto layout = g_resource_layouts.at(std::to_underlying(grsrc.layout));
-		if (grsrc.kind == GlobalResourceKind::ePushConstant) {
-			auto offset = grsrc.push_constant_offset.value_or(0);
-			auto repr = type_repr(em, grsrc.type);
-
-			em.emit_fmt_line("layout ({}, push_constant) uniform PC {{", layout);
-			em.indentation++;
-			em.emit_fmt_line("layout (offset = {}) {} pc{};", offset, repr.base, repr.suffix);
-			em.indentation--;
-			em.emit_line("};");
-			em.emit_newline();
-			continue;
-		}
-
-		auto group = grsrc.group.value_or(0);
-		auto index = grsrc.index.value_or(0);
-		auto name = grsrc_name(grsrc);
-		if (grsrc.kind == GlobalResourceKind::eSampler) {
-			em.emit_fmt_line(
-				"layout (set = {}, binding = {}) "
-				"uniform sampler2D {};",
-				group, index, name
-			);
-			em.emit_newline();
-			continue;
-		}
-
-		// Rest are buffer types
-		auto access = buffer_access(grsrc);
-
-		em.emit_fmt_line(
-			"layout ({}, set = {}, binding = {}) "
-			"{} Buffer{}x{} {{",
-			layout, group, index,
-			access, group, index
-		);
-
-		auto &type = grsrc.type->as <Type> ();
-
-		em.indentation++;
-		if (type.is <AggregateType> ()) {
-			auto &agg = type.as <AggregateType> ();
-			for (const auto &[i, f] : std::views::enumerate(agg)) {
-				auto repr = type_repr(em, f);
-				em.emit_fmt_line("{} f{}{};", repr.base, i, repr.suffix);
-			}
-		} else {
-			auto repr = type_repr(em, grsrc.type);
-			em.emit_fmt_line("{} value{};", repr.base, repr.suffix);
-		}
-		em.indentation--;
-
-		em.emit_fmt_line("}} {};", name);
-		em.emit_newline();
+		emit_resource(em, grsrc);
 	}
 
 	// Main method

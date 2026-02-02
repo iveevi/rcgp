@@ -120,15 +120,14 @@ auto wrappers_to_pcs(const Tlist <Wrappers...> &)
 
 			offset = align_up(static_cast <size_t> (offset), alignof(T));
 			
-			ranges[index] = vk::PushConstantRange()
+			ranges[index++] = vk::PushConstantRange()
 				.setOffset(offset)
 				.setSize(sizeof(T))
 				.setStageFlags(W::flags);
 
-			map.emplace(W::reference::address, PushConstantAllocation { index, offset });
+			map.emplace(W::reference::address, offset);
 
 			offset += sizeof(T);
-			index++;
 		};
 
 		(populate.template operator() <Wrappers> (), ...);
