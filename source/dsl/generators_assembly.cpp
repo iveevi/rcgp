@@ -73,12 +73,12 @@ std::string stringify(AsmContext &ctx, Constant x, Reference ref)
 	}, x);
 }
 
-std::string stringify_type(AsmContext &ctx, PrimitiveType x, Reference ref)
+std::string stringify_type(AsmContext &ctx, Primitive x, Reference ref)
 {
 	return std::string(repr(x));
 }
 
-std::string stringify_type(AsmContext &ctx, AggregateType x, Reference ref)
+std::string stringify_type(AsmContext &ctx, Struct x, Reference ref)
 {
 	std::string result;
 	for (size_t i = 0; i < x.size(); i++) {
@@ -93,7 +93,7 @@ std::string stringify_type(AsmContext &ctx, AggregateType x, Reference ref)
 	return "aggregate(" + result + ")";
 }
 
-std::string stringify_type(AsmContext &ctx, ArrayType x, Reference ref)
+std::string stringify_type(AsmContext &ctx, Array x, Reference ref)
 {
 	return fmt::format("array({}, {})",
 		stringify(ctx, x.base), x.size);

@@ -169,15 +169,15 @@ struct GLSLEmitter {
 bool is_unsized_type(const Type &type)
 {
 	vswitch (type) {
-	vcase(ArrayType): {
-		auto &array = type.as <ArrayType> ();
+	vcase(Array): {
+		auto &array = type.as <Array> ();
 		auto &base = array.base->as <Type> ();
 		return (array.size <= 0)
 			? true
 			: is_unsized_type(base);
 	}
-	vcase(AggregateType): {
-		auto &agg = type.as <AggregateType> ();
+	vcase(Struct): {
+		auto &agg = type.as <Struct> ();
 		for (auto &field : agg) {
 			auto &ftype = field->as <Type> ();
 			if (is_unsized_type(ftype))
@@ -227,7 +227,7 @@ std::string lval_repr(const GLSLEmitter &em, const Reference &ref)
 			return base;
 
 		auto &type = grsrc.type->as <Type> ();
-		return type.is <AggregateType> ()
+		return type.is <Struct> ()
 			? base
 			: base + ".value";
 	}
@@ -267,7 +267,7 @@ struct TypeRepr {
 	std::string suffix;
 };
 
-std::string primitive_repr(const PrimitiveType &primitive)
+std::string primitive_repr(const Primitive &primitive)
 {
 	auto raw = std::to_underlying(primitive);
 	if (raw < 0 || static_cast<size_t>(raw) >= g_primitive_types.size())
@@ -279,17 +279,17 @@ TypeRepr type_repr(const GLSLEmitter &em, const Reference &ref)
 {
 	auto &type = ref->as <Type> ();
 	vswitch (type) {
-	vcase(PrimitiveType): {
-		auto &pt = type.as <PrimitiveType> ();
+	vcase(Primitive): {
+		auto &pt = type.as <Primitive> ();
 		auto str = primitive_repr(pt);
 		return { str, "" };
 	}
-	vcase(AggregateType): {
-		auto &agg = type.as <AggregateType> ();
+	vcase(Struct): {
+		auto &agg = type.as <Struct> ();
 		return { agg.name, "" };
 	}
-	vcase(ArrayType): {
-		auto &array = type.as <ArrayType> ();
+	vcase(Array): {
+		auto &array = type.as <Array> ();
 		auto size = array.size > 0 ? std::format("[{}]", array.size) : "[]";
 		auto repr = type_repr(em, array.base);
 		return { repr.base, repr.suffix + size };
@@ -569,24 +569,24 @@ void emit_stage_io(GLSLEmitter &em)
 void emit_structs(GLSLEmitter &em)
 {
 	// TODO: refactor AggregateX -> StructX
-	auto cmp = [](const AggregateType &a, const AggregateType &b) {
+	auto cmp = [](const Struct &a, const Struct &b) {
 		return a.name < b.name;
 	};
 
 	// TODO: make this an iteration over all method blocks
-	std::set <AggregateType, decltype(cmp)> structs;
+	std::set <Struct, decltype(cmp)> structs;
 	for (auto &instr : *em.main) {
 		if (not instr->is <Type> ())
 			continue;
 
 		auto &type = instr->as <Type> ();
-		if (not type.is <AggregateType> ())
+		if (not type.is <Struct> ())
 			continue;
 
 		if (is_unsized_type(type))
 			continue;
 
-		auto &agg = type.as <AggregateType> ();
+		auto &agg = type.as <Struct> ();
 		structs.insert(agg);
 	}
 
@@ -663,8 +663,8 @@ void emit_resource(GLSLEmitter &em, const GlobalResource &grsrc)
 	auto &type = grsrc.type->as <Type> ();
 
 	em.indentation++;
-	if (type.is <AggregateType> ()) {
-		auto &agg = type.as <AggregateType> ();
+	if (type.is <Struct> ()) {
+		auto &agg = type.as <Struct> ();
 		for (const auto &[i, f] : std::views::enumerate(agg)) {
 			auto repr = type_repr(em, f);
 			em.emit_fmt_line("{} f{}{};", repr.base, i, repr.suffix);

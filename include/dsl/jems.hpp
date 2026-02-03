@@ -88,24 +88,24 @@ inline size_t type_cache_key_for(const Type &type)
 
 	size_t key = 0;
 	vswitch (type) {
-	vcase(PrimitiveType): {
-		auto &prim = type.as <PrimitiveType> ();
-		key = RuntimeTypeRegistry::id <PrimitiveType> ();
+	vcase(Primitive): {
+		auto &prim = type.as <Primitive> ();
+		key = RuntimeTypeRegistry::id <Primitive> ();
 		hash_combine(key, static_cast <size_t> (prim));
 		return key;
 	}
-	vcase(AggregateType): {
-		auto &agg = type.as <AggregateType> ();
-		key = RuntimeTypeRegistry::id <AggregateType> ();
+	vcase(Struct): {
+		auto &agg = type.as <Struct> ();
+		key = RuntimeTypeRegistry::id <Struct> ();
 		hash_string(key, agg.name);
 		hash_combine(key, agg.size());
 		for (auto &field : agg)
 			hash_combine(key, reinterpret_cast <size_t> (field.get()));
 		return key;
 	}
-	vcase(ArrayType): {
-		auto &arr = type.as <ArrayType> ();
-		key = RuntimeTypeRegistry::id <ArrayType> ();
+	vcase(Array): {
+		auto &arr = type.as <Array> ();
+		key = RuntimeTypeRegistry::id <Array> ();
 		hash_combine(key, reinterpret_cast <size_t> (arr.base.get()));
 		hash_combine(key, static_cast <size_t> (arr.size));
 		return key;

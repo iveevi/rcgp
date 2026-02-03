@@ -63,7 +63,10 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	} else {
 		fmt::print(pass_style, "summary: ");
-		fmt::print("passed {} tests, skipped {} tests\n", passed, skipped);
+		if (skipped)
+			fmt::print("passed {} tests, skipped {} tests\n", passed, skipped);
+		else
+			fmt::print("passed {} test\n", passed);
 	}
 
 	return EXIT_SUCCESS;

@@ -47,7 +47,7 @@ template <typename T, int64_t N>
 struct reconstructor_t <array <T, N>> {
 	static jems::handle main($location) {
 		auto base = reconstructor_t <T> ::main(loc);
-		return jems::type_loc(loc, ArrayType(base, N));
+		return jems::type_loc(loc, Array(base, N));
 	}
 };
 
@@ -61,7 +61,7 @@ struct reconstructor_t <std::nullptr_t> {
 template <aggregate T>
 struct reconstructor_t <T> {
 	template <size_t I>
-	static void collect_field(AggregateType &aggregate, $location) {
+	static void collect_field(Struct &aggregate, $location) {
 		using field_type = std::remove_cvref_t <
 			decltype(std::declval <T &> ().template _rcgp_get <I> ())
 		>;
@@ -71,7 +71,7 @@ struct reconstructor_t <T> {
 	}
 
 	static jems::handle main($location) {
-		AggregateType aggregate;
+		Struct aggregate;
 		aggregate.name = std::string($ss_type(T).view());
 		constexpr_for(Is, T::field_count,
 			(collect_field <Is> (aggregate, loc), ...)

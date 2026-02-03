@@ -6,17 +6,12 @@
 #include <string>
 #include <type_traits>
 #include <vector>
-#include <print>
 #include <memory>
-
-#include <fmt/format.h>
 
 #include "../util/variant.hpp"
 #include "enumerations.hpp"
 
 namespace rcgp {
-
-// TODO: move repr implementations to instruction_nodes.cpp
 
 // Forward declarations
 struct Block;
@@ -25,21 +20,17 @@ struct Instruction;
 using SharedBlockReference = std::shared_ptr <Block>;
 using Reference = std::shared_ptr <Instruction>;
 
-struct AggregateType : std::vector <Reference> {
+struct Struct : std::vector <Reference> {
 	std::string name;
 };
 
-struct ArrayType {
+struct Array {
 	Reference base;
 	int64_t size;
 };
 
 // @node Type
-struct Type : variant <
-	PrimitiveType,
-	AggregateType,
-	ArrayType
-> {
+struct Type : variant <Primitive, Struct, Array> {
 	using variant_self::variant;
 
 	std::string repr() const;
@@ -55,11 +46,7 @@ struct Constant : variant <
 > {
 	using variant_self::variant;
 
-	std::string repr() const {
-		return std::visit([](auto x) {
-			return fmt::format("{}", x);
-		}, *this);
-	}
+	std::string repr() const;
 };
 
 // @node Operation
@@ -68,9 +55,7 @@ struct Operation {
 	Reference a;
 	Reference b;
 
-	std::string repr() const {
-		return fmt::format("Operation({})", rcgp::repr(code));
-	}
+	std::string repr() const;
 };
 
 struct Construct {
@@ -81,9 +66,7 @@ struct Construct {
 	Construct(Reference type_, Args ... args_)
 		: type(type_), args { args_ ... } {}
 
-	std::string repr() const {
-		return "Construct";
-	}
+	std::string repr() const;
 };
 
 struct Invocation {
@@ -91,9 +74,7 @@ struct Invocation {
 	std::vector <Reference> args;
 	std::vector <Reference> returns;
 
-	std::string repr() const {
-		return "Invocation";
-	}
+	std::string repr() const;
 };
 
 struct Branch {
@@ -105,9 +86,7 @@ struct Branch {
 	std::vector <Segment> segments;
 	std::optional <SharedBlockReference> fallback;
 
-	std::string repr() const {
-		return "Branch";
-	}
+	std::string repr() const;
 };
 
 struct Loop {
@@ -118,17 +97,13 @@ struct Loop {
 	std::optional <SharedBlockReference> step;
 	SharedBlockReference body;
 
-	std::string repr() const {
-		return "Loop";
-	}
+	std::string repr() const;
 };
 
 struct Local {
 	Reference type;
 
-	std::string repr() const {
-		return "Local";
-	}
+	std::string repr() const;
 };
 
 struct BuiltinIntrinsic {
@@ -140,45 +115,35 @@ struct BuiltinIntrinsic {
 	BuiltinIntrinsic(BuiltinIntrinsicCode code_, Args ... args_)
 		: code(code_), args { args_ ... } {}
 
-	std::string repr() const {
-		return std::format("BuiltinIntrinsic({})", rcgp::repr(code));
-	}
+	std::string repr() const;
 };
 
 struct Swizzle {
 	SwizzleCode code;
 	Reference value;
 
-	std::string repr() const {
-		return std::format("Swizzle({})", rcgp::repr(code));
-	}
+	std::string repr() const;
 };
 
 struct FieldAccess {
 	Reference value;
 	uint32_t fidx;
 
-	std::string repr() const {
-		return "FieldAccess";
-	}
+	std::string repr() const;
 };
 
 struct ArrayAccess {
 	Reference value;
 	Reference index;
 
-	std::string repr() const {
-		return "ArrayAccess";
-	}
+	std::string repr() const;
 };
 
 struct Store {
 	Reference destination;
 	Reference source;
 
-	std::string repr() const {
-		return "Store";
-	}
+	std::string repr() const;
 };
 
 struct GlobalResource {
@@ -191,28 +156,21 @@ struct GlobalResource {
 	std::optional <uint32_t> index;
 	std::optional <uint32_t> offset;
 
-	std::string repr() const {
-		return std::format("GlobalResource({}, {})",
-			rcgp::repr(kind), rcgp::repr(layout));
-	}
+	std::string repr() const;
 };
 
 struct Argument {
 	Reference type;
 	uint32_t argi;
 
-	std::string repr() const {
-		return std::format("Argument({})", argi);
-	}
+	std::string repr() const;
 };
 
 struct StageInput {
 	Reference type;
 	uint32_t argi;
 
-	std::string repr() const {
-		return std::format("StageInput({})", argi);
-	}
+	std::string repr() const;
 };
 
 struct StageOutput {
@@ -220,18 +178,14 @@ struct StageOutput {
 	uint32_t argi;
 	RateProperties properties;
 
-	std::string repr() const {
-		return std::format("StageOutput({}, {})", argi, rcgp::repr(properties));
-	}
+	std::string repr() const;
 };
 
 struct Return {
 	Reference type;
 	uint32_t argi;
 
-	std::string repr() const {
-		return std::format("Return({})", argi);
-	}
+	std::string repr() const;
 };
 
 } // namespace rcgp

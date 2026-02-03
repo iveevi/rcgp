@@ -1,28 +1,8 @@
 #include "common.hpp"
+#include "common_resources.hpp"
 
 #define SUITE "glsl"
 
-// Resources
-struct Ray {
-	float3 origin;
-	float3 direction;
-
-	$reflection(origin, direction);
-};
-
-struct View {
-	float4x4 model;
-	float4x4 view;
-	float4x4 proj;
-
-	$reflection(model, view, proj);
-};
-
-static PushConstant <View> view;
-
-static AttributeStream <float3> position;
-
-// Tests
 add_test(vs_empty)
 {
 	auto vs = $shader(vertex)() {};
@@ -142,7 +122,7 @@ add_test(vs_push_constant)
 		return float3(wpos);
 	};
 
-	// TODO: field names in the structs... encode within the AggregateType
+	// TODO: field names in the structs... encode within the Struct
 	assert_glsl_match_file(vs, "glsl/vs_push_constant.glsl");
 };
 

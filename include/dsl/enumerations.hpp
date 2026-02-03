@@ -30,7 +30,7 @@ enum class OperationCode {
 
 std::string_view repr(OperationCode value);
 
-enum class PrimitiveType {
+enum class Primitive {
 	eBool,
 	eInt32,
 	eUInt32,
@@ -73,7 +73,7 @@ enum class PrimitiveType {
 	eFMat4x4,
 };
 
-std::string_view repr(PrimitiveType value);
+std::string_view repr(Primitive value);
 
 enum class GlobalResourceKind {
 	ePushConstant,
