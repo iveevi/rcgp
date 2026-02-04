@@ -161,8 +161,38 @@ add_test(vs_push_constant)
 		return float3(wpos);
 	};
 
-	// TODO: field names in the structs... encode within the Struct
 	assert_glsl_match_file(vs, "glsl/vs_push_constant.glsl");
+};
+
+add_test(fr_diffuse_lighting)
+{
+	auto fs = $shader(fragment)(
+		$contracts(lights, material),
+		float3 position,
+		float3 normal,
+		float2 uv
+	) -> float3
+	{
+		vec3 base = material.albedo.sample(uv).xyz;
+
+		vec3 color = vec3(0.0f);
+		$for (i32 i = 0, i < lights.count, ++i) {
+			auto light = lights.lights[i];
+			auto L = light.position - position;
+			auto dist2 = max(dot(L, L), f32(1e-4f));
+			auto atten = light.intensity / dist2;
+
+			auto ldir = normalize(L);
+			auto n_dot_l = max(dot(normal, ldir), f32(0.0f));
+
+			// TODO: += and etc
+			color = color + (base * n_dot_l) * light.color * atten;
+		};
+
+		return color;
+	};
+
+	assert_glsl_match_file(fs, "glsl/fr_diffuse_lighting.glsl");
 };
 
 add_test(sr_return_primitives)

@@ -14,75 +14,63 @@
 
 namespace rcgp {
 
-// TODO: use normal functions...
 template <typename T>
-struct reconstructor_t {
-	static jems::handle main($location) {
-		static_error("type reconstructor for "_ss + $ss_type(T) + " has not been implemented yet"_ss);
-	}
-};
+jems::handle reconstruct_type($location);
 
 template <typename T>
-struct reconstructor_t <scalar <T>> {
-	static jems::handle main($location) {
-		return jems::type_loc(loc, primitive_of <T> ());
-	}
-};
+auto reconstructor_for(std::type_identity <scalar <T>>, $location)
+{
+	return jems::type_loc(loc, primitive_of <T> ());
+}
 
 template <typename T, size_t N>
-struct reconstructor_t <vector <T, N>> {
-	static jems::handle main($location) {
-		return jems::type_loc(loc, primitive_of <T, N> ());
-	}
-};
+auto reconstructor_for(std::type_identity <vector <T, N>>, $location)
+{
+	return jems::type_loc(loc, primitive_of <T, N> ());
+}
 
 template <typename T, size_t N, size_t M>
-struct reconstructor_t <matrix <T, N, M>> {
-	static jems::handle main($location) {
-		return jems::type_loc(loc, primitive_of <T, N, M> ());
-	}
-};
+auto reconstructor_for(std::type_identity <matrix <T, N, M>>, $location)
+{
+	return jems::type_loc(loc, primitive_of <T, N, M> ());
+}
 
 template <typename T, int64_t N>
-struct reconstructor_t <array <T, N>> {
-	static jems::handle main($location) {
-		auto base = reconstructor_t <T> ::main(loc);
-		return jems::type_loc(loc, Array(base, N));
-	}
-};
+auto reconstructor_for(std::type_identity <array <T, N>>, $location)
+{
+	auto base = reconstruct_type <T> (loc);
+	return jems::type_loc(loc, Array(base, N));
+}
 
-template <>
-struct reconstructor_t <std::nullptr_t> {
-	static jems::handle main($location) {
-		return jems::handle();
-	}
-};
+inline auto reconstructor_for(std::type_identity <std::nullptr_t>, $location)
+{
+	return jems::handle();
+}
 
 template <aggregate T>
-struct reconstructor_t <T> {
-	static jems::handle main($location) {
-		Struct st;
-		
-		st.name = std::string($ss_type(T).view());
+auto reconstructor_for(std::type_identity <T>, $location)
+{
+	Struct st;
+	
+	st.name = std::string($ss_type(T).view());
 
-		auto ftn = [&] <size_t I> {
-			using F = T::fields::template get <I>;
-			st.emplace_back(reconstructor_t <F> ::main(loc));
-			st.fields.emplace_back(T::_field_names[I]);
-		};
+	auto ftn = [&] <size_t I> {
+		using F = T::fields::template get <I>;
+		st.emplace_back(reconstruct_type <F> (loc));
+		st.fields.emplace_back(T::_field_names[I]);
+	};
 
-		constexpr_for(Is, T::field_count,
-			(ftn.template operator() <Is> (), ...);
-		);
+	constexpr_for(Is, T::field_count,
+		(ftn.template operator() <Is> (), ...);
+	);
 
-		return jems::type_loc(loc, st);
-	}
-};
+	return jems::type_loc(loc, st);
+}
 
 template <typename T>
-jems::handle reconstruct_type($location)
+jems::handle reconstruct_type(const std::source_location &loc)
 {
-	return reconstructor_t <T> ::main(loc);
+	return reconstructor_for(std::type_identity <T> (), loc);
 }
 
 } // namespace rcgp
