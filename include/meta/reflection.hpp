@@ -23,19 +23,15 @@ using snipped_tlist = rcgp::Tlist <Ts...>;
 #define GEN_AGGREGATE_FIELD_REFERENCE(T, field)	\
 	else if constexpr (D == (__COUNTER__ - counter_base - 1)) { return field; }
 
-// TODO: do we really need a ref get? we have override reference...
 #define DEFINE_FIELD_REFERENCE(R, ...)							\
 	template <size_t D>								\
 	auto &_rcgp_get() R {								\
 		static constexpr size_t counter_base = __COUNTER__;			\
 		if constexpr (false) {}							\
 		MAP(GEN_AGGREGATE_FIELD_REFERENCE, /* NA */, __VA_ARGS__)		\
-		else {									\
-			static_error("out of bounds field reference access of "_ss	\
-				+ $ss_type(This));					\
-			return _rcgp_get_fallback;					\
-		}									\
-	}										\
+		else									\
+			static_error("invalid field access of "_ss + $ss_type(This));	\
+	}
 
 // Generating the override reference method
 #define GEN_OVERRIDE_FIELD_REFERENCE(T, field)	\
@@ -45,7 +41,15 @@ using snipped_tlist = rcgp::Tlist <Ts...>;
 	void override_reference(const Reference &ref) {				\
 		static constexpr size_t counter_base = __COUNTER__;		\
 		MAP(GEN_OVERRIDE_FIELD_REFERENCE, /* ... */, __VA_ARGS__)	\
-	}									\
+	}
+
+// Field names
+#define GEN_FIELD_NAME(T, field) #field,
+
+#define DEFINE_FIELD_NAMES(...) 						\
+	static constexpr auto _field_names = std::array {			\
+		MAP(GEN_FIELD_NAME, /* ... */, __VA_ARGS__)			\
+	};
 
 // Full reflection information for aggregates
 #define $reflection(...)					\
@@ -55,8 +59,9 @@ using snipped_tlist = rcgp::Tlist <Ts...>;
 	DEFINE_FIELD_TYPE_LIST(__VA_ARGS__);			\
 	DEFINE_SCAFFOLD(__VA_ARGS__);				\
 								\
-	static inline std::nullptr_t _rcgp_get_fallback {};	\
-	DEFINE_FIELD_REFERENCE(/*&*/, __VA_ARGS__);		\
 	DEFINE_FIELD_REFERENCE(const, __VA_ARGS__);		\
+	DEFINE_FIELD_REFERENCE(/*&*/, __VA_ARGS__);		\
+								\
+	DEFINE_FIELD_NAMES(__VA_ARGS__);			\
 								\
 	DEFINE_OVERRIDE_REFERENCE(__VA_ARGS__);

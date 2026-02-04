@@ -221,7 +221,8 @@ std::string lval_repr(const GLSLEmitter &em, const Reference &ref)
 	}
 	vcase(FieldAccess): {
 		auto &facc = ref->as <FieldAccess> ();
-		return std::format("{}.f{}", expr_repr(em, facc.value), facc.fidx);
+		auto &st = get_struct(facc.value);
+		return std::format("{}.{}", expr_repr(em, facc.value), st.fields[facc.fidx]);
 	}
 	vcase(ArrayAccess): {
 		auto &aacc = ref->as <ArrayAccess> ();
@@ -500,7 +501,7 @@ void emit_subroutine(GLSLEmitter &em, const SharedBlockReference &sbr)
 	em.emit_line("{");
 	em.indentation++;
 
-	emit_body(em, em.main);
+	emit_body(em, sbr);
 	
 	em.indentation--;
 	em.emit_line("}");
@@ -577,12 +578,12 @@ void emit_structs(GLSLEmitter &em)
 		structs.insert(agg);
 	}
 
-	for (auto &agg : structs) {
-		em.emit_fmt_line("struct {} {{", agg.name);
+	for (auto &st : structs) {
+		em.emit_fmt_line("struct {} {{", st.name);
 		em.indentation++;
-		for (const auto &[i, f] : std::views::enumerate(agg)) {
+		for (const auto &[i, f] : std::views::enumerate(st)) {
 			auto repr = type_repr(em, f);
-			em.emit_fmt_line("{} f{}{};", repr.base, i, repr.suffix);
+			em.emit_fmt_line("{} {}{};", repr.base, st.fields[i], repr.suffix);
 		}
 		em.indentation--;
 		em.emit_line("};");
@@ -651,10 +652,10 @@ void emit_resource(GLSLEmitter &em, const GlobalResource &grsrc)
 
 	em.indentation++;
 	if (type.is <Struct> ()) {
-		auto &agg = type.as <Struct> ();
-		for (const auto &[i, f] : std::views::enumerate(agg)) {
+		auto &st = type.as <Struct> ();
+		for (const auto &[i, f] : std::views::enumerate(st)) {
 			auto repr = type_repr(em, f);
-			em.emit_fmt_line("{} f{}{};", repr.base, i, repr.suffix);
+			em.emit_fmt_line("{} {}{};", repr.base, st.fields[i], repr.suffix);
 		}
 	} else {
 		auto repr = type_repr(em, grsrc.type);

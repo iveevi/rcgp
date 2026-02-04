@@ -3,9 +3,9 @@
 #extension GL_EXT_scalar_block_layout : require
 
 struct View {
-    mat4 f0;
-    mat4 f1;
-    mat4 f2;
+    mat4 model;
+    mat4 view;
+    mat4 proj;
 };
 
 layout (location = 0) in vec3 lin0;
@@ -29,8 +29,8 @@ void main()
     lvar7 = 1;
     vec4 lvar8;
     lvar8 = vec4(lin0, lvar7);
-    gl_Position = ((pc.f2 * pc.f1) * (pc.f0 * lvar8));
+    gl_Position = ((pc.proj * pc.view) * (pc.model * lvar8));
     vec3 lvar9;
-    lvar9 = vec3((pc.f0 * lvar8));
+    lvar9 = vec3((pc.model * lvar8));
     lout0 = lvar9;
 }

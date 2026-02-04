@@ -194,11 +194,11 @@ add_test(vs_push_constant)
 	  $9 = Local $5
 	  $10 = Local $5
 	  $11 = Local $5
-	  $12 = View { f0: $5, f1: $5, f2: $5 }
+	  $12 = View { model: $5, view: $5, proj: $5 }
 	  $1 = PushConstant +4294967295: Std430 $12
-	  $13 = $1.f0
-	  $14 = $1.f1
-	  $15 = $1.f2
+	  $13 = $1.model
+	  $14 = $1.view
+	  $15 = $1.proj
 	  $16 = StageInput 0: $0
 	  $17 = Local $3
 	  $18 = 1
@@ -296,7 +296,7 @@ add_test(sr_return_aggregate)
 	  $14 = Local $2
 	  Store $14 $13
 	  $15 = Normalize($14)
-	  $1 = Ray { f0: $2, f1: $2 }
+	  $1 = Ray { origin: $2, direction: $2 }
 	  $16 = Return 0: $1
 	  $17 = New $1($8, $15)
 	  Store $16 $17
@@ -334,7 +334,7 @@ add_test(sr_invocation)
 	    stage: Vertex,
 	    stage inputs: { Smooth $0, Smooth $0, Smooth $1, Smooth $0, Smooth $0 }
 	  }
-	  $2 = Ray { f0: $0, f1: $0 }
+	  $2 = Ray { origin: $0, direction: $0 }
 	  $1 = UVec2
 	  $3 = UInt32
 	  $0 = Vec3
@@ -363,8 +363,8 @@ add_test(sr_invocation)
 	  sr3($17, $19)
 	  $20 = Local $0
 	  $21 = Local $0
-	  $22 = $19.f0
-	  $23 = $19.f1
+	  $22 = $19.origin
+	  $23 = $19.direction
 	  $24 = StageOutput 0: Smooth $0
 	  Store $24 $7
 	  $25 = StageOutput 1: Smooth $0

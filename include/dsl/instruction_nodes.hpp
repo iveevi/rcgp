@@ -22,6 +22,7 @@ using Reference = std::shared_ptr <Instruction>;
 
 struct Struct : std::vector <Reference> {
 	std::string name;
+	std::vector <std::string> fields;
 };
 
 struct Array {
@@ -182,5 +183,8 @@ struct Return {
 
 	std::string repr() const;
 };
+
+// Additional methods
+const Struct &get_struct(const Reference &ref);
 
 } // namespace rcgp

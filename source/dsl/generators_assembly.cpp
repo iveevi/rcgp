@@ -73,10 +73,9 @@ std::string emit_type(AsmEmitter &em, const Type &type)
 	}
 	vcase(Struct): {
 		auto &st = type.as <Struct> ();
-		// TODO: show true field names
 		std::string result;
 		for (const auto &[i, f] : std::views::enumerate(st)) {
-			result += std::format("f{}: {}", i, em.ref(f));
+			result += std::format("{}: {}", st.fields[i], em.ref(f));
 			if (i + 1 < st.size())
 				result += ", ";
 		}
@@ -135,8 +134,8 @@ std::string emit_instr_value(AsmEmitter &em, const Reference &ref)
 	}
 	vcase(FieldAccess): {
 		auto &facc = ref->as <FieldAccess> ();
-		// TODO: use true field names
-		return std::format("{}.f{}", em.ref(facc.value), facc.fidx);
+		auto &st = get_struct(facc.value);
+		return std::format("{}.{}", em.ref(facc.value), st.fields[facc.fidx]);
 	}
 	vcase(ArrayAccess): {
 		auto &aacc = ref->as <ArrayAccess> ();
@@ -192,8 +191,6 @@ std::string emit_instr_value(AsmEmitter &em, const Reference &ref)
 			em.ref(grsrc.type)
 		);
 	}
-	// vcase(BuiltinIntrinsic): {
-	// 	auto &bintr = ref->as <BuiltinIntrinsic> ();
 	default:
 		break;
 	};

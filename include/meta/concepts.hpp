@@ -11,18 +11,8 @@
 namespace rcgp {
 
 // Primitive types
-TYPE_TRAIT(is_primitive);
-	template <typename T>
-	TYPE_TRAIT_INCLUDES(is_primitive, scalar <T>);
-	
-	template <typename T, size_t N>
-	TYPE_TRAIT_INCLUDES(is_primitive, vector <T, N>);
-	
-	template <typename T, size_t N, size_t M>
-	TYPE_TRAIT_INCLUDES(is_primitive, matrix <T, N, M>);
-
 template <typename T>
-concept primitive = is_primitive_v <T>;
+concept primitive = std::is_base_of_v <jems::handle, T>;
 
 // User-defined types
 template <typename T>

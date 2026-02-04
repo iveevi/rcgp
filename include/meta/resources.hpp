@@ -21,6 +21,8 @@ struct ResourceGroup : T {
 	using value_type = T;
 };
 
+// TODO: something similar for descriptor heaps with strided access
+
 // Push constants
 template <typename T, template <typename> typename L = layouts::std430>
 struct PushConstant : T {};

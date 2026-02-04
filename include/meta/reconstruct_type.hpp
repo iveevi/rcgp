@@ -14,7 +14,7 @@
 
 namespace rcgp {
 
-// TODO: try thread local handles? since its the same always...
+// TODO: use normal functions...
 template <typename T>
 struct reconstructor_t {
 	static jems::handle main($location) {
@@ -60,20 +60,21 @@ struct reconstructor_t <std::nullptr_t> {
 
 template <aggregate T>
 struct reconstructor_t <T> {
-	template <size_t I>
-	static void collect_field(Struct &st, $location) {
-		using field_type = std::remove_cvref_t <
-			decltype(std::declval <T &> ().template _rcgp_get <I> ())
-		>;
-		st.emplace_back(reconstructor_t <field_type> ::main(loc));
-	}
-
 	static jems::handle main($location) {
 		Struct st;
+		
 		st.name = std::string($ss_type(T).view());
+
+		auto ftn = [&] <size_t I> {
+			using F = T::fields::template get <I>;
+			st.emplace_back(reconstructor_t <F> ::main(loc));
+			st.fields.emplace_back(T::_field_names[I]);
+		};
+
 		constexpr_for(Is, T::field_count,
-			(collect_field <Is> (st, loc), ...)
+			(ftn.template operator() <Is> (), ...);
 		);
+
 		return jems::type_loc(loc, st);
 	}
 };

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cstdlib>
+#include <type_traits>
+
 namespace rcgp {
 
 // Tuples without the baggage
@@ -63,7 +66,7 @@ struct tlist_contains <T, Tlist <>> : std::false_type {};
 template <typename T, typename Head, typename ... Rest>
 struct tlist_contains <T, Tlist <Head, Rest...>>
 	: std::bool_constant <
-		std::same_as <T, Head> || tlist_contains <T, Tlist <Rest...>> ::value
+		std::is_same_v <T, Head> or tlist_contains <T, Tlist <Rest...>> ::value
 	> {};
 
 template <typename List>

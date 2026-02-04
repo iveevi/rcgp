@@ -1,6 +1,48 @@
 #include "dsl/instructions.hpp"
+#include "util/error.hpp"
 
 namespace rcgp {
+
+const Type &get_type(const Reference &ref)
+{
+	vswitch (*ref) {
+	vcase(Local): {
+		auto &local = ref->as <Local> ();
+		return get_type(local.type);
+	}
+	vcase(Type): {
+		return ref->as <Type> ();
+	}
+	vcase(GlobalResource): {
+		auto &grsrc = ref->as <GlobalResource> ();
+		assertion(grsrc.kind == GlobalResourceKind::ePushConstant
+			or grsrc.kind == GlobalResourceKind::eStorageBuffer);
+		return get_type(grsrc.type);
+	}
+	vcase(ArrayAccess): {
+		auto &aacc = ref->as <ArrayAccess> ();
+		auto &type = get_type(aacc.value);
+		assertion(type.is <Array> ());
+		return get_type(type.as <Array> ().base);
+	}
+	vcase(FieldAccess): {
+		auto &facc = ref->as <FieldAccess> ();
+		auto &type = get_type(facc.value);
+		assertion(type.is <Struct> ());
+		return get_type(type.as <Struct>().at(facc.fidx));
+	}
+	default:
+		break;
+	}
+
+	fatal("unhandled instruction in get_type: {}", ref->repr());
+}
+
+const Struct &get_struct(const Reference &ref)
+{
+	auto &type = get_type(ref);
+	return type.as <Struct> ();
+}
 
 void Block::apply_group_allocation_map(const group_allocation_map &map)
 {

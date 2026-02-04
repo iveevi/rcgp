@@ -246,10 +246,10 @@ add_test(field_access)
 	  $1 = Local $0
 	  $2 = Int32
 	  $3 = Local $2
-	  $4 = RecordingPair { f0: $0, f1: $2 }
+	  $4 = RecordingPair { x: $0, y: $2 }
 	  $5 = Local $4
-	  $6 = $5.f0
-	  $7 = $5.f1
+	  $6 = $5.x
+	  $7 = $5.y
 	  $8 = Add $6 $7
 	}
 	)");
