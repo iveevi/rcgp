@@ -1,24 +1,9 @@
-#include <iostream>
-#include <print>
 #include <set>
 
 #include "dsl/generators.hpp"
 #include "dsl/instructions.hpp"
 #include "util/timer.hpp"
-
-#undef assert
-#define assert(c) 							\
-	if (not (c)) {							\
-		std::println(std::cerr, "assertion failed: {}", #c);	\
-		std::flush(std::cerr);					\
-		__builtin_trap();					\
-	}
-
-#define fatal(...) {							\
-		std::println(std::cerr, __VA_ARGS__);			\
-		std::flush(std::cerr);					\
-		__builtin_trap();					\
-	}
+#include "util/error.hpp"
 
 namespace rcgp {
 
@@ -96,6 +81,9 @@ static auto g_intrinsic_code = std::array {
 	"transpose",
 	"SetMeshOutputsEXT",
 	"EmitMeshTasksEXT",
+	"break",
+	"continue",
+	"discard",
 };
 
 static auto g_primitive_types = std::array {
@@ -354,6 +342,13 @@ std::string expr_repr(const GLSLEmitter &em, const Reference &ref)
 	}
 	vcase(BuiltinIntrinsic): {
 		auto &bintr = ref->as <BuiltinIntrinsic> ();
+		switch (bintr.code) {
+		case BuiltinIntrinsicCode::eBreak: return "break";
+		case BuiltinIntrinsicCode::eContinue: return "continue";
+		case BuiltinIntrinsicCode::eDiscard: return "discard";
+		default:
+			break;
+		}
 		auto ftn = g_intrinsic_code.at(std::to_underlying(bintr.code));
 		return std::format("{}({})", ftn, args(bintr.args));
 	}
@@ -397,18 +392,10 @@ void emit_statement(GLSLEmitter &em, const Reference &ref)
 	vcase(Loop): {
 		auto &loop = ref->as <Loop> ();
 
-		if (loop.kind == LoopKind::eFor and loop.init)
-			emit_body(em, *loop.init);
-
-		em.emit_line("for (;;) {");
+		em.emit_line("while (true) {");
 		em.indentation++;
 
-		emit_body(em, loop.cond);
-		em.emit_fmt_line("if (!({})) break;", expr_repr(em, loop.cond_value));
 		emit_body(em, loop.body);
-		
-		if (loop.kind == LoopKind::eFor and loop.step)
-			emit_body(em, *loop.step);
 		
 		em.indentation--;
 		return em.emit_line("}");
@@ -493,7 +480,7 @@ void emit_subroutine(GLSLEmitter &em, const SharedBlockReference &sbr)
 	for (const auto &[i, arg] : std::views::enumerate(sbr->arguments)) {
 		auto repr = type_repr(em, arg.type);
 		args += std::format("{} arg{}{}", repr.base, i, repr.suffix);
-		if (i + 1 < sbr->returns.size())
+		if (i + 1 < sbr->arguments.size())
 			args += ", ";
 	}
 
@@ -535,8 +522,8 @@ auto collect_extensions(const GLSLEmitter &em)
 	std::vector <std::string> extensions;
 	extensions.emplace_back("GL_EXT_scalar_block_layout");
 	
-	auto model = em.main->model;
-	if (model == ShaderStage::eMesh or model == ShaderStage::eTask)
+	auto stage = em.main->stage;
+	if (stage == ShaderStage::eMesh or stage == ShaderStage::eTask)
 		extensions.emplace_back("GL_EXT_mesh_shader");
 
 	return extensions;
@@ -710,7 +697,7 @@ void emit_whole(GLSLEmitter &em)
 	}
 
 	// Mesh shader output
-	if (em.main->model == ShaderStage::eMesh) {
+	if (em.main->stage == ShaderStage::eMesh) {
 		auto &max_vertices = em.main->mesh_max_vertices.value();
 		auto &max_primitives = em.main->mesh_max_primitives.value();
 		em.emit_fmt_line("layout ("
@@ -769,12 +756,6 @@ void collect_subroutines(GLSLEmitter &em, const SharedBlockReference &sbr)
 		}
 		vcase(Loop): {
 			auto &loop = inst->as <Loop> ();
-			if (loop.kind == LoopKind::eFor) {
-				collect_subroutines(em, loop.init.value());
-				collect_subroutines(em, loop.step.value());
-			}
-
-			collect_subroutines(em, loop.cond);
 			collect_subroutines(em, loop.body);
 			break;
 		}
@@ -794,7 +775,7 @@ std::string generate_glsl(const SharedBlockReference &sbr)
 		.indentation = 0,
 	};
 
-	if (sbr->model == ShaderStage::eSubroutine) {
+	if (sbr->stage == ShaderStage::eSubroutine) {
 		emit_subroutine(em, sbr);
 	} else {
 		collect_subroutines(em, sbr);

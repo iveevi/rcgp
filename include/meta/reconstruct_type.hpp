@@ -61,22 +61,20 @@ struct reconstructor_t <std::nullptr_t> {
 template <aggregate T>
 struct reconstructor_t <T> {
 	template <size_t I>
-	static void collect_field(Struct &aggregate, $location) {
+	static void collect_field(Struct &st, $location) {
 		using field_type = std::remove_cvref_t <
 			decltype(std::declval <T &> ().template _rcgp_get <I> ())
 		>;
-		auto handle = reconstructor_t <field_type> ::main(loc);
-		if (handle)
-			aggregate.emplace_back(handle);
+		st.emplace_back(reconstructor_t <field_type> ::main(loc));
 	}
 
 	static jems::handle main($location) {
-		Struct aggregate;
-		aggregate.name = std::string($ss_type(T).view());
+		Struct st;
+		st.name = std::string($ss_type(T).view());
 		constexpr_for(Is, T::field_count,
-			(collect_field <Is> (aggregate, loc), ...)
+			(collect_field <Is> (st, loc), ...)
 		);
-		return jems::type_loc(loc, aggregate);
+		return jems::type_loc(loc, st);
 	}
 };
 

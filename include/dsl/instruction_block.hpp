@@ -18,15 +18,14 @@ using push_constant_allocation_map = std::map <void *, uint32_t>;
 
 // DebugInfo information
 struct DebugInfo {
+	// TODO: node name
 	std::source_location origin;
 };
 
+// TODO: should transition to CFG style...
+// CFG nodes and a top level Module which include context info
 struct Block : std::vector <Reference> {
-	// TODO: None option for loops and branches...
-	ShaderStage model = ShaderStage::eSubroutine;
-
 	std::string name;
-
 	std::vector <Argument> arguments;
 	std::vector <Return> returns;
 	std::vector <StageInput> stage_inputs;
@@ -39,6 +38,7 @@ struct Block : std::vector <Reference> {
 	std::optional <MeshPrimitive> mesh_primitive_kind;
 	std::map <uint32_t, bool> mesh_perprimitive_outputs;
 	uint32_t mesh_output_counter = 0;
+	ShaderStage stage = ShaderStage::eSubroutine;
 	
 	void add_argument(const Argument &arg);
 	void add_return(const Return &ret);

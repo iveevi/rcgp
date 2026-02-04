@@ -130,14 +130,12 @@ void show_diff(const std::string &expected_str, const std::string &actual_str)
 	}
 }
 
-std::string clean(const std::string &input, size_t end_trim)
+std::string clean(const std::string &input)
 {
 	auto lines = split_lines(input);
 
-	lines = std::vector(lines.begin() + 1, lines.end() - end_trim);
-
 	std::string result;
-	for (size_t i = 0; i < lines.size(); i++) {
+	for (size_t i = 1; i < lines.size(); i++) {
 		size_t off = 0;
 		if (lines[i].size() && lines[i][0] == '\t')
 			off++;
@@ -152,7 +150,7 @@ std::string clean(const std::string &input, size_t end_trim)
 
 void assert_assembly_match(const SharedBlockReference &block, const std::string &str)
 {
-	auto expected = clean(str, 1);
+	auto expected = clean(str);
 	auto act = generate_assembly(block);
 	if (act != expected) {
 		show_diff(expected, act);
@@ -168,7 +166,7 @@ void assert_assembly_match(const SharedBlockReference &block, const std::string 
 
 void assert_glsl_match(const SharedBlockReference &block, const std::string &str)
 {
-	auto expected = clean(str, 0);
+	auto expected = clean(str);
 	auto act = generate_glsl(block);
 	if (act != expected) {
 		show_diff(expected, act);

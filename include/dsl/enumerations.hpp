@@ -151,6 +151,9 @@ enum class BuiltinIntrinsicCode {
 	eTranspose,
 	eSetMeshOutputsEXT,
 	eEmitMeshTasksEXT,
+	eBreak,
+	eContinue,
+	eDiscard,
 };
 
 std::string_view repr(BuiltinIntrinsicCode value);
@@ -205,12 +208,5 @@ enum class ShaderStage {
 };
 
 std::string_view repr(ShaderStage value);
-
-enum class LoopKind {
-	eWhile,
-	eFor,
-};
-
-std::string_view repr(LoopKind value);
 
 } // namespace rcgp

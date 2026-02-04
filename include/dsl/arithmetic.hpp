@@ -5,6 +5,16 @@
 
 namespace rcgp {
 
+inline scalar <float> operator+(const scalar <float> &a, const scalar <int32_t> &b)
+{
+	return scalar <float> ::reinterpret(jems::operation(OperationCode::eAdd, a, b));
+}
+
+inline scalar <float> operator-(const scalar <float> &a, const scalar <int32_t> &b)
+{
+	return scalar <float> ::reinterpret(jems::operation(OperationCode::eSubtract, a, b));
+}
+
 template <native_scalar T, size_t N, size_t M>
 vector <T, M> operator*(const matrix <T, N, M> &m, const vector <T, N> &v)
 {

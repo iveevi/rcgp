@@ -33,7 +33,7 @@ auto trace(auto ftn)
 
 	auto result = F::stage::alloc();
 
-	result->model = S;
+	result->stage = S;
 	if (auto s = jems::scope(result)) {
 		TSCOPE("primary trace");
 		typename F::args args;

@@ -90,11 +90,6 @@ struct Branch {
 };
 
 struct Loop {
-	LoopKind kind;
-	std::optional <SharedBlockReference> init;
-	SharedBlockReference cond;
-	Reference cond_value;
-	std::optional <SharedBlockReference> step;
 	SharedBlockReference body;
 
 	std::string repr() const;

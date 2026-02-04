@@ -64,7 +64,7 @@ def generate_cpp(enums: list[tuple[str, list[str]]]) -> list[str]:
     for enum_name, entries in enums:
         array_name = f"k{enum_name}Names"
         lines.append(
-            f"static constexpr std::array<std::string_view, {len(entries)}> {array_name} = {{"
+            f"static constexpr std::array {array_name} = {{"
         )
         for entry in entries:
             repr_value = strip_enum_prefix(entry)

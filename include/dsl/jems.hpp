@@ -8,9 +8,10 @@
 
 namespace rcgp::jems {
 
-struct handle {
+class handle {
+protected:
 	Reference _ref;
-
+public:
 	handle(const Reference &ref_ = nullptr) : _ref(ref_) {}
 
 	void override_reference(const Reference &ref_) {
@@ -23,10 +24,6 @@ struct handle {
 	
 	operator const Reference &() const {
 		return _ref;
-	}
-
-	operator bool() const {
-		return _ref.get() != nullptr;
 	}
 };
 
@@ -74,6 +71,7 @@ JEM(array_access, ArrayAccess);
 JEM(field_access, FieldAccess);
 JEM(store, Store);
 JEM(local, Local);
+JEM(loop, Loop);
 
 // TODO: separate header & source later...
 inline size_t type_cache_key_for(const Type &type)
@@ -160,3 +158,7 @@ type(Args ...) -> type <Args...>;
 } // namespace rcgp::jems
 
 #define $location const std::source_location &loc = std::source_location::current()
+
+#define $break ::rcgp::jems::builtin_intrinsic(::rcgp::BuiltinIntrinsicCode::eBreak)
+#define $continue ::rcgp::jems::builtin_intrinsic(::rcgp::BuiltinIntrinsicCode::eContinue)
+#define $discard ::rcgp::jems::builtin_intrinsic(::rcgp::BuiltinIntrinsicCode::eDiscard)

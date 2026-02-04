@@ -3,6 +3,11 @@
 
 #define SUITE "tracing"
 
+// Tracing:
+// Testing that user-authored shader modules and subroutines are correctly
+// trascribed into instructions. This primarily tests for argument injection,
+// return handling, and subroutine invocation.
+
 add_test(vs_empty)
 {
 	auto vs = $shader(vertex)() {};

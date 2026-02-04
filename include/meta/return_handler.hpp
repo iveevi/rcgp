@@ -41,9 +41,6 @@ void interpolation_return_handler(const Interpolant <T, P> &ret, size_t &argi)
 	auto type = reconstruct_type <T> ();
 	auto sout = StageOutput(type, argi, P);
 	$tsb.add_stage_output(sout);
-
-	// Fix the argument index of the original value
-	ret._ref->template as <StageOutput> ().argi = argi++;
 }
 
 // TODO: shorten using type traits

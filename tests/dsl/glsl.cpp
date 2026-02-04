@@ -3,6 +3,10 @@
 
 #define SUITE "glsl"
 
+// GLSL:
+// Testing that shader modules and subroutines are generated into reasonable
+// GLSL shader code.
+
 add_test(vs_empty)
 {
 	auto vs = $shader(vertex)() {};
@@ -203,4 +207,19 @@ add_test(sr_invocation)
 	};
 
 	assert_glsl_match_file(vs, "glsl/sr_invocation.glsl");
+};
+
+add_test(for_loop)
+{
+	auto sr = $subroutine(sr)(i32 limit, i32 step) {
+		f32 sum = 0;
+		$for (i32 i = 0, i < limit, i = i + step) {
+			sum = sum + i;
+		};
+
+		return sum;
+	};
+
+	assert_glsl_match(sr, R"(
+	)");
 };

@@ -5,7 +5,6 @@
 
 namespace rcgp {
 
-// TODO: generate this header?
 struct Instruction : variant <
 	Argument,
 	ArrayAccess,
