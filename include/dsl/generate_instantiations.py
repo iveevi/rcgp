@@ -62,9 +62,9 @@ def gen_jems_instantiations() -> tuple[list[str], list[str]]:
         add_extern(name, arg)
         add_extern(name + '_loc', arg)
 
-    # global_intrinsic and loc
-    add_extern('global_intrinsic', 'GlobalIntrinsic')
-    add_extern('global_intrinsic_loc', 'GlobalIntrinsic')
+    # system_value and loc
+    add_extern('system_value', 'SystemValue')
+    add_extern('system_value_loc', 'SystemValue')
 
     # global_resource and loc (common shape)
     add_extern('global_resource', 'jems::handle, GlobalResourceKind, GlobalResourceLayout, GlobalResourceAccess, std::nullopt_t, uint32_t')

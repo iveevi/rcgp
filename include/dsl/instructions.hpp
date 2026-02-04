@@ -13,7 +13,7 @@ struct Instruction : variant <
 	Constant,
 	Construct,
 	FieldAccess,
-	GlobalIntrinsic,
+	SystemValue,
 	GlobalResource,
 	Branch,
 	Loop,
@@ -34,8 +34,8 @@ struct Instruction : variant <
 
 	std::string repr() const {
 		return std::visit([&] <typename T> (T x) -> std::string {
-			if constexpr (std::same_as <T, GlobalIntrinsic>)
-				return std::string(rcgp::repr(this->as <GlobalIntrinsic> ()));
+			if constexpr (std::same_as <T, SystemValue>)
+				return std::string(rcgp::repr(this->as <SystemValue> ()));
 			else
 				return x.repr();
 		}, *this);

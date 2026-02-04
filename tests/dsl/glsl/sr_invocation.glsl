@@ -42,7 +42,7 @@ void sr1(float arg0, out vec3 ret0)
     lout4 = lvar10.f1;
 }
 
-void sr2(float arg0, uint arg1, out vec3 ret0, out uvec2 ret1)
+void sr3(float arg0, out Ray ret0)
 {
     float lvar0;
     lvar0 = 1;
@@ -71,7 +71,7 @@ void sr2(float arg0, uint arg1, out vec3 ret0, out uvec2 ret1)
     lout4 = lvar10.f1;
 }
 
-void sr3(float arg0, out Ray ret0)
+void sr2(float arg0, uint arg1, out vec3 ret0, out uvec2 ret1)
 {
     float lvar0;
     lvar0 = 1;

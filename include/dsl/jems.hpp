@@ -64,7 +64,7 @@ JEM(returns, Return);
 JEM(stage_input, StageInput);
 JEM(stage_output, StageOutput);
 JEM(global_resource, GlobalResource);
-JEM(global_intrinsic, GlobalIntrinsic);
+JEM(system_value, SystemValue);
 JEM(builtin_intrinsic, BuiltinIntrinsic);
 JEM(swizzle, Swizzle);
 JEM(array_access, ArrayAccess);

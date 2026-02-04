@@ -22,7 +22,7 @@ static auto g_resource_layouts = std::array {
 	"std430",
 };
 
-static auto g_global_intrinsics = std::array {
+static auto g_system_values = std::array {
 	// TODO: generate with script with @glsl comments
 	"gl_Position",
 	"gl_InstanceIndex",
@@ -201,9 +201,9 @@ std::string lval_repr(const GLSLEmitter &em, const Reference &ref)
 		auto &ret = ref->as <Return> ();
 		return std::format("ret{}", ret.argi);
 	}
-	vcase(GlobalIntrinsic): {
-		auto gintr = ref->as <GlobalIntrinsic> ();
-		return g_global_intrinsics.at(std::to_underlying(gintr));
+	vcase(SystemValue): {
+		auto sysval = ref->as <SystemValue> ();
+		return g_system_values.at(std::to_underlying(sysval));
 	}
 	vcase(GlobalResource): {
 		auto &grsrc = ref->as <GlobalResource> ();
@@ -225,9 +225,9 @@ std::string lval_repr(const GLSLEmitter &em, const Reference &ref)
 	}
 	vcase(ArrayAccess): {
 		auto &aacc = ref->as <ArrayAccess> ();
-		if (aacc.value->is <GlobalIntrinsic> ()) {
-			auto &gintr = aacc.value->as <GlobalIntrinsic> ();
-			if (gintr == GlobalIntrinsic::eMeshVertices) {
+		if (aacc.value->is <SystemValue> ()) {
+			auto &sysval = aacc.value->as <SystemValue> ();
+			if (sysval == SystemValue::eMeshVertices) {
 				return std::format(
 					"gl_MeshVerticesEXT[{}].gl_Position",
 					expr_repr(em, aacc.index)
@@ -359,7 +359,7 @@ std::string expr_repr(const GLSLEmitter &em, const Reference &ref)
 	vcase(ArrayAccess):
 	vcase(FieldAccess):
 	vcase(GlobalResource):
-	vcase(GlobalIntrinsic): {
+	vcase(SystemValue): {
 		return lval_repr(em, ref);
 	}
 	default:

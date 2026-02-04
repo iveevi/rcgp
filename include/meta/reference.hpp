@@ -7,6 +7,7 @@ namespace rcgp {
 template <auto &ref>
 using reference_base_t = std::decay_t <decltype(ref)>;
 
+// TODO: refactor to contract!
 // TODO: should enforce that base is a resource type
 template <auto &ref>
 struct reference : reference_base_t <ref> {

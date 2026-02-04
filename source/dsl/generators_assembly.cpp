@@ -142,9 +142,9 @@ std::string emit_instr_value(AsmEmitter &em, const Reference &ref)
 		auto &aacc = ref->as <ArrayAccess> ();
 		return std::format("{}[{}]", em.ref(aacc.value), em.ref(aacc.index));
 	}
-	vcase(GlobalIntrinsic): {
-		auto &gintr = ref->as <GlobalIntrinsic> ();
-		return std::format("SV: {}", repr(gintr));
+	vcase(SystemValue): {
+		auto &sysval = ref->as <SystemValue> ();
+		return std::format("SV: {}", repr(sysval));
 	}
 	vcase(StageOutput): {
 		auto &sout = ref->as <StageOutput> ();
@@ -211,7 +211,7 @@ void emit_instr(AsmEmitter &em, const Reference &ref)
 	vcase(Constant):
 	vcase(Construct):
 	vcase(FieldAccess):
-	vcase(GlobalIntrinsic):
+	vcase(SystemValue):
 	vcase(GlobalResource):
 	vcase(Operation):
 	vcase(StageInput):

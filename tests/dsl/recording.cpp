@@ -327,18 +327,19 @@ add_test(while_loop)
 	    $0 = Int32
 	    $1 = Float
 	    $11 = Less $8 $4
-	    $12 = Block {
+	    $12 = LogicalNot $11
+	    $13 = Block {
 	      Break
 	    }
-	    Branch $11: $12
-	    $13 = Add $6 $8
-	    Store $6 $13
-	    $14 = Add $8 $5
-	    Store $8 $14
+	    Branch $12: $13
+	    $14 = Add $6 $8
+	    Store $6 $14
+	    $15 = Add $8 $5
+	    Store $8 $15
 	  }
 	  Loop $10
-	  $15 = Return 0: $1
-	  Store $15 $6
+	  $16 = Return 0: $1
+	  Store $16 $6
 	}
 	)");
 };
@@ -385,18 +386,19 @@ add_test(for_loop)
 	    $0 = Int32
 	    $1 = Float
 	    $11 = Less $8 $4
-	    $12 = Block {
+	    $12 = LogicalNot $11
+	    $13 = Block {
 	      Break
 	    }
-	    Branch $11: $12
-	    $13 = Add $6 $8
-	    Store $6 $13
-	    $14 = Add $8 $5
-	    Store $8 $14
+	    Branch $12: $13
+	    $14 = Add $6 $8
+	    Store $6 $14
+	    $15 = Add $8 $5
+	    Store $8 $15
 	  }
 	  Loop $10
-	  $15 = Return 0: $1
-	  Store $15 $6
+	  $16 = Return 0: $1
+	  Store $16 $6
 	}
 	)");
 };

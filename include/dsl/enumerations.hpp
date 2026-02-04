@@ -100,8 +100,7 @@ enum class GlobalResourceAccess {
 
 std::string_view repr(GlobalResourceAccess value);
 
-// TODO: rename to SystemValue
-enum class GlobalIntrinsic {
+enum class SystemValue {
 	eClipPosition,
 	eInstanceIndex,
 	eVertexIndex,
@@ -113,7 +112,7 @@ enum class GlobalIntrinsic {
 	ePrimitiveTriangleIndices,
 };
 
-std::string_view repr(GlobalIntrinsic value);
+std::string_view repr(SystemValue value);
 
 enum class RateProperties {
 	eNone,

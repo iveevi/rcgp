@@ -13,36 +13,36 @@ namespace rcgp {
 
 // TODO: move intrinsics definition to a dedicated header
 // TODO: should also mark the stage so that we check at shader module definion...
-template <GlobalIntrinsic G, ShaderStage S, primitive T>
+template <SystemValue G, ShaderStage S, primitive T>
 struct read_only_intrinsic {
 	// NOTE: for aggregates, we may need to inject...
 	operator T() const {
-		return T::reinterpret(jems::global_intrinsic(G));
+		return T::reinterpret(jems::system_value(G));
 	}
 };
 
-template <GlobalIntrinsic G, ShaderStage S, primitive T>
+template <SystemValue G, ShaderStage S, primitive T>
 struct write_only_intrinsic {
 	auto &operator=(const T &value) {
-		auto self = jems::global_intrinsic(G);
+		auto self = jems::system_value(G);
 		jems::store(self, value);
 		return value;
 	}
 };
 
-template <GlobalIntrinsic G, ShaderStage S, typename T>
+template <SystemValue G, ShaderStage S, typename T>
 struct projection <read_only_intrinsic <G, S, T>> {
 	using type = T;
 };
 
-using InstanceIndex = read_only_intrinsic <GlobalIntrinsic::eInstanceIndex, ShaderStage::eVertex, i32>;
-using VertexIndex = read_only_intrinsic <GlobalIntrinsic::eVertexIndex, ShaderStage::eVertex, i32>;
-using ClipPosition = write_only_intrinsic <GlobalIntrinsic::eClipPosition, ShaderStage::eVertex, vec4>;
+using InstanceIndex = read_only_intrinsic <SystemValue::eInstanceIndex, ShaderStage::eVertex, i32>;
+using VertexIndex = read_only_intrinsic <SystemValue::eVertexIndex, ShaderStage::eVertex, i32>;
+using ClipPosition = write_only_intrinsic <SystemValue::eClipPosition, ShaderStage::eVertex, vec4>;
 
 // TODO: should also support mesh, task...
-using LocalInvocationID = read_only_intrinsic <GlobalIntrinsic::eLocalInvocationID, ShaderStage::eCompute, uvec3>;
-using WorkGroupID = read_only_intrinsic <GlobalIntrinsic::eWorkGroupID, ShaderStage::eCompute, uvec3>;
-using GlobalInvocationID = read_only_intrinsic <GlobalIntrinsic::eGlobalInvocationID, ShaderStage::eCompute, uvec3>;
+using LocalInvocationID = read_only_intrinsic <SystemValue::eLocalInvocationID, ShaderStage::eCompute, uvec3>;
+using WorkGroupID = read_only_intrinsic <SystemValue::eWorkGroupID, ShaderStage::eCompute, uvec3>;
+using GlobalInvocationID = read_only_intrinsic <SystemValue::eGlobalInvocationID, ShaderStage::eCompute, uvec3>;
 
 template <uint32_t X, uint32_t Y = 1, uint32_t Z = 1>
 struct WorkGroup {
@@ -114,14 +114,14 @@ template <typename T>
 struct TaskPayload : T {
 	TaskPayload() {
 		inject_reference(static_cast <T &> (*this),
-			jems::global_intrinsic(GlobalIntrinsic::eTaskPayload)
+			jems::system_value(SystemValue::eTaskPayload)
 		);
 	}
 };
 
 template <typename T>
 struct mesh_vertex_positions : jems::handle {
-	mesh_vertex_positions() : handle(jems::global_intrinsic(GlobalIntrinsic::eMeshVertices)) {}
+	mesh_vertex_positions() : handle(jems::system_value(SystemValue::eMeshVertices)) {}
 
 	template <projectively_int_scalar U>
 	T operator[](const U &idx) const {
@@ -135,7 +135,7 @@ struct mesh_vertex_positions : jems::handle {
 template <typename T>
 struct mesh_primitive_triangles : jems::handle {
 	mesh_primitive_triangles()
-		: handle(jems::global_intrinsic(GlobalIntrinsic::ePrimitiveTriangleIndices)) {}
+		: handle(jems::system_value(SystemValue::ePrimitiveTriangleIndices)) {}
 
 	template <projectively_int_scalar U>
 	T operator[](const U &idx) const {

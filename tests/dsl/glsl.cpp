@@ -265,7 +265,7 @@ add_test(for_loop)
 	    int lvar3;
 	    lvar3 = 0;
 	    while (true) {
-	        if ((lvar3 < arg0)) {
+	        if ((!(lvar3 < arg0))) {
 	            break;
 	        }
 	        lvar2 = (lvar2 + lvar3);

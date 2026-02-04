@@ -50,7 +50,7 @@ void inject_one_argument(TaskGroup <X, Y, Z> &, InjectionCounters &)
 }
 
 // TODO: check stage compatibility
-template <ShaderStage S1, GlobalIntrinsic G, ShaderStage S2, typename T>
+template <ShaderStage S1, SystemValue G, ShaderStage S2, typename T>
 void inject_one_argument(read_only_intrinsic <G, S2, T> &value, InjectionCounters &counters)
 {
 	if constexpr (S1 != S2) {
@@ -59,7 +59,7 @@ void inject_one_argument(read_only_intrinsic <G, S2, T> &value, InjectionCounter
 	}
 }
 
-template <ShaderStage S1, GlobalIntrinsic G, ShaderStage S2, typename T>
+template <ShaderStage S1, SystemValue G, ShaderStage S2, typename T>
 void inject_one_argument(write_only_intrinsic <G, S2, T> &value, InjectionCounters &counters)
 {
 	if constexpr (S1 != S2)
@@ -75,7 +75,7 @@ void inject_one_argument(TaskPayload <T> &value, InjectionCounters &)
 {
 	static_assert(S == ShaderStage::eMesh, "TaskPayload is only valid for mesh shaders");
 	$tsb.task_payload_type = reconstruct_type <T> ();
-	inject_reference(Tas <T &> (value), jems::global_intrinsic(GlobalIntrinsic::eTaskPayload));
+	inject_reference(Tas <T &> (value), jems::system_value(SystemValue::eTaskPayload));
 }
 
 template <aggregate T, size_t I>
