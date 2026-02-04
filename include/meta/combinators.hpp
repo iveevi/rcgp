@@ -20,6 +20,7 @@ auto shaders_to_modules(const Device &device, const ShaderCompiler &compiler, St
 	auto process = [&](auto shader) {
 		constexpr auto stage = decltype(shader)::stage;
 		auto glsl = generate_glsl(shader);
+		printf("%s\n", glsl.c_str());
 		auto spirv = compiler.glsl_to_spirv(glsl, stage_to_esh(stage));
 		// TODO: make more error tolerant
 		return device.new_shader_module(spirv);

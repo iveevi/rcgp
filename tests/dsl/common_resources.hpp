@@ -22,3 +22,5 @@ struct View {
 static PushConstant <View> view;
 
 static AttributeStream <float3> position;
+static AttributeStream <float3> normal;
+static AttributeStream <float2> uv;

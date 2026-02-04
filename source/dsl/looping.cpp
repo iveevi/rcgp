@@ -14,7 +14,7 @@ _loop_holder::~_loop_holder()
 	auto sbr = std::make_shared <Block> ();
 	if (auto s = jems::scope(sbr)) {
 		boolean b = cond();
-		$if (b) { $break; };
+		$if (not b) { $break; };
 		body();
 		if (step)
 			(*step)();

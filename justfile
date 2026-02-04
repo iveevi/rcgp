@@ -7,7 +7,7 @@ rcgp:
 	cmake --build build -j
 
 # Build runtime tests
-test:
+test: rcgp
 	cmake --build build -j -t test
 
 # Tests for scaffold generation

@@ -159,6 +159,6 @@ type(Args ...) -> type <Args...>;
 
 #define $location const std::source_location &loc = std::source_location::current()
 
-#define $break ::rcgp::jems::builtin_intrinsic(::rcgp::BuiltinIntrinsicCode::eBreak)
-#define $continue ::rcgp::jems::builtin_intrinsic(::rcgp::BuiltinIntrinsicCode::eContinue)
-#define $discard ::rcgp::jems::builtin_intrinsic(::rcgp::BuiltinIntrinsicCode::eDiscard)
+#define $break ::rcgp::jems::builtin_intrinsic { ::rcgp::BuiltinIntrinsicCode::eBreak }
+#define $continue ::rcgp::jems::builtin_intrinsic { ::rcgp::BuiltinIntrinsicCode::eContinue }
+#define $discard ::rcgp::jems::builtin_intrinsic { ::rcgp::BuiltinIntrinsicCode::eDiscard }

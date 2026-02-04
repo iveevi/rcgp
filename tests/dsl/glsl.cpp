@@ -114,6 +114,41 @@ add_test(vs_stream)
 	)");
 };
 
+add_test(vs_multiple_io)
+{
+	auto vs = $shader(vertex)($contracts(position, normal, uv)) {
+		return std::tuple {
+			Smooth <float3> { position },
+			Smooth <float3> { normal },
+			Smooth <float2> { uv },
+		};
+	};
+	
+	assert_glsl_match(vs, R"(
+	#version 460
+
+	#extension GL_EXT_scalar_block_layout : require
+
+	layout (location = 0) in vec3 lin0;
+	layout (location = 1) in vec3 lin1;
+	layout (location = 2) in vec2 lin2;
+
+	layout (location = 0) smooth out vec3 lout0;
+	layout (location = 1) smooth out vec3 lout1;
+	layout (location = 2) smooth out vec2 lout2;
+
+	void main()
+	{
+	    vec2 lvar0;
+	    vec3 lvar1;
+	    vec3 lvar2;
+	    lout0 = lin0;
+	    lout1 = lin1;
+	    lout2 = lin2;
+	}
+	)");
+};
+
 add_test(vs_push_constant)
 {
 	auto vs = $shader(vertex)(
@@ -221,5 +256,22 @@ add_test(for_loop)
 	};
 
 	assert_glsl_match(sr, R"(
+	void sr(int arg0, int arg1, out float ret0)
+	{
+	    int lvar0;
+	    int lvar1;
+	    float lvar2;
+	    lvar2 = 0;
+	    int lvar3;
+	    lvar3 = 0;
+	    while (true) {
+	        if ((lvar3 < arg0)) {
+	            break;
+	        }
+	        lvar2 = (lvar2 + lvar3);
+	        lvar3 = (lvar3 + arg1);
+	    }
+	    ret0 = lvar2;
+	}
 	)");
 };

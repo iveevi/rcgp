@@ -454,7 +454,8 @@ void emit_statement(GLSLEmitter &em, const Reference &ref)
 void emit_body(GLSLEmitter &em, const SharedBlockReference &sbr)
 {
 	// TODO: use heuristics to guage which instructions should be promoted
-	// std::vector <Reference> statements;
+	// base it on # of instructions and # of uses
+	// std::vector/set <Reference> statements;
 
 	for (auto &instr : *sbr) {
 		vswitch (*instr) {
@@ -555,7 +556,6 @@ void emit_stage_io(GLSLEmitter &em)
 
 void emit_structs(GLSLEmitter &em)
 {
-	// TODO: refactor AggregateX -> StructX
 	auto cmp = [](const Struct &a, const Struct &b) {
 		return a.name < b.name;
 	};

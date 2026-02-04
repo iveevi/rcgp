@@ -28,6 +28,7 @@ struct AsmEmitter {
 	}
 
 	std::string ref(const Reference &ref) {
+		// TODO: check for name in debug info
 		auto ptr = ref.get();
 		if (not ids.contains(ptr))
 			ids.emplace(ptr, ids.size());
@@ -52,13 +53,11 @@ struct AsmEmitter {
 	#define emit_fmt_assign(ref, ...) emit_assign(ref, std::format(__VA_ARGS__))
 };
 
-std::string emit_instr_value(AsmEmitter &em, const Reference &ref);
-
 std::string strargs(AsmEmitter &em, const std::vector <Reference> &args)
 {
 	std::string result;
 	for (const auto &[i, arg] : std::views::enumerate(args)) {
-		result += emit_instr_value(em, arg);
+		result += em.ref(arg);
 		if (i + 1 < args.size())
 			result += ", ";
 	}
@@ -143,6 +142,58 @@ std::string emit_instr_value(AsmEmitter &em, const Reference &ref)
 		auto &aacc = ref->as <ArrayAccess> ();
 		return std::format("{}[{}]", em.ref(aacc.value), em.ref(aacc.index));
 	}
+	vcase(GlobalIntrinsic): {
+		auto &gintr = ref->as <GlobalIntrinsic> ();
+		return std::format("SV: {}", repr(gintr));
+	}
+	vcase(StageOutput): {
+		auto &sout = ref->as <StageOutput> ();
+		return std::format(
+			"StageOutput {}: {} {}",
+			sout.argi,
+			repr(sout.properties),
+			em.ref(sout.type)
+		);
+	}
+	vcase(StageInput): {
+		auto &sin = ref->as <StageInput> ();
+		return std::format(
+			"StageInput {}: {}",
+			sin.argi,
+			em.ref(sin.type)
+		);
+	}
+	vcase(GlobalResource): {
+		auto &grsrc = ref->as <GlobalResource> ();
+		if (grsrc.kind == GlobalResourceKind::ePushConstant) {
+			return std::format(
+				"{} +{}: {} {}",
+				repr(grsrc.kind),
+				grsrc.offset.value_or(-1),
+				repr(grsrc.layout),
+				em.ref(grsrc.type)
+			);
+		}
+
+		auto binding = std::format(
+			"r{}b{}",
+			grsrc.group.value_or(-1),
+			grsrc.index.value_or(-1)
+		);
+
+		if (grsrc.kind == GlobalResourceKind::eSampler)
+			return std::format("{} @{}", repr(grsrc.kind), binding);
+
+		return std::format(
+			"{} @{}: {} {}",
+			repr(grsrc.kind),
+			binding,
+			repr(grsrc.layout),
+			em.ref(grsrc.type)
+		);
+	}
+	// vcase(BuiltinIntrinsic): {
+	// 	auto &bintr = ref->as <BuiltinIntrinsic> ();
 	default:
 		break;
 	};
@@ -155,13 +206,17 @@ void emit_block(AsmEmitter &em, const SharedBlockReference &sbr);
 void emit_instr(AsmEmitter &em, const Reference &ref)
 {
 	vswitch (*ref) {
-	vcase(Constant):
-	vcase(Operation):
-	vcase(Swizzle):
 	vcase(Argument):
+	vcase(ArrayAccess):
+	vcase(Constant):
 	vcase(Construct):
 	vcase(FieldAccess):
-	vcase(ArrayAccess):
+	vcase(GlobalIntrinsic):
+	vcase(GlobalResource):
+	vcase(Operation):
+	vcase(StageInput):
+	vcase(StageOutput):
+	vcase(Swizzle):
 	vcase(Type): {
 		auto value = emit_instr_value(em, ref);
 		return em.emit_assign(ref, value);
@@ -210,15 +265,33 @@ void emit_instr(AsmEmitter &em, const Reference &ref)
 			return em.emit_line("Continue");
 		case BuiltinIntrinsicCode::eDiscard:
 			return em.emit_line("Discard");
+		case BuiltinIntrinsicCode::eEmitMeshTasksEXT:
+		case BuiltinIntrinsicCode::eSetMeshOutputsEXT:
+			return em.emit_fmt_line("{}({})", repr(bintr.code), strargs(em, bintr.args));
 		default:
 			break;
 		}
 
-		return em.emit_fmt_line("{}({})", repr(bintr.code), strargs(em, bintr.args));
+		return em.emit_fmt_assign(
+			ref,
+			"{}({})",
+			repr(bintr.code),
+			strargs(em, bintr.args)
+		);
 	}
 	vcase(Return): {
 		auto &ret = ref->as <Return> ();
 		return em.emit_fmt_assign(ref, "Return {}: {}", ret.argi, em.ref(ret.type));
+	}
+	vcase(Invocation): {
+		auto &inv = ref->as <Invocation> ();
+		std::string result;
+		result += inv.sbr->name + "(";
+		result += strargs(em, inv.args);
+		if (inv.args.size() and inv.returns.size())
+			result += ", ";
+		result += strargs(em, inv.returns) + ")";
+		return em.emit_line(result);
 	}
 	default:
 		break;
@@ -245,7 +318,67 @@ void emit_context(AsmEmitter &em, const SharedBlockReference &sbr)
 	em.indentation++;
 
 	em.emit_fmt_line("stage: {},", repr(sbr->stage));
-	// TODO: more stuff
+
+	if (sbr->stage == ShaderStage::eSubroutine)
+		em.emit_fmt_line("name: {},", sbr->name);
+
+	if (sbr->stage_inputs.size()) {
+		std::string result;
+		for (const auto &[i, sin] : std::views::enumerate(sbr->stage_inputs)) {
+			result += std::format("{}", em.ref(sin.type));
+			if (i + 1 < sbr->stage_inputs.size())
+				result += ", ";
+		}
+
+		em.emit_fmt_line("stage inputs: {{ {} }}", result);
+	}
+	
+	if (sbr->stage_outputs.size()) {
+		std::string result;
+		for (const auto &[i, sout] : std::views::enumerate(sbr->stage_outputs)) {
+			result += std::format("{} {}", repr(sout.properties), em.ref(sout.type));
+			if (i + 1 < sbr->stage_outputs.size())
+				result += ", ";
+		}
+
+		em.emit_fmt_line("stage inputs: {{ {} }}", result);
+	}
+
+	if (sbr->global_resources.size()) {
+		std::string result;
+
+		size_t i = 0;
+		for (const auto &[_, grsrc] : sbr->global_resources) {
+			result += em.ref(grsrc);
+			if (++i < sbr->global_resources.size())
+				result += ", ";
+		}
+
+		em.emit_fmt_line("resources: {{ {} }},", result);
+	}
+
+	if (sbr->arguments.size()) {
+		// TODO: shorthand which takes a lambda...
+		std::string result;
+		for (const auto &[i, arg] : std::views::enumerate(sbr->arguments)) {
+			result += em.ref(arg.type);
+			if (i + 1 < sbr->arguments.size())
+				result += ", ";
+		}
+
+		em.emit_fmt_line("arguments: {{ {} }},", result);
+	}
+	
+	if (sbr->returns.size()) {
+		std::string result;
+		for (const auto &[i, ret] : std::views::enumerate(sbr->returns)) {
+			result += em.ref(ret.type);
+			if (i + 1 < sbr->returns.size())
+				result += ", ";
+		}
+
+		em.emit_fmt_line("returns: {{ {} }},", result);
+	}
 	
 	em.indentation--;
 	em.emit_line("}");
@@ -267,6 +400,9 @@ void emit_primary_block(AsmEmitter &em, const SharedBlockReference &sbr)
 
 std::string generate_assembly(const SharedBlockReference &sbr, bool debug)
 {
+	// TODO: option to show types directly (i.e. vec2, instead of $2)
+	// also inlining constants...
+	// bool verbose = false -> disregards types and such
 	auto em = AsmEmitter {
 		.ids = {},
 		.result = "",

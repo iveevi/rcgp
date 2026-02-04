@@ -46,6 +46,7 @@ inline auto operator*(std::nullptr_t, std::function <void ()> &&fn)
 		jems::scope scope(sbr);
 		fn();
 	}
+	sbr->name = "recorded";
 	return sbr;
 }
 

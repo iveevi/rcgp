@@ -9,7 +9,7 @@
 namespace rcgp {
 
 template <ShaderStage S, typename T>
-void return_handler(const TaskPayload <T> &, size_t &)
+void return_handler(TaskPayload <T> &, size_t &)
 {
 	static_assert(S == ShaderStage::eTask);
 	$tsb.task_payload_type = reconstruct_type <T> ();
@@ -18,7 +18,7 @@ void return_handler(const TaskPayload <T> &, size_t &)
 // TODO: can we do ..., void> or is that partial specialization
 template <ShaderStage S, MeshPrimitive P, uint32_t MaxVertices, uint32_t MaxPrimitives, typename T>
 requires std::is_void_v <T>
-void return_handler(const MeshletPayload <P, MaxVertices, MaxPrimitives, T> &, size_t &)
+void return_handler(MeshletPayload <P, MaxVertices, MaxPrimitives, T> &, size_t &)
 {
 	static_assert(S == ShaderStage::eMesh);
 	$tsb.mesh_max_vertices = MaxVertices;
@@ -27,7 +27,7 @@ void return_handler(const MeshletPayload <P, MaxVertices, MaxPrimitives, T> &, s
 }
 
 template <ShaderStage S, MeshPrimitive P, uint32_t MaxVertices, uint32_t MaxPrimitives, typename T>
-void return_handler(const MeshletPayload <P, MaxVertices, MaxPrimitives, T> &, size_t &)
+void return_handler(MeshletPayload <P, MaxVertices, MaxPrimitives, T> &, size_t &)
 {
 	static_assert(S == ShaderStage::eMesh);
 	$tsb.mesh_max_vertices = MaxVertices;
@@ -36,37 +36,40 @@ void return_handler(const MeshletPayload <P, MaxVertices, MaxPrimitives, T> &, s
 }
 
 template <typename T, RateProperties P>
-void interpolation_return_handler(const Interpolant <T, P> &ret, size_t &argi)
+void interpolation_return_handler(Interpolant <T, P> &ret, size_t &argi)
 {
 	auto type = reconstruct_type <T> ();
 	auto sout = StageOutput(type, argi, P);
 	$tsb.add_stage_output(sout);
+
+	Reference &ref = ret;
+	ref->as <StageOutput> ().argi = argi++;
 }
 
 // TODO: shorten using type traits
 template <ShaderStage S, primitive T>
-void return_handler(const Smooth <T> &ret, size_t &argi)
+void return_handler(Smooth <T> &ret, size_t &argi)
 {
 	static_assert(S == ShaderStage::eVertex);
 	interpolation_return_handler(ret, argi);
 }
 
 template <ShaderStage S, primitive T>
-void return_handler(const Flat <T> &ret, size_t &argi)
+void return_handler(Flat <T> &ret, size_t &argi)
 {
 	static_assert(S == ShaderStage::eVertex);
 	interpolation_return_handler(ret, argi);
 }
 
 template <ShaderStage S, primitive T>
-void return_handler(const NoPerspective <T> &ret, size_t &argi)
+void return_handler(NoPerspective <T> &ret, size_t &argi)
 {
 	static_assert(S == ShaderStage::eVertex);
 	interpolation_return_handler(ret, argi);
 }
 
 template <ShaderStage S, primitive T>
-void return_handler(const T &value, size_t &argi)
+void return_handler(T &value, size_t &argi)
 {
 	auto type = reconstruct_type <T> ();
 
@@ -91,7 +94,7 @@ void return_handler(const T &value, size_t &argi)
 }
 
 template <ShaderStage S, aggregate T>
-void return_handler(const T &value, size_t &argi)
+void return_handler(T &value, size_t &argi)
 {
 	static_assert(S == ShaderStage::eSubroutine);
 
@@ -103,7 +106,7 @@ void return_handler(const T &value, size_t &argi)
 }
 
 template <ShaderStage S, typename ... Args>
-void return_handler(const std::tuple <Args...> &ret, size_t &argi)
+void return_handler(std::tuple <Args...> &ret, size_t &argi)
 {
 	constexpr_for(Is, sizeof...(Args),
 		(return_handler <S> (std::get <Is> (ret), argi), ...)

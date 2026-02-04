@@ -7,16 +7,16 @@
 // Testing that user-authored shader modules and subroutines are correctly
 // trascribed into instructions. This primarily tests for argument injection,
 // return handling, and subroutine invocation.
+// TODO: verbose_tracing and normal tracing
 
 add_test(vs_empty)
 {
 	auto vs = $shader(vertex)() {};
 
 	assert_assembly_match(vs, R"(
-	block {
-	  context {
-	    model: vertex shader,
-	    name: main,
+	Block {
+	  Context {
+	    stage: Vertex,
 	  }
 	}
 	)");
@@ -30,21 +30,20 @@ add_test(vs_clip)
 	};
 
 	assert_assembly_match(vs, R"(
-	block {
-	  context {
-	    model: vertex shader,
-	    name: main,
+	Block {
+	  Context {
+	    stage: Vertex,
 	  }
 	  $0 = Float
-	  $1 = local $0
+	  $1 = Local $0
 	  $2 = 1
-	  store $1 $2
+	  Store $1 $2
 	  $3 = Vec4
-	  $4 = new $3($1, $1, $1, $1)
-	  $5 = local $3
-	  store $5 $4
-	  $6 = SVPosition
-	  store $6 $5
+	  $4 = New $3($1, $1, $1, $1)
+	  $5 = Local $3
+	  Store $5 $4
+	  $6 = SV: ClipPosition
+	  Store $6 $5
 	}
 	)");
 };
@@ -60,36 +59,34 @@ add_test(vs_louts)
 	};
 
 	assert_assembly_match(vs, R"(
-	block {
-	  context {
-	    model: vertex shader,
-	    name: main,
-	    stage out 0: $0 (smooth),
-	    stage out 1: $1 (flat),
+	Block {
+	  Context {
+	    stage: Vertex,
+	    stage inputs: { Smooth $0, Flat $1 }
 	  }
 	  $2 = Float
-	  $3 = local $2
+	  $3 = Local $2
 	  $4 = 1
-	  store $3 $4
+	  Store $3 $4
 	  $0 = Vec3
-	  $5 = new $0($3, $3, $3)
-	  $6 = local $0
-	  store $6 $5
-	  $7 = stage out($0, 0, smooth)
-	  store $7 $6
+	  $5 = New $0($3, $3, $3)
+	  $6 = Local $0
+	  Store $6 $5
+	  $7 = StageOutput 0: Smooth $0
+	  Store $7 $6
 	  $8 = UInt32
-	  $9 = local $8
+	  $9 = Local $8
 	  $10 = 4
-	  store $9 $10
-	  $11 = local $8
+	  Store $9 $10
+	  $11 = Local $8
 	  $12 = 1
-	  store $11 $12
+	  Store $11 $12
 	  $1 = UVec2
-	  $13 = new $1($11, $9)
-	  $14 = local $1
-	  store $14 $13
-	  $15 = stage out($1, 1, flat)
-	  store $15 $14
+	  $13 = New $1($11, $9)
+	  $14 = Local $1
+	  Store $14 $13
+	  $15 = StageOutput 1: Flat $1
+	  Store $15 $14
 	}
 	)");
 };
@@ -106,28 +103,62 @@ add_test(vs_stream)
 	};
 
 	assert_assembly_match(vs, R"(
-	block {
-	  context {
-	    model: vertex shader,
-	    name: main,
-	    stage in 0: $0,
-	    stage out 0: $0 (smooth),
+	Block {
+	  Context {
+	    stage: Vertex,
+	    stage inputs: { $0 }
+	    stage inputs: { Smooth $0 }
 	  }
 	  $1 = Vec4
 	  $2 = Float
 	  $0 = Vec3
-	  $3 = local $0
-	  $4 = stage in($0, 0)
-	  $5 = local $2
+	  $3 = Local $0
+	  $4 = StageInput 0: $0
+	  $5 = Local $2
 	  $6 = 1
-	  store $5 $6
-	  $7 = new $1($4, $5)
-	  $8 = local $1
-	  store $8 $7
-	  $9 = SVPosition
-	  store $9 $8
-	  $10 = stage out($0, 0, smooth)
-	  store $10 $4
+	  Store $5 $6
+	  $7 = New $1($4, $5)
+	  $8 = Local $1
+	  Store $8 $7
+	  $9 = SV: ClipPosition
+	  Store $9 $8
+	  $10 = StageOutput 0: Smooth $0
+	  Store $10 $4
+	}
+	)");
+};
+
+add_test(vs_multiple_io)
+{
+	auto vs = $shader(vertex)($contracts(position, normal, uv)) {
+		return std::tuple {
+			Smooth <float3> { position },
+			Smooth <float3> { normal },
+			Smooth <float2> { uv },
+		};
+	};
+	
+	assert_assembly_match(vs, R"(
+	Block {
+	  Context {
+	    stage: Vertex,
+	    stage inputs: { $0, $0, $1 }
+	    stage inputs: { Smooth $0, Smooth $0, Smooth $1 }
+	  }
+	  $0 = Vec3
+	  $1 = Vec2
+	  $2 = Local $1
+	  $3 = Local $0
+	  $4 = Local $0
+	  $5 = StageInput 0: $0
+	  $6 = StageInput 1: $0
+	  $7 = StageInput 2: $1
+	  $8 = StageOutput 0: Smooth $0
+	  Store $8 $5
+	  $9 = StageOutput 1: Smooth $0
+	  Store $9 $6
+	  $10 = StageOutput 2: Smooth $1
+	  Store $10 $7
 	}
 	)");
 };
@@ -145,47 +176,46 @@ add_test(vs_push_constant)
 	};
 
 	assert_assembly_match(vs, R"(
-	block {
-	  context {
-	    model: vertex shader,
-	    name: main,
-	    stage in 0: $0,
-	    stage out 0: $0 (smooth),
-	    resource: {$1},
+	Block {
+	  Context {
+	    stage: Vertex,
+	    stage inputs: { $0 }
+	    stage inputs: { Smooth $0 }
+	    resources: { $1 },
 	  }
 	  $2 = Vec4
 	  $3 = Float
 	  $0 = Vec3
-	  $4 = local $0
+	  $4 = Local $0
 	  $5 = FMat4x4
-	  $6 = local $5
-	  $7 = local $5
-	  $8 = local $5
-	  $9 = local $5
-	  $10 = local $5
-	  $11 = local $5
-	  $12 = View($5, $5, $5)
-	  $1 = push_constant($12, nil:0, Std430)
-	  $13 = field $1:0
-	  $14 = field $1:1
-	  $15 = field $1:2
-	  $16 = stage in($0, 0)
-	  $17 = local $3
+	  $6 = Local $5
+	  $7 = Local $5
+	  $8 = Local $5
+	  $9 = Local $5
+	  $10 = Local $5
+	  $11 = Local $5
+	  $12 = View { f0: $5, f1: $5, f2: $5 }
+	  $1 = PushConstant +4294967295: Std430 $12
+	  $13 = $1.f0
+	  $14 = $1.f1
+	  $15 = $1.f2
+	  $16 = StageInput 0: $0
+	  $17 = Local $3
 	  $18 = 1
-	  store $17 $18
-	  $19 = new $2($16, $17)
-	  $20 = local $2
-	  store $20 $19
-	  $21 = mul($13, $20)
-	  $22 = mul($15, $14)
-	  $23 = mul($22, $21)
-	  $24 = SVPosition
-	  store $24 $23
-	  $25 = new $0($21)
-	  $26 = local $0
-	  store $26 $25
-	  $27 = stage out($0, 0, smooth)
-	  store $27 $26
+	  Store $17 $18
+	  $19 = New $2($16, $17)
+	  $20 = Local $2
+	  Store $20 $19
+	  $21 = Multiply $13 $20
+	  $22 = Multiply $15 $14
+	  $23 = Multiply $22 $21
+	  $24 = SV: ClipPosition
+	  Store $24 $23
+	  $25 = New $0($21)
+	  $26 = Local $0
+	  Store $26 $25
+	  $27 = StageOutput 0: Smooth $0
+	  Store $27 $26
 	}
 	)");
 };
@@ -197,36 +227,34 @@ add_test(sr_return_primitives)
 	};
 	
 	assert_assembly_match(sr, R"(
-	block {
-	  context {
-	    model: subroutine,
+	Block {
+	  Context {
+	    stage: Subroutine,
 	    name: sr,
-	    argument 0: $0,
-	    argument 1: $1,
-	    return 0: $2,
-	    return 1: $3,
+	    arguments: { $0, $1 },
+	    returns: { $2, $3 },
 	  }
 	  $3 = UVec2
 	  $2 = Vec3
 	  $0 = Float
 	  $1 = UInt32
-	  $4 = local $1
-	  $5 = local $0
-	  $6 = argument $0:0
-	  $7 = argument $1:1
-	  $8 = new $2($6, $6, $6)
-	  $9 = local $2
-	  store $9 $8
-	  $10 = local $1
+	  $4 = Local $1
+	  $5 = Local $0
+	  $6 = Argument 0: $0
+	  $7 = Argument 1: $1
+	  $8 = New $2($6, $6, $6)
+	  $9 = Local $2
+	  Store $9 $8
+	  $10 = Local $1
 	  $11 = 13
-	  store $10 $11
-	  $12 = new $3($7, $10)
-	  $13 = local $3
-	  store $13 $12
-	  $14 = return($2, 0)
-	  store $14 $9
-	  $15 = return($3, 1)
-	  store $15 $13
+	  Store $10 $11
+	  $12 = New $3($7, $10)
+	  $13 = Local $3
+	  Store $13 $12
+	  $14 = Return 0: $2
+	  Store $14 $9
+	  $15 = Return 1: $3
+	  Store $15 $13
 	}
 	)");
 };
@@ -241,37 +269,37 @@ add_test(sr_return_aggregate)
 	};
 	
 	assert_assembly_match(sr, R"(
-	block {
-	  context {
-	    model: subroutine,
+	Block {
+	  Context {
+	    stage: Subroutine,
 	    name: sr,
-	    argument 0: $0,
-	    return 0: $1,
+	    arguments: { $0 },
+	    returns: { $1 },
 	  }
 	  $2 = Vec3
 	  $0 = Float
-	  $3 = local $0
-	  $4 = argument $0:0
-	  $5 = local $0
+	  $3 = Local $0
+	  $4 = Argument 0: $0
+	  $5 = Local $0
 	  $6 = 0
-	  store $5 $6
-	  $7 = new $2($5, $5, $5)
-	  $8 = local $2
-	  store $8 $7
-	  $9 = local $0
+	  Store $5 $6
+	  $7 = New $2($5, $5, $5)
+	  $8 = Local $2
+	  Store $8 $7
+	  $9 = Local $0
 	  $10 = 1
-	  store $9 $10
-	  $11 = local $0
+	  Store $9 $10
+	  $11 = Local $0
 	  $12 = 1
-	  store $11 $12
-	  $13 = new $2($11, $4, $9)
-	  $14 = local $2
-	  store $14 $13
-	  $15 = normalize($14)
-	  $1 = Ray($2, $2)
-	  $16 = return($1, 0)
-	  $17 = new $1($8, $15)
-	  store $16 $17
+	  Store $11 $12
+	  $13 = New $2($11, $4, $9)
+	  $14 = Local $2
+	  Store $14 $13
+	  $15 = Normalize($14)
+	  $1 = Ray { f0: $2, f1: $2 }
+	  $16 = Return 0: $1
+	  $17 = New $1($8, $15)
+	  Store $16 $17
 	}
 	)");
 };
@@ -301,57 +329,52 @@ add_test(sr_invocation)
 	};
 
 	assert_assembly_match(vs, R"(
-	block {
-	  context {
-	    model: vertex shader,
-	    name: main,
-	    stage out 0: $0 (smooth),
-	    stage out 1: $0 (smooth),
-	    stage out 2: $1 (smooth),
-	    stage out 3: $0 (smooth),
-	    stage out 4: $0 (smooth),
+	Block {
+	  Context {
+	    stage: Vertex,
+	    stage inputs: { Smooth $0, Smooth $0, Smooth $1, Smooth $0, Smooth $0 }
 	  }
-	  $2 = Ray($0, $0)
+	  $2 = Ray { f0: $0, f1: $0 }
 	  $1 = UVec2
 	  $3 = UInt32
 	  $0 = Vec3
 	  $4 = Float
-	  $5 = local $4
+	  $5 = Local $4
 	  $6 = 1
-	  store $5 $6
-	  $7 = local $0
-	  @sr1($5; $7)
-	  $8 = local $0
-	  $9 = local $3
+	  Store $5 $6
+	  $7 = Local $0
+	  sr1($5, $7)
+	  $8 = Local $0
+	  $9 = Local $3
 	  $10 = 2
-	  store $9 $10
-	  $11 = local $4
+	  Store $9 $10
+	  $11 = Local $4
 	  $12 = 1
-	  store $11 $12
-	  $13 = local $0
-	  $14 = local $1
-	  @sr2($11, $9; $13, $14)
-	  $15 = local $1
-	  $16 = local $0
-	  $17 = local $4
+	  Store $11 $12
+	  $13 = Local $0
+	  $14 = Local $1
+	  sr2($11, $9, $13, $14)
+	  $15 = Local $1
+	  $16 = Local $0
+	  $17 = Local $4
 	  $18 = 2
-	  store $17 $18
-	  $19 = local $2
-	  @sr3($17; $19)
-	  $20 = local $0
-	  $21 = local $0
-	  $22 = field $19:0
-	  $23 = field $19:1
-	  $24 = stage out($0, 0, smooth)
-	  store $24 $7
-	  $25 = stage out($0, 1, smooth)
-	  store $25 $14
-	  $26 = stage out($1, 2, smooth)
-	  store $26 $13
-	  $27 = stage out($0, 3, smooth)
-	  store $27 $22
-	  $28 = stage out($0, 4, smooth)
-	  store $28 $23
+	  Store $17 $18
+	  $19 = Local $2
+	  sr3($17, $19)
+	  $20 = Local $0
+	  $21 = Local $0
+	  $22 = $19.f0
+	  $23 = $19.f1
+	  $24 = StageOutput 0: Smooth $0
+	  Store $24 $7
+	  $25 = StageOutput 1: Smooth $0
+	  Store $25 $14
+	  $26 = StageOutput 2: Smooth $1
+	  Store $26 $13
+	  $27 = StageOutput 3: Smooth $0
+	  Store $27 $22
+	  $28 = StageOutput 4: Smooth $0
+	  Store $28 $23
 	}
 	)");
 };

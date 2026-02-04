@@ -100,6 +100,7 @@ enum class GlobalResourceAccess {
 
 std::string_view repr(GlobalResourceAccess value);
 
+// TODO: rename to SystemValue
 enum class GlobalIntrinsic {
 	eClipPosition,
 	eInstanceIndex,

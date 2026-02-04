@@ -88,6 +88,11 @@ public:
 	friend scalar operator-(const scalar &v) {
 		return scalar(jems::operation(OperationCode::eMultiply, scalar <T> (-1), v));
 	}
+	
+	friend scalar operator!(const scalar &v)
+	requires std::is_same_v <T, bool> {
+		return scalar(jems::operation(OperationCode::eLogicalNot, v));
+	}
 
 	static auto reinterpret(const jems::handle &h) {
 		return scalar(h);

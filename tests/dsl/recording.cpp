@@ -23,6 +23,7 @@ add_test(scalar_constant)
 	Block {
 	  Context {
 	    stage: Subroutine,
+	    name: recorded,
 	  }
 	  $0 = Int32
 	  $1 = Local $0
@@ -44,6 +45,7 @@ add_test(binary_op)
 	Block {
 	  Context {
 	    stage: Subroutine,
+	    name: recorded,
 	  }
 	  $0 = Int32
 	  $1 = Local $0
@@ -68,6 +70,7 @@ add_test(unary_op)
 	Block {
 	  Context {
 	    stage: Subroutine,
+	    name: recorded,
 	  }
 	  $0 = Int32
 	  $1 = Local $0
@@ -93,6 +96,7 @@ add_test(assignment_store)
 	Block {
 	  Context {
 	    stage: Subroutine,
+	    name: recorded,
 	  }
 	  $0 = Int32
 	  $1 = Local $0
@@ -118,6 +122,7 @@ add_test(increment_decrement)
 	Block {
 	  Context {
 	    stage: Subroutine,
+	    name: recorded,
 	  }
 	  $0 = Int32
 	  $1 = Local $0
@@ -158,6 +163,7 @@ add_test(type_caching)
 	Block {
 	  Context {
 	    stage: Subroutine,
+	    name: recorded,
 	  }
 	  $0 = Int32
 	  $1 = Local $0
@@ -179,6 +185,7 @@ add_test(construct_vec3)
 	Block {
 	  Context {
 	    stage: Subroutine,
+	    name: recorded,
 	  }
 	  $0 = Float
 	  $1 = Local $0
@@ -209,6 +216,7 @@ add_test(swizzle_xyz)
 	Block {
 	  Context {
 	    stage: Subroutine,
+	    name: recorded,
 	  }
 	  $0 = Vec4
 	  $1 = Local $0
@@ -232,6 +240,7 @@ add_test(field_access)
 	Block {
 	  Context {
 	    stage: Subroutine,
+	    name: recorded,
 	  }
 	  $0 = Float
 	  $1 = Local $0
@@ -259,6 +268,7 @@ add_test(array_access)
 	Block {
 	  Context {
 	    stage: Subroutine,
+	    name: recorded,
 	  }
 	  $0 = Int32
 	  $1 = Int32[4]
@@ -299,6 +309,7 @@ add_test(while_loop)
 	Block {
 	  Context {
 	    stage: Subroutine,
+	    name: recorded,
 	  }
 	  $0 = Int32
 	  $1 = Float
@@ -356,6 +367,7 @@ add_test(for_loop)
 	Block {
 	  Context {
 	    stage: Subroutine,
+	    name: recorded,
 	  }
 	  $0 = Int32
 	  $1 = Float
@@ -407,6 +419,7 @@ add_test(branching)
 	Block {
 	  Context {
 	    stage: Subroutine,
+	    name: recorded,
 	  }
 	  $0 = Int32
 	  $1 = Local $0
