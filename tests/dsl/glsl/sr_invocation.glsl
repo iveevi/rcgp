@@ -47,34 +47,36 @@ void sr3(float arg0, out Ray ret0)
     vec3 lvar12;
     lvar12 = vec3(lvar11, arg0, lvar10);
     normalize(lvar12);
-    ret0 = Ray(lvar9, normalize(lvar12));
+    vec3 lvar13;
+    lvar13 = normalize(lvar12);
+    ret0 = Ray(lvar9, lvar13);
 }
 
 void main()
 {
-    float lvar13;
-    lvar13 = 1;
-    vec3 lvar14;
-    sr1(lvar13, lvar14);
+    float lvar14;
+    lvar14 = 1;
     vec3 lvar15;
-    uint lvar16;
-    lvar16 = 2;
-    float lvar17;
-    lvar17 = 1;
-    vec3 lvar18;
-    uvec2 lvar19;
-    sr2(lvar17, lvar16, lvar18, lvar19);
+    sr1(lvar14, lvar15);
+    vec3 lvar16;
+    uint lvar17;
+    lvar17 = 2;
+    float lvar18;
+    lvar18 = 1;
+    vec3 lvar19;
     uvec2 lvar20;
-    vec3 lvar21;
-    float lvar22;
-    lvar22 = 2;
-    Ray lvar23;
-    sr3(lvar22, lvar23);
-    vec3 lvar24;
+    sr2(lvar18, lvar17, lvar19, lvar20);
+    uvec2 lvar21;
+    vec3 lvar22;
+    float lvar23;
+    lvar23 = 2;
+    Ray lvar24;
+    sr3(lvar23, lvar24);
     vec3 lvar25;
-    lout0 = lvar14;
-    lout1 = lvar19;
-    lout2 = lvar18;
-    lout3 = lvar23.origin;
-    lout4 = lvar23.direction;
+    vec3 lvar26;
+    lout0 = lvar15;
+    lout1 = lvar20;
+    lout2 = lvar19;
+    lout3 = lvar24.origin;
+    lout4 = lvar24.direction;
 }

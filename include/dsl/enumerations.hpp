@@ -26,6 +26,7 @@ enum class OperationCode {
 	eBitNot,
 	eShiftLeft,
 	eShiftRight,
+	eMod,
 };
 
 std::string_view repr(OperationCode value);
@@ -154,6 +155,7 @@ enum class BuiltinIntrinsicCode {
 	eBreak,
 	eContinue,
 	eDiscard,
+	eSqrt,
 };
 
 std::string_view repr(BuiltinIntrinsicCode value);

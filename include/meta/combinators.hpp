@@ -14,15 +14,33 @@
 
 namespace rcgp {
 
+struct DebugOptions {
+	bool dump_assembly = false;
+	bool dump_glsl = false;
+};
+
 template <typename ... Stage>
-auto shaders_to_modules(const Device &device, const ShaderCompiler &compiler, Stage &&... shaders)
+auto shaders_to_modules(
+	const Device &device,
+	const ShaderCompiler &compiler,
+	const DebugOptions &debug,
+	Stage &&... shaders
+)
 {
 	auto process = [&](auto shader) {
 		constexpr auto stage = decltype(shader)::stage;
+
+		if (debug.dump_assembly) {
+			auto sasm = generate_assembly(shader);
+			printf("assembly:\n%s\n", sasm.c_str());
+		}
+
 		auto glsl = generate_glsl(shader);
-		printf("%s\n", glsl.c_str());
+		if (debug.dump_glsl)
+			printf("glsl:\n%s\n", glsl.c_str());
+		
 		auto spirv = compiler.glsl_to_spirv(glsl, stage_to_esh(stage));
-		// TODO: make more error tolerant
+
 		return device.new_shader_module(spirv);
 	};
 
@@ -35,15 +53,12 @@ struct RasterizationCombinator {
 	const ShaderCompiler &compiler;
 	const vk::RenderPass &render_pass;
 	RasterizationOptions options;
+	DebugOptions debug;
 
-	template <
-		typename VRet, typename ... As,
-		typename FRet, typename ... Bs
-	>
-	auto operator()(
-		shader_stage <ShaderStage::eVertex, VRet, As...> &vertex,
-		shader_stage <ShaderStage::eFragment, FRet, Bs...> &fragment
-	) const {
+	template <typename VertexShader, typename FragmentShader>
+	requires is_vertex_shader_v <VertexShader>
+		and is_fragment_shader_v <FragmentShader>
+	auto operator()(VertexShader &vertex_shader, FragmentShader &fragment_shader) const {
 		TSCOPE("rasterization combinator");
 
 		// TODO: return a Tlist of error static strings...
@@ -51,8 +66,9 @@ struct RasterizationCombinator {
 		// [[maybe_unused]] constexpr bool interface_ok =
 		// 	vertex_fragment_interface <VRet, Bs...> ::value;
 
-		using vertex_icontext = icontext_from_args_t <As...>;
-		using fragment_icontext = icontext_from_args_t <Bs...>;
+		// TODO: we can get rid of these...
+		using vertex_icontext = VertexShader::icontext;
+		using fragment_icontext = FragmentShader::icontext;
 
 		// Collect vertex attribute streams
 		auto streams = collect_streams(vertex_icontext());
@@ -67,11 +83,14 @@ struct RasterizationCombinator {
 			collect_gvrs <ShaderStage::eFragment> (fragment_icontext())
 		));
 
-		auto [layout, dsls, gamap] = apply_gvrs(device, gvrs, vertex, fragment);
+		auto [layout, dsls, gamap] = apply_gvrs(
+			device, gvrs,
+			vertex_shader, fragment_shader
+		);
 
 		auto [vmod, fmod] = shaders_to_modules(
-			device, compiler,
-			vertex, fragment
+			device, compiler, debug,
+			vertex_shader, fragment_shader
 		);
 
 		auto pipeline = compile_rasterization_pipeline(
@@ -101,22 +120,19 @@ struct DynamicRasterizationCombinator {
 	const ShaderCompiler &compiler;
 	RasterizationRenderingFormats formats;
 	RasterizationOptions options;
+	DebugOptions debug;
 
-	template <
-		typename VRet, typename ... As,
-		typename FRet, typename ... Bs
-	>
-	auto operator()(
-		shader_stage <ShaderStage::eVertex, VRet, As...> &vertex,
-		shader_stage <ShaderStage::eFragment, FRet, Bs...> &fragment
-	) const {
+	template <typename VertexShader, typename FragmentShader>
+	requires is_vertex_shader_v <VertexShader>
+		and is_fragment_shader_v <FragmentShader>
+	auto operator()(VertexShader &vertex_shader, FragmentShader &fragment_shader) const {
 		TSCOPE("dynamic rasterization combinator");
 
 		// [[maybe_unused]] constexpr bool interface_ok =
 		// 	vertex_fragment_interface <VRet, Bs...> ::value;
 
-		using vertex_icontext = icontext_from_args_t <As...>;
-		using fragment_icontext = icontext_from_args_t <Bs...>;
+		using vertex_icontext = VertexShader::icontext;
+		using fragment_icontext = FragmentShader::icontext;
 
 		auto streams = collect_streams(vertex_icontext());
 		auto vertex_bindings = sequence_to_vertex_bindings(streams);
@@ -127,11 +143,15 @@ struct DynamicRasterizationCombinator {
 			collect_gvrs <ShaderStage::eFragment> (fragment_icontext())
 		));
 
-		auto [layout, dsls, gamap] = apply_gvrs(device, gvrs, vertex, fragment);
+		auto [layout, dsls, gamap] = apply_gvrs(
+			device, gvrs,
+			vertex_shader,
+			fragment_shader
+		);
 
 		auto [vmod, fmod] = shaders_to_modules(
-			device, compiler,
-			vertex, fragment
+			device, compiler, debug,
+			vertex_shader, fragment_shader
 		);
 
 		auto pipeline = compile_rasterization_pipeline_dynamic(
@@ -158,6 +178,7 @@ struct DynamicRasterizationCombinator {
 struct ComputeCombinator {
 	const Device &device;
 	const ShaderCompiler &compiler;
+	DebugOptions debug;
 
 	template <typename Ret, typename ... As>
 	auto operator()(shader_stage <ShaderStage::eCompute, Ret, As...> &compute) const {
@@ -168,7 +189,7 @@ struct ComputeCombinator {
 		auto gvrs = collect_gvrs <ShaderStage::eCompute> (icontext());
 		auto [layout, dsls, gamap] = apply_gvrs(device, gvrs, compute);
 		
-		auto [cmod] = shaders_to_modules(device, compiler, compute);
+		auto [cmod] = shaders_to_modules(device, compiler, debug, compute);
 
 		auto pipeline = compile_compute_pipeline(
 			device,
@@ -189,6 +210,7 @@ struct MeshShadingCombinator {
 	const ShaderCompiler &compiler;
 	const vk::RenderPass &render_pass;
 	RasterizationOptions options;
+	DebugOptions debug;
 
 	template <
 		typename TRet, typename ... Ts,
@@ -215,7 +237,7 @@ struct MeshShadingCombinator {
 		auto [layout, dsls, gamap] = apply_gvrs(device, gvrs, task, mesh, fragment);
 
 		auto [tmod, mmod, fmod] = shaders_to_modules(
-			device, compiler,
+			device, compiler, debug,
 			task, mesh, fragment
 		);
 

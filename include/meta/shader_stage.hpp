@@ -6,6 +6,7 @@
 
 #include "../dsl/jems.hpp"
 #include "../util/tlist.hpp"
+#include "../util/cti.hpp"
 #include "implicit_context.hpp"
 #include "coerce_to_handle.hpp"
 
@@ -59,6 +60,14 @@ struct shader_stage : SharedBlockReference {
 	}
 };
 
+TYPE_TRAIT(is_vertex_shader);
+	template <typename R, typename ... Args>
+	TYPE_TRAIT_INCLUDES(is_vertex_shader, shader_stage <ShaderStage::eVertex, R, Args...>);
+
+TYPE_TRAIT(is_fragment_shader);
+	template <typename R, typename ... Args>
+	TYPE_TRAIT_INCLUDES(is_fragment_shader, shader_stage <ShaderStage::eFragment, R, Args...>);
+
 // Subroutine stages
 template <typename R>
 struct invocation_setup {};
@@ -98,7 +107,7 @@ struct invocable : SharedBlockReference {
 	invocable(const SharedBlockReference &sbr)
 		: SharedBlockReference(sbr) {}
 	
-	auto operator()(Args &&... args) {
+	auto operator()(const Args &... args) {
 		std::vector <Reference> locals;
 		auto cargs = std::vector <Reference> { coerce_to_handle(args)... };
 		invocation_setup <R> ::locals(locals);

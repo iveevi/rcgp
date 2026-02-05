@@ -30,6 +30,7 @@ add_custom_command(
 	DEPENDS ${CMAKE_CURRENT_LIST_DIR}/include/dsl/generate_instantiations.py
 		${CMAKE_CURRENT_LIST_DIR}/include/dsl/generate_macro_swizzle.py
 		${CMAKE_CURRENT_LIST_DIR}/include/dsl/generate_instruction_enums.py
+		${CMAKE_CURRENT_LIST_DIR}/include/dsl/enumerations.hpp
 		COMMENT "Running Python header/source generator scripts"
 )
 

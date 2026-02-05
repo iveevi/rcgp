@@ -10,14 +10,6 @@
 
 namespace rcgp {
 
-auto wrap_in_local(auto loc, auto type, auto ... cargs)
-{
-	auto c = jems::construct_loc(loc, type, cargs...);
-	auto l = jems::local_loc(loc, type);
-	jems::store(l, c);
-	return l;
-}
-
 template <SwizzleCode S, typename T, typename R>
 struct swizzle_component {
 	// TODO: need to think about swizzles later...
@@ -42,6 +34,7 @@ struct vector;
 template <native_scalar T, size_t D>
 struct vector_base : jems::handle {};
 
+// TODO: lift restriction on tracer being active unless we are storing...
 template <native_scalar T>
 class vector_base <T, 2> : public jems::handle {
 protected:
@@ -56,6 +49,12 @@ public:
 			init_local_if_tracing(*this, type);
 		}
 	}
+	
+	vector_base(const scalar <T> &x, $location)
+		: handle(wrap_in_local(loc,
+			jems::type_loc(loc, primitive_of <T, 2> ()),
+			x, x
+		)) {}
 	
 	vector_base(const scalar <T> &x, const scalar <T> &y, $location)
 		: handle(wrap_in_local(loc,

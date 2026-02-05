@@ -66,7 +66,6 @@ void inject_one_argument(write_only_intrinsic <G, S2, T> &value, InjectionCounte
 		static_error("unsupported intrinsic"_ss);
 }
 
-// Nothing to do for the implicit context
 template <ShaderStage S, auto &... refs>
 void inject_one_argument(implicit_context <refs...> &value, InjectionCounters &counters) {}
 

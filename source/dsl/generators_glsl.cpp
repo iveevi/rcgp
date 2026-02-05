@@ -57,6 +57,7 @@ static auto g_operation_code = std::array {
 	"~",
 	"<<",
 	">>",
+	"%",
 };
 
 static auto g_intrinsic_code = std::array {
@@ -85,6 +86,7 @@ static auto g_intrinsic_code = std::array {
 	"break",
 	"continue",
 	"discard",
+	"sqrt",
 };
 
 static auto g_primitive_types = std::array {
@@ -200,6 +202,37 @@ std::string sanitize_name(const std::string &name)
 	return std::regex_replace(name, std::regex("::"), "x");
 }
 
+struct TypeRepr {
+	std::string base;
+	std::string suffix;
+};
+
+TypeRepr type_repr(const GLSLEmitter &em, const Reference &ref)
+{
+	auto &type = ref->as <Type> ();
+	vswitch (type) {
+	vcase(Primitive): {
+		auto &pt = type.as <Primitive> ();
+		auto str = g_primitive_types.at(std::to_underlying(pt));
+		return { str, "" };
+	}
+	vcase(Struct): {
+		auto &st = type.as <Struct> ();
+		return { sanitize_name(st.name), "" };
+	}
+	vcase(Array): {
+		auto &array = type.as <Array> ();
+		auto size = array.size > 0 ? std::format("[{}]", array.size) : "[]";
+		auto repr = type_repr(em, array.base);
+		return { repr.base, repr.suffix + size };
+	}
+	default:
+		break;
+	}
+
+	fatal("unhandled case for type_repr: {}", ref->repr());
+}
+
 std::string expr_repr(const GLSLEmitter &em, const Reference &ref);
 
 std::string lval_repr(const GLSLEmitter &em, const Reference &ref)
@@ -261,45 +294,6 @@ std::string lval_repr(const GLSLEmitter &em, const Reference &ref)
 		fatal("no lval id entry for {}", ref->repr());
 
 	return std::format("lvar{}", em.ids.at(ptr));
-}
-
-struct TypeRepr {
-	std::string base;
-	std::string suffix;
-};
-
-std::string primitive_repr(const Primitive &primitive)
-{
-	auto raw = std::to_underlying(primitive);
-	if (raw < 0 || static_cast<size_t>(raw) >= g_primitive_types.size())
-		fatal("unhandled primitive type string case");
-	return g_primitive_types.at(static_cast<size_t>(raw));
-}
-
-TypeRepr type_repr(const GLSLEmitter &em, const Reference &ref)
-{
-	auto &type = ref->as <Type> ();
-	vswitch (type) {
-	vcase(Primitive): {
-		auto &pt = type.as <Primitive> ();
-		auto str = primitive_repr(pt);
-		return { str, "" };
-	}
-	vcase(Struct): {
-		auto &st = type.as <Struct> ();
-		return { sanitize_name(st.name), "" };
-	}
-	vcase(Array): {
-		auto &array = type.as <Array> ();
-		auto size = array.size > 0 ? std::format("[{}]", array.size) : "[]";
-		auto repr = type_repr(em, array.base);
-		return { repr.base, repr.suffix + size };
-	}
-	default:
-		break;
-	}
-
-	fatal("unhandled case for type_repr: {}", ref->repr());
 }
 
 std::string expr_repr(const GLSLEmitter &em, const Reference &ref);

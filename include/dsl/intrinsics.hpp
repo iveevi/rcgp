@@ -92,6 +92,18 @@ scalar <T> sin(const scalar <T> &v)
 	return scalar <T> ::reinterpret(jems::builtin_intrinsic(BuiltinIntrinsicCode::eSin, v));
 }
 
+template <native_float_scalar T>
+scalar <T> cos(const scalar <T> &v)
+{
+	return scalar <T> ::reinterpret(jems::builtin_intrinsic(BuiltinIntrinsicCode::eCos, v));
+}
+
+template <native_float_scalar T>
+scalar <T> sqrt(const scalar <T> &v)
+{
+	return scalar <T> ::reinterpret(jems::builtin_intrinsic(BuiltinIntrinsicCode::eSqrt, v));
+}
+
 template <native_float_scalar T, size_t N>
 vector <T, N> sin(const vector <T, N> &v)
 {

@@ -27,7 +27,10 @@ public:
 		)) {}
 
 	static auto reinterpret(const jems::handle &h) {
-		return matrix(h);
+		auto type = jems::type(primitive_of <T, N, M> ());
+		auto local = jems::local(type);
+		jems::store(local, h);
+		return matrix (local);
 	}
 
 	matrix &operator=(const matrix &rhs) {

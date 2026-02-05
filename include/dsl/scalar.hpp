@@ -10,6 +10,14 @@
 
 namespace rcgp {
 
+auto wrap_in_local(auto loc, auto type, auto ... cargs)
+{
+	auto c = jems::construct_loc(loc, type, cargs...);
+	auto l = jems::local_loc(loc, type);
+	jems::store(l, c);
+	return l;
+}
+
 // Scalars in GPU code
 template <native_scalar T>
 class scalar : public jems::handle {
@@ -42,7 +50,7 @@ public:
 			return *this;
 		}
 
-		auto type = jems::type_loc(std::source_location::current(), primitive_of <T> ());
+		auto type = jems::type(primitive_of <T> ());
 		assign_or_store(*this, rhs, type);
 		return *this;
 	}
@@ -95,7 +103,10 @@ public:
 	}
 
 	static auto reinterpret(const jems::handle &h) {
-		return scalar(h);
+		auto type = jems::type(primitive_of <T> ());
+		auto local = jems::local(type);
+		jems::store(local, h);
+		return scalar(local);
 	}
 };
 

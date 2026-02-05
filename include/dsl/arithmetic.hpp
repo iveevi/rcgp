@@ -15,6 +15,11 @@ inline scalar <float> operator-(const scalar <float> &a, const scalar <int32_t> 
 	return scalar <float> ::reinterpret(jems::operation(OperationCode::eSubtract, a, b));
 }
 
+inline scalar <int32_t> operator%(const scalar <int32_t> &a, const scalar <int32_t> &b)
+{
+	return scalar <int32_t> ::reinterpret(jems::operation(OperationCode::eMod, a, b));
+}
+
 template <native_scalar T, size_t N, size_t M>
 vector <T, M> operator*(const matrix <T, N, M> &m, const vector <T, N> &v)
 {

@@ -332,7 +332,9 @@ add_test(sr_return_aggregate)
 	    vec3 lvar5;
 	    lvar5 = vec3(lvar4, arg0, lvar3);
 	    normalize(lvar5);
-	    ret0 = Ray(lvar2, normalize(lvar5));
+	    vec3 lvar6;
+	    lvar6 = normalize(lvar5);
+	    ret0 = Ray(lvar2, lvar6);
 	}
 	)");
 };
@@ -385,10 +387,14 @@ add_test(for_loop)
 	    int lvar3;
 	    lvar3 = 0;
 	    while (true) {
-	        if ((!(lvar3 < arg0))) {
+	        bool lvar4;
+	        lvar4 = (lvar3 < arg0);
+	        if ((!lvar4)) {
 	            break;
 	        }
-	        lvar2 = (lvar2 + lvar3);
+	        float lvar5;
+	        lvar5 = (lvar2 + lvar3);
+	        lvar2 = lvar5;
 	        lvar3 = (lvar3 + arg1);
 	    }
 	    ret0 = lvar2;

@@ -73,31 +73,37 @@ void main()
     uint lvar12;
     lvar12 = 0;
     while (true) {
-        if ((!(lvar12 < r0b0.value[task_payload.meshlet].vertex_count))) {
+        bool lvar13;
+        lvar13 = (lvar12 < r0b0.value[task_payload.meshlet].vertex_count);
+        if ((!lvar13)) {
             break;
         }
-        uint lvar13;
-        vec4 lvar14;
+        uint lvar14;
         vec4 lvar15;
-        gl_MeshVerticesEXT[lvar12].gl_Position = (pc.view_proj * r0b0.value[r0b0.value[(r0b0.value[task_payload.meshlet].vertex_offset + lvar12)]]);
-        vec3 lvar16;
-        vec3 lvar17;
+        vec4 lvar16;
+        lvar16 = (pc.view_proj * r0b0.value[r0b0.value[(r0b0.value[task_payload.meshlet].vertex_offset + lvar12)]]);
+        vec4 lvar17;
+        gl_MeshVerticesEXT[lvar12].gl_Position = lvar16;
+        vec3 lvar18;
+        vec3 lvar19;
         lout0[lvar12] = r0b0.value[task_payload.meshlet];
-        uint lvar18;
-        lvar18 = 1;
-        lvar12 = (lvar12 + lvar18);
+        uint lvar20;
+        lvar20 = 1;
+        lvar12 = (lvar12 + lvar20);
     }
-    uint lvar19;
-    lvar19 = 0;
+    uint lvar21;
+    lvar21 = 0;
     while (true) {
-        if ((!(lvar19 < r0b0.value[task_payload.meshlet].primitive_count))) {
+        bool lvar22;
+        lvar22 = (lvar21 < r0b0.value[task_payload.meshlet].primitive_count);
+        if ((!lvar22)) {
             break;
         }
-        uvec3 lvar20;
-        uvec3 lvar21;
-        gl_PrimitiveTriangleIndicesEXT[lvar19] = r0b0.value[(r0b0.value[task_payload.meshlet].primitive_offset + lvar19)];
-        uint lvar22;
-        lvar22 = 1;
-        lvar19 = (lvar19 + lvar22);
+        uvec3 lvar23;
+        uvec3 lvar24;
+        gl_PrimitiveTriangleIndicesEXT[lvar21] = r0b0.value[(r0b0.value[task_payload.meshlet].primitive_offset + lvar21)];
+        uint lvar25;
+        lvar25 = 1;
+        lvar21 = (lvar21 + lvar25);
     }
 }

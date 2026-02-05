@@ -216,15 +216,21 @@ add_test(vs_push_constant)
 	  $20 = Local $2
 	  Store $20 $19
 	  $21 = Multiply $13 $20
-	  $22 = Multiply $15 $14
-	  $23 = Multiply $22 $21
-	  $24 = SV: ClipPosition
+	  $22 = Local $2
+	  Store $22 $21
+	  $23 = Multiply $15 $14
+	  $24 = Local $5
 	  Store $24 $23
-	  $25 = New $0($21)
-	  $26 = Local $0
+	  $25 = Multiply $24 $22
+	  $26 = Local $2
 	  Store $26 $25
-	  $27 = StageOutput 0: Smooth $0
+	  $27 = SV: ClipPosition
 	  Store $27 $26
+	  $28 = New $0($22)
+	  $29 = Local $0
+	  Store $29 $28
+	  $30 = StageOutput 0: Smooth $0
+	  Store $30 $29
 	}
 	)");
 };
@@ -305,10 +311,12 @@ add_test(sr_return_aggregate)
 	  $14 = Local $2
 	  Store $14 $13
 	  $15 = Normalize($14)
+	  $16 = Local $2
+	  Store $16 $15
 	  $1 = Ray { origin: $2, direction: $2 }
-	  $16 = Return 0: $1
-	  $17 = New $1($8, $15)
-	  Store $16 $17
+	  $17 = Return 0: $1
+	  $18 = New $1($8, $16)
+	  Store $17 $18
 	}
 	)");
 };

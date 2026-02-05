@@ -27,8 +27,14 @@ void main()
     lvar7 = 1;
     vec4 lvar8;
     lvar8 = vec4(lin0, lvar7);
-    gl_Position = ((pc.proj * pc.view) * (pc.model * lvar8));
-    vec3 lvar9;
-    lvar9 = vec3((pc.model * lvar8));
-    lout0 = lvar9;
+    vec4 lvar9;
+    lvar9 = (pc.model * lvar8);
+    mat4 lvar10;
+    lvar10 = (pc.proj * pc.view);
+    vec4 lvar11;
+    lvar11 = (lvar10 * lvar9);
+    gl_Position = lvar11;
+    vec3 lvar12;
+    lvar12 = vec3(lvar9);
+    lout0 = lvar12;
 }

@@ -10,8 +10,12 @@ template <native_scalar T, size_t N>
 struct vector : public vector_base <T, N> {
 	using vector_base <T, N> ::vector_base;
 	
+	// TODO: only upcast to local if its being stored into...
 	static auto reinterpret(const jems::handle &h) {
-		return vector(h);
+		auto type = jems::type(primitive_of <T, N> ());
+		auto local = jems::local(type);
+		jems::store(local, h);
+		return vector(local);
 	}
 
 	vector &operator=(const vector &rhs) {
@@ -22,7 +26,7 @@ struct vector : public vector_base <T, N> {
 			return *this;
 		}
 
-		auto type = jems::type_loc(std::source_location::current(), primitive_of <T, N> ());
+		auto type = jems::type(primitive_of <T, N> ());
 		assign_or_store(*this, rhs, type);
 		return *this;
 	}
