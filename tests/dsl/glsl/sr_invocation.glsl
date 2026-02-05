@@ -1,7 +1,5 @@
 #version 460
 
-#extension GL_EXT_scalar_block_layout : require
-
 struct Ray {
     vec3 origin;
     vec3 direction;
@@ -21,35 +19,35 @@ void sr1(float arg0, out vec3 ret0)
     ret0 = lvar1;
 }
 
-void sr3(float arg0, out Ray ret0)
-{
-    float lvar2;
-    float lvar3;
-    lvar3 = 0;
-    vec3 lvar4;
-    lvar4 = vec3(lvar3, lvar3, lvar3);
-    float lvar5;
-    lvar5 = 1;
-    float lvar6;
-    lvar6 = 1;
-    vec3 lvar7;
-    lvar7 = vec3(lvar6, arg0, lvar5);
-    normalize(lvar7);
-    ret0 = Ray(lvar4, normalize(lvar7));
-}
-
 void sr2(float arg0, uint arg1, out vec3 ret0, out uvec2 ret1)
 {
-    uint lvar8;
-    float lvar9;
-    vec3 lvar10;
-    lvar10 = vec3(arg0, arg0, arg0);
-    uint lvar11;
-    lvar11 = 13;
-    uvec2 lvar12;
-    lvar12 = uvec2(arg1, lvar11);
-    ret0 = lvar10;
-    ret1 = lvar12;
+    uint lvar2;
+    float lvar3;
+    vec3 lvar4;
+    lvar4 = vec3(arg0, arg0, arg0);
+    uint lvar5;
+    lvar5 = 13;
+    uvec2 lvar6;
+    lvar6 = uvec2(arg1, lvar5);
+    ret0 = lvar4;
+    ret1 = lvar6;
+}
+
+void sr3(float arg0, out Ray ret0)
+{
+    float lvar7;
+    float lvar8;
+    lvar8 = 0;
+    vec3 lvar9;
+    lvar9 = vec3(lvar8, lvar8, lvar8);
+    float lvar10;
+    lvar10 = 1;
+    float lvar11;
+    lvar11 = 1;
+    vec3 lvar12;
+    lvar12 = vec3(lvar11, arg0, lvar10);
+    normalize(lvar12);
+    ret0 = Ray(lvar9, normalize(lvar12));
 }
 
 void main()

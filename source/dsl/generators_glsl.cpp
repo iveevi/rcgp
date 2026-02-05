@@ -1,4 +1,5 @@
 #include <set>
+#include <regex>
 
 #include "dsl/generators.hpp"
 #include "dsl/instructions.hpp"
@@ -129,9 +130,15 @@ static auto g_primitive_types = std::array {
 	"mat4",
 };
 
+// TODO: remove when we do top sort on the subroutines
+auto sbr_cmp = [](const SharedBlockReference &a, const SharedBlockReference &b)
+{
+	return a->name < b->name;
+};
+
 struct GLSLEmitter {
 	const SharedBlockReference &main;
-	std::set <SharedBlockReference> subroutines;
+	std::set <SharedBlockReference, decltype(sbr_cmp)> subroutines;
 	std::map <const Instruction *const, uint32_t> ids;
 	std::string result;
 	int32_t indentation;
@@ -188,6 +195,11 @@ std::string grsrc_name(const GlobalResource &grsrc)
 	return fmt::format("r{}b{}", group, index);
 }
 
+std::string sanitize_name(const std::string &name)
+{
+	return std::regex_replace(name, std::regex("::"), "x");
+}
+
 std::string expr_repr(const GLSLEmitter &em, const Reference &ref);
 
 std::string lval_repr(const GLSLEmitter &em, const Reference &ref)
@@ -221,7 +233,7 @@ std::string lval_repr(const GLSLEmitter &em, const Reference &ref)
 	}
 	vcase(FieldAccess): {
 		auto &facc = ref->as <FieldAccess> ();
-		auto &st = get_struct(facc.value);
+		auto &st = get_struct(em.main, facc.value);
 		return std::format("{}.{}", expr_repr(em, facc.value), st.fields[facc.fidx]);
 	}
 	vcase(ArrayAccess): {
@@ -274,8 +286,8 @@ TypeRepr type_repr(const GLSLEmitter &em, const Reference &ref)
 		return { str, "" };
 	}
 	vcase(Struct): {
-		auto &agg = type.as <Struct> ();
-		return { agg.name, "" };
+		auto &st = type.as <Struct> ();
+		return { sanitize_name(st.name), "" };
 	}
 	vcase(Array): {
 		auto &array = type.as <Array> ();
@@ -522,7 +534,14 @@ void emit_main(GLSLEmitter &em)
 auto collect_extensions(const GLSLEmitter &em)
 {
 	std::vector <std::string> extensions;
-	extensions.emplace_back("GL_EXT_scalar_block_layout");
+	
+	for (auto &[_, ref] : em.main->global_resources) {
+		auto &grsrc = ref->as <GlobalResource> ();
+		if (grsrc.layout == GlobalResourceLayout::eScalar) {
+			extensions.emplace_back("GL_EXT_scalar_block_layout");
+			break;
+		}
+	}
 	
 	auto stage = em.main->stage;
 	if (stage == ShaderStage::eMesh or stage == ShaderStage::eTask)
@@ -579,7 +598,7 @@ void emit_structs(GLSLEmitter &em)
 	}
 
 	for (auto &st : structs) {
-		em.emit_fmt_line("struct {} {{", st.name);
+		em.emit_fmt_line("struct {} {{", sanitize_name(st.name));
 		em.indentation++;
 		for (const auto &[i, f] : std::views::enumerate(st)) {
 			auto repr = type_repr(em, f);
@@ -676,7 +695,9 @@ void emit_whole(GLSLEmitter &em)
 	auto extensions = collect_extensions(em);
 	for (auto &ext : extensions)
 		em.emit_fmt_line("#extension {} : require", ext);
-	em.emit_newline();
+
+	if (extensions.size())
+		em.emit_newline();
 
 	// Struct declarations
 	emit_structs(em);

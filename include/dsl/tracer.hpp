@@ -6,14 +6,13 @@
 #include <stack>
 #include <unordered_map>
 
-#include "instructions.hpp"
-#include "../util/runtime_type_registry.hpp"
+#include "instruction_nodes.hpp"
 
 namespace rcgp {
 
 struct Tracer {
 	std::stack <SharedBlockReference> records;
-	std::unordered_map <size_t, Reference> type_cache;
+	std::unordered_map <std::string, Reference> type_cache;
 
 	Block &active() {
 		if (records.empty()) {

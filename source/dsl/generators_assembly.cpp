@@ -17,6 +17,7 @@
 namespace rcgp {
 
 struct AsmEmitter {
+	const SharedBlockReference &main;
 	std::map <void *, uint32_t> ids;
 	std::string result;
 	int32_t indentation;
@@ -134,7 +135,7 @@ std::string emit_instr_value(AsmEmitter &em, const Reference &ref)
 	}
 	vcase(FieldAccess): {
 		auto &facc = ref->as <FieldAccess> ();
-		auto &st = get_struct(facc.value);
+		auto &st = get_struct(em.main, facc.value);
 		return std::format("{}.{}", em.ref(facc.value), st.fields[facc.fidx]);
 	}
 	vcase(ArrayAccess): {
@@ -401,6 +402,7 @@ std::string generate_assembly(const SharedBlockReference &sbr, bool debug)
 	// also inlining constants...
 	// bool verbose = false -> disregards types and such
 	auto em = AsmEmitter {
+		.main = sbr,
 		.ids = {},
 		.result = "",
 		.indentation = 0,

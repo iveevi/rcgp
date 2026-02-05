@@ -1,8 +1,6 @@
 #version 460
 
-#extension GL_EXT_scalar_block_layout : require
-
-struct View {
+struct fwdxView {
     mat4 model;
     mat4 view;
     mat4 proj;
@@ -13,7 +11,7 @@ layout (location = 0) in vec3 lin0;
 layout (location = 0) smooth out vec3 lout0;
 
 layout (std430, push_constant) uniform PC {
-    layout (offset = 0) View pc;
+    layout (offset = 0) fwdxView pc;
 };
 
 void main()

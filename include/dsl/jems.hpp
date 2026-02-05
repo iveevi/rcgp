@@ -73,53 +73,12 @@ JEM(store, Store);
 JEM(local, Local);
 JEM(loop, Loop);
 
-// TODO: separate header & source later...
-inline size_t type_cache_key_for(const Type &type)
-{
-	auto hash_combine = [](size_t &seed, size_t v) {
-		seed ^= v + 0x9e3779b97f4a7c15ull + (seed << 6) + (seed >> 2);
-	};
-	auto hash_string = [&](size_t &seed, const std::string &value) {
-		for (unsigned char c : value)
-			hash_combine(seed, c);
-	};
-
-	size_t key = 0;
-	vswitch (type) {
-	vcase(Primitive): {
-		auto &prim = type.as <Primitive> ();
-		key = RuntimeTypeRegistry::id <Primitive> ();
-		hash_combine(key, static_cast <size_t> (prim));
-		return key;
-	}
-	vcase(Struct): {
-		auto &agg = type.as <Struct> ();
-		key = RuntimeTypeRegistry::id <Struct> ();
-		hash_string(key, agg.name);
-		hash_combine(key, agg.size());
-		for (auto &field : agg)
-			hash_combine(key, reinterpret_cast <size_t> (field.get()));
-		return key;
-	}
-	vcase(Array): {
-		auto &arr = type.as <Array> ();
-		key = RuntimeTypeRegistry::id <Array> ();
-		hash_combine(key, reinterpret_cast <size_t> (arr.base.get()));
-		hash_combine(key, static_cast <size_t> (arr.size));
-		return key;
-	}
-	default:
-		break;
-	}
-	return key;
-}
-
 template <typename ... Args>
 struct type : handle {
 	type(Args ... args, const std::source_location &loc = std::source_location::current()) {
 		static_assert(sizeof...(Args) == 1);
 		Type t(args...);
-		auto key = type_cache_key_for(t);
+		auto key = t.repr();
 		auto &cache = Tracer::singleton.type_cache;
 		if (auto it = cache.find(key); it != cache.end()) {
 			_ref = it->second;
@@ -138,7 +97,7 @@ struct type_loc : handle {
 	type_loc(const std::source_location &loc, Args ... args) {
 		static_assert(sizeof...(Args) == 1);
 		Type t(args...);
-		auto key = type_cache_key_for(t);
+		auto key = t.repr();
 		auto &cache = Tracer::singleton.type_cache;
 		if (auto it = cache.find(key); it != cache.end()) {
 			_ref = it->second;

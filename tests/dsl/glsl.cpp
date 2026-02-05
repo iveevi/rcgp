@@ -14,8 +14,6 @@ add_test(vs_empty)
 	assert_glsl_match(vs, R"(
 	#version 460
 
-	#extension GL_EXT_scalar_block_layout : require
-
 	void main()
 	{
 	}
@@ -31,8 +29,6 @@ add_test(vs_clip)
 
 	assert_glsl_match(vs, R"(
 	#version 460
-
-	#extension GL_EXT_scalar_block_layout : require
 
 	void main()
 	{
@@ -58,8 +54,6 @@ add_test(vs_louts)
 	assert_glsl_match(vs, R"(
 	#version 460
 
-	#extension GL_EXT_scalar_block_layout : require
-
 	layout (location = 0) smooth out vec3 lout0;
 	layout (location = 1) flat out uvec2 lout1;
 
@@ -84,18 +78,16 @@ add_test(vs_louts)
 add_test(vs_stream)
 {
 	auto vs = $shader(vertex)(
-		$contracts(position),
+		$contracts((p, fwd::position)),
 		ClipPosition cpos
 	) -> float3
 	{
-		cpos = float4(position, 1);
-		return position;
+		cpos = float4(p, 1);
+		return p;
 	};
 
 	assert_glsl_match(vs, R"(
 	#version 460
-	
-	#extension GL_EXT_scalar_block_layout : require
 
 	layout (location = 0) in vec3 lin0;
 
@@ -116,18 +108,22 @@ add_test(vs_stream)
 
 add_test(vs_multiple_io)
 {
-	auto vs = $shader(vertex)($contracts(position, normal, uv)) {
+	auto vs = $shader(vertex)(
+		$contracts(
+			(pos, fwd::position),
+			(nrm, fwd::normal),
+			(uv, fwd::uv)
+		)
+	) {
 		return std::tuple {
-			Smooth <float3> { position },
-			Smooth <float3> { normal },
+			Smooth <float3> { pos },
+			Smooth <float3> { nrm },
 			Smooth <float2> { uv },
 		};
 	};
 	
 	assert_glsl_match(vs, R"(
 	#version 460
-
-	#extension GL_EXT_scalar_block_layout : require
 
 	layout (location = 0) in vec3 lin0;
 	layout (location = 1) in vec3 lin1;
@@ -152,11 +148,14 @@ add_test(vs_multiple_io)
 add_test(vs_push_constant)
 {
 	auto vs = $shader(vertex)(
-		$contracts(view, position),
+		$contracts(
+			(view, fwd::view),
+			(pos, fwd::position)
+		),
 		ClipPosition cpos
 	) -> float3
 	{
-		float4 wpos = view.model * float4(position, 1);
+		float4 wpos = view.model * float4(pos, 1);
 		cpos = view.proj * view.view * wpos;
 		return float3(wpos);
 	};
@@ -167,7 +166,10 @@ add_test(vs_push_constant)
 add_test(fr_diffuse_lighting)
 {
 	auto fs = $shader(fragment)(
-		$contracts(lights, material),
+		$contracts(
+			(lights, fwd::lights),
+			(material, fwd::material)
+		),
 		float3 position,
 		float3 normal,
 		float2 uv
@@ -192,7 +194,95 @@ add_test(fr_diffuse_lighting)
 		return color;
 	};
 
+	// TODO: get rid of side-effect (i.e. value based)
+	// free intrinsics that are by themselves...
 	assert_glsl_match_file(fs, "glsl/fr_diffuse_lighting.glsl");
+};
+
+add_test(ts_meshlets)
+{
+	auto ts = $shader(task)(
+		$contracts(
+			(view, meshlets::view),
+			(meshlets, meshlets::meshlets)
+		),
+		TaskGroup <1> group
+	)
+	{
+		TaskPayload <meshlets::TaskPayloadData> payload;
+
+		uvec3 gid = group.workgroup_index;
+		u32 meshlet_index = gid.y * view.task_group_width + gid.x;
+		$if (meshlet_index < view.meshlet_count) {
+			auto meshlet = meshlets[meshlet_index];
+			vec3 center = vec3(meshlet.bounds);
+			f32 radius = meshlet.bounds.w;
+
+			boolean visible = true;
+			$for (u32 i = 0, i < 6u, i++) {
+				vec4 plane = view.frustum_planes[i];
+				vec3 plane_n = vec3(plane);
+				f32 dist = dot(plane_n, center) + plane.w;
+				$if (dist < -radius) {
+					visible = false;
+				};
+			};
+
+			$if (visible) {
+				payload.meshlet = meshlet_index;
+				group.dispatch_mesh_groups(1u, 1u, 1u);
+			};
+		};
+
+		return payload;
+	};
+	
+	assert_glsl_match_file(ts, "glsl/ts_meshlets.glsl");
+};
+
+add_test(ms_meshlets)
+{
+	auto ms = $shader(mesh)(
+		$contracts(
+			(view, meshlets::view),
+			(positions, meshlets::positions),
+			(meshlets, meshlets::meshlets)
+		),
+		$contracts(
+			(verts, meshlets::buffers.vertices),
+			(tris, meshlets::buffers.triangles),
+			(colors, meshlets::buffers.colors)
+		),
+		TaskPayload <meshlets::TaskPayloadData> payload,
+		WorkGroup <1> group
+	)
+	{
+		MeshletPayload <
+			MeshPrimitive::eTriangles,
+			64, 126,
+			meshlets::MeshOutputs
+		> out;
+
+		u32 meshlet_index = payload.meshlet;
+		auto meshlet = meshlets[meshlet_index];
+
+		out.allocate(meshlet.vertex_count, meshlet.primitive_count);
+
+		$for (u32 v = 0, v < meshlet.vertex_count, v++) {
+			u32 global_index = verts[meshlet.vertex_offset + v];
+			vec4 pos = positions[global_index];
+			out.positions[v] = view.view_proj * pos;
+			out.color[v] = colors[meshlet_index];
+		};
+
+		$for (u32 p = 0, p < meshlet.primitive_count, p++) {
+			out.triangles[p] = tris[meshlet.primitive_offset + p];
+		};
+
+		return out;
+	};
+
+	assert_glsl_match_file(ms, "glsl/ms_meshlets.glsl");
 };
 
 add_test(sr_return_primitives)

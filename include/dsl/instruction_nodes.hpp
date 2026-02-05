@@ -185,6 +185,6 @@ struct Return {
 };
 
 // Additional methods
-const Struct &get_struct(const Reference &ref);
+const Struct &get_struct(const SharedBlockReference &sbr, const Reference &ref);
 
 } // namespace rcgp

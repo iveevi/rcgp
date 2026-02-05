@@ -94,12 +94,12 @@ add_test(vs_louts)
 add_test(vs_stream)
 {
 	auto vs = $shader(vertex)(
-		$contracts(position),
+		$contracts((p, fwd::position)),
 		ClipPosition cpos
 	) -> float3
 	{
-		cpos = float4(position, 1);
-		return position;
+		cpos = float4(p, 1);
+		return p;
 	};
 
 	assert_assembly_match(vs, R"(
@@ -130,10 +130,16 @@ add_test(vs_stream)
 
 add_test(vs_multiple_io)
 {
-	auto vs = $shader(vertex)($contracts(position, normal, uv)) {
+	auto vs = $shader(vertex)(
+		$contracts(
+			(pos, fwd::position),
+			(nrm, fwd::normal),
+			(uv, fwd::uv)
+		)
+	) {
 		return std::tuple {
-			Smooth <float3> { position },
-			Smooth <float3> { normal },
+			Smooth <float3> { pos },
+			Smooth <float3> { nrm },
 			Smooth <float2> { uv },
 		};
 	};
@@ -166,11 +172,14 @@ add_test(vs_multiple_io)
 add_test(vs_push_constant)
 {
 	auto vs = $shader(vertex)(
-		$contracts(view, position),
+		$contracts(
+			(view, fwd::view),
+			(pos, fwd::position)
+		),
 		ClipPosition cpos
 	) -> float3
 	{
-		float4 wpos = view.model * float4(position, 1);
+		float4 wpos = view.model * float4(pos, 1);
 		cpos = view.proj * view.view * wpos;
 		return float3(wpos);
 	};
@@ -194,7 +203,7 @@ add_test(vs_push_constant)
 	  $9 = Local $5
 	  $10 = Local $5
 	  $11 = Local $5
-	  $12 = View { model: $5, view: $5, proj: $5 }
+	  $12 = fwd::View { model: $5, view: $5, proj: $5 }
 	  $1 = PushConstant +4294967295: Std430 $12
 	  $13 = $1.model
 	  $14 = $1.view

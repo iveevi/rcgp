@@ -1,8 +1,6 @@
 #version 460
 
-#extension GL_EXT_scalar_block_layout : require
-
-struct PointLight {
+struct fwdxPointLight {
     vec3 position;
     vec3 color;
     vec3 velocity;
@@ -17,7 +15,7 @@ layout (location = 0)  out vec3 lout0;
 
 layout (std430, set = 0, binding = 0) readonly buffer Buffer0x0 {
     int count;
-    PointLight lights[];
+    fwdxPointLight lights[];
 } r0b0;
 
 layout (set = 0, binding = 0) uniform sampler2D r0b0;
