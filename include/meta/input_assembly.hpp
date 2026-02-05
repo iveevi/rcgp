@@ -1,6 +1,5 @@
 #pragma once
 
-#include "witnesses.hpp"
 #include "contract.hpp"
 #include "resources.hpp"
 #include "symbolic_format.hpp"
@@ -12,7 +11,7 @@ constexpr auto sequence_to_vertex_bindings(const Tlist <contract <refs>...> &in)
 {
 	auto desc = [] <typename T, template <typename> typename L, vk::VertexInputRate R>
 	(const AttributeStream <T, L, R> &) {
-		using M = TypeMirror <T, L>;
+		using M = layouts::apply_t <T, L>;
 		return vk::VertexInputBindingDescription()
 			.setStride(sizeof(M))
 			.setInputRate(R);

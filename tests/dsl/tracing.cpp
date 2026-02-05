@@ -64,21 +64,21 @@ add_test(vs_louts)
 	    stage: Vertex,
 	    stage outputs: { Smooth $0, Flat $1 }
 	  }
-	  $2 = UInt32
+	  $2 = Float
+	  $3 = Local $2
+	  $4 = 1
+	  Store $3 $4
 	  $0 = Vec3
-	  $3 = Float
-	  $4 = Local $3
-	  $5 = 1
-	  Store $4 $5
-	  $6 = New $0($4, $4, $4)
-	  $7 = Local $0
+	  $5 = New $0($3, $3, $3)
+	  $6 = Local $0
+	  Store $6 $5
+	  $7 = StageOutput 0: Smooth $0
 	  Store $7 $6
-	  $8 = StageOutput 0: Smooth $0
-	  Store $8 $7
-	  $9 = Local $2
+	  $8 = UInt32
+	  $9 = Local $8
 	  $10 = 4
 	  Store $9 $10
-	  $11 = Local $2
+	  $11 = Local $8
 	  $12 = 1
 	  Store $11 $12
 	  $1 = UVec2
@@ -109,21 +109,21 @@ add_test(vs_stream)
 	    stage inputs: { Smooth $0 }
 	    stage outputs: { Smooth $0 }
 	  }
-	  $1 = Vec4
-	  $2 = Float
 	  $0 = Vec3
-	  $3 = Local $0
-	  $4 = StageInput 0: Smooth $0
-	  $5 = Local $2
-	  $6 = 1
-	  Store $5 $6
-	  $7 = New $1($4, $5)
-	  $8 = Local $1
+	  $1 = Local $0
+	  $2 = StageInput 0: Smooth $0
+	  $3 = Float
+	  $4 = Local $3
+	  $5 = 1
+	  Store $4 $5
+	  $6 = Vec4
+	  $7 = New $6($2, $4)
+	  $8 = Local $6
 	  Store $8 $7
 	  $9 = SV: ClipPosition
 	  Store $9 $8
 	  $10 = StageOutput 0: Smooth $0
-	  Store $10 $4
+	  Store $10 $2
 	}
 	)");
 };
@@ -151,9 +151,9 @@ add_test(vs_multiple_io)
 	    stage inputs: { Smooth $0, Smooth $0, Smooth $1 }
 	    stage outputs: { Smooth $0, Smooth $0, Smooth $1 }
 	  }
-	  $0 = Vec3
 	  $1 = Vec2
 	  $2 = Local $1
+	  $0 = Vec3
 	  $3 = Local $0
 	  $4 = Local $0
 	  $5 = StageInput 0: Smooth $0
@@ -192,45 +192,42 @@ add_test(vs_push_constant)
 	    stage outputs: { Smooth $0 }
 	    resources: { $1 },
 	  }
-	  $2 = Vec4
-	  $3 = Float
 	  $0 = Vec3
-	  $4 = Local $0
-	  $5 = FMat4x4
-	  $6 = Local $5
-	  $7 = Local $5
-	  $8 = Local $5
-	  $9 = Local $5
-	  $10 = Local $5
-	  $11 = Local $5
-	  $12 = fwd::View { model: $5, view: $5, proj: $5 }
-	  $1 = PushConstant +4294967295: Std430 $12
-	  $13 = $1.model
-	  $14 = $1.view
-	  $15 = $1.proj
-	  $16 = StageInput 0: Smooth $0
-	  $17 = Local $3
-	  $18 = 1
-	  Store $17 $18
-	  $19 = New $2($16, $17)
-	  $20 = Local $2
-	  Store $20 $19
-	  $21 = Multiply $13 $20
-	  $22 = Local $2
-	  Store $22 $21
-	  $23 = Multiply $15 $14
-	  $24 = Local $5
+	  $2 = Local $0
+	  $3 = FMat4x4
+	  $4 = Local $3
+	  $5 = Local $3
+	  $6 = Local $3
+	  $7 = fwd::View { model: $3, view: $3, proj: $3 }
+	  $1 = PushConstant +4294967295: Std430 $7
+	  $8 = $1.model
+	  $9 = $1.view
+	  $10 = $1.proj
+	  $11 = StageInput 0: Smooth $0
+	  $12 = Float
+	  $13 = Local $12
+	  $14 = 1
+	  Store $13 $14
+	  $15 = Vec4
+	  $16 = New $15($11, $13)
+	  $17 = Local $15
+	  Store $17 $16
+	  $18 = Multiply $8 $17
+	  $19 = Local $15
+	  Store $19 $18
+	  $20 = Multiply $10 $9
+	  $21 = Local $3
+	  Store $21 $20
+	  $22 = Multiply $21 $19
+	  $23 = Local $15
+	  Store $23 $22
+	  $24 = SV: ClipPosition
 	  Store $24 $23
-	  $25 = Multiply $24 $22
-	  $26 = Local $2
+	  $25 = New $0($19)
+	  $26 = Local $0
 	  Store $26 $25
-	  $27 = SV: ClipPosition
+	  $27 = StageOutput 0: Smooth $0
 	  Store $27 $26
-	  $28 = New $0($22)
-	  $29 = Local $0
-	  Store $29 $28
-	  $30 = StageOutput 0: Smooth $0
-	  Store $30 $29
 	}
 	)");
 };
@@ -249,20 +246,20 @@ add_test(sr_return_primitives)
 	    arguments: { $0, $1 },
 	    returns: { $2, $3 },
 	  }
-	  $3 = UVec2
-	  $2 = Vec3
-	  $0 = Float
 	  $1 = UInt32
 	  $4 = Local $1
+	  $0 = Float
 	  $5 = Local $0
 	  $6 = Argument 0: $0
 	  $7 = Argument 1: $1
+	  $2 = Vec3
 	  $8 = New $2($6, $6, $6)
 	  $9 = Local $2
 	  Store $9 $8
 	  $10 = Local $1
 	  $11 = 13
 	  Store $10 $11
+	  $3 = UVec2
 	  $12 = New $3($7, $10)
 	  $13 = Local $3
 	  Store $13 $12
@@ -291,15 +288,15 @@ add_test(sr_return_aggregate)
 	    arguments: { $0 },
 	    returns: { $1 },
 	  }
-	  $2 = Vec3
 	  $0 = Float
-	  $3 = Local $0
-	  $4 = Argument 0: $0
-	  $5 = Local $0
-	  $6 = 0
-	  Store $5 $6
-	  $7 = New $2($5, $5, $5)
-	  $8 = Local $2
+	  $2 = Local $0
+	  $3 = Argument 0: $0
+	  $4 = Local $0
+	  $5 = 0
+	  Store $4 $5
+	  $6 = Vec3
+	  $7 = New $6($4, $4, $4)
+	  $8 = Local $6
 	  Store $8 $7
 	  $9 = Local $0
 	  $10 = 1
@@ -307,13 +304,13 @@ add_test(sr_return_aggregate)
 	  $11 = Local $0
 	  $12 = 1
 	  Store $11 $12
-	  $13 = New $2($11, $4, $9)
-	  $14 = Local $2
+	  $13 = New $6($11, $3, $9)
+	  $14 = Local $6
 	  Store $14 $13
 	  $15 = Normalize($14)
-	  $16 = Local $2
+	  $16 = Local $6
 	  Store $16 $15
-	  $1 = Ray { origin: $2, direction: $2 }
+	  $1 = Ray { origin: $6, direction: $6 }
 	  $17 = Return 0: $1
 	  $18 = New $1($8, $16)
 	  Store $17 $18
@@ -351,43 +348,43 @@ add_test(sr_invocation)
 	    stage: Vertex,
 	    stage outputs: { Smooth $0, Smooth $0, Smooth $1, Smooth $0, Smooth $0 }
 	  }
-	  $2 = Ray { origin: $0, direction: $0 }
-	  $1 = UVec2
-	  $3 = UInt32
+	  $2 = Float
+	  $3 = Local $2
+	  $4 = 1
+	  Store $3 $4
 	  $0 = Vec3
-	  $4 = Float
-	  $5 = Local $4
-	  $6 = 1
-	  Store $5 $6
-	  $7 = Local $0
-	  sr1($5, $7)
-	  $8 = Local $0
-	  $9 = Local $3
-	  $10 = 2
-	  Store $9 $10
-	  $11 = Local $4
-	  $12 = 1
-	  Store $11 $12
-	  $13 = Local $0
+	  $5 = Local $0
+	  sr1($3, $5)
+	  $6 = Local $0
+	  $7 = UInt32
+	  $8 = Local $7
+	  $9 = 2
+	  Store $8 $9
+	  $10 = Local $2
+	  $11 = 1
+	  Store $10 $11
+	  $12 = Local $0
+	  $1 = UVec2
+	  $13 = Local $1
+	  sr2($10, $8, $12, $13)
 	  $14 = Local $1
-	  sr2($11, $9, $13, $14)
-	  $15 = Local $1
-	  $16 = Local $0
-	  $17 = Local $4
-	  $18 = 2
-	  Store $17 $18
-	  $19 = Local $2
-	  sr3($17, $19)
+	  $15 = Local $0
+	  $16 = Local $2
+	  $17 = 2
+	  Store $16 $17
+	  $18 = Ray { origin: $0, direction: $0 }
+	  $19 = Local $18
+	  sr3($16, $19)
 	  $20 = Local $0
 	  $21 = Local $0
 	  $22 = $19.origin
 	  $23 = $19.direction
 	  $24 = StageOutput 0: Smooth $0
-	  Store $24 $7
+	  Store $24 $5
 	  $25 = StageOutput 1: Smooth $0
-	  Store $25 $14
+	  Store $25 $13
 	  $26 = StageOutput 2: Smooth $1
-	  Store $26 $13
+	  Store $26 $12
 	  $27 = StageOutput 3: Smooth $0
 	  Store $27 $22
 	  $28 = StageOutput 4: Smooth $0

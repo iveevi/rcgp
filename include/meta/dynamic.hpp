@@ -1,9 +1,10 @@
 #pragma once
 
+#include <utility>
+
 #include "../dsl/array.hpp"
 #include "../util/array.hpp"
 #include "../util/tlist.hpp"
-#include <utility>
 #include "concepts.hpp"
 
 namespace rcgp {

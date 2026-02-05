@@ -2,14 +2,14 @@
 
 #include "../rhi/buffer.hpp"
 #include "dynamic.hpp"
-#include "witnesses.hpp"
+#include "layouts.hpp"
 
 namespace rcgp {
 
 // TODO: move to dynamic.hpp
 template <typename T, template <typename> typename L>
 using dynamic_element_of_mirror = decltype([] {
-	TypeMirror <T, L> data;
+	layouts::apply_t <T, L> data;
 	auto [dyn, offset] = dynamic_part <T> (data);
 	return typename std::decay_t <decltype(dyn)> ::value_type();
 } ());
@@ -20,7 +20,7 @@ struct MirrorBuffer : Buffer {};
 template <non_dynamic T, template <typename> typename L, vk::BufferUsageFlagBits F>
 struct MirrorBuffer <T, L, F> : Buffer {
 	using symbolic_type = T;
-	using value_type = TypeMirror <T, L>;
+	using value_type = layouts::apply_t <T, L>;
 
 	auto &write(const value_type &data) const {
 		Buffer::write(&data, sizeof(value_type), 0);
@@ -67,7 +67,7 @@ struct MirrorBuffer <T, L, F> : Buffer {
 template <dynamic T, template <typename> typename L, vk::BufferUsageFlagBits F>
 struct MirrorBuffer <T, L, F> : Buffer {
 	using symbolic_type = T;
-	using value_type = TypeMirror <T, L>;
+	using value_type = layouts::apply_t <T, L>;
 	using element_type = dynamic_element_of_mirror <T, L>;
 
 	auto &write(const value_type &data) const {

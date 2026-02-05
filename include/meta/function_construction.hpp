@@ -31,6 +31,8 @@ auto trace(auto ftn)
 
 	using F = decltype(infer_shader_signature <S> (std::function(ftn)));
 
+	Tracer::singleton.type_cache.clear();
+
 	auto result = F::stage::alloc();
 
 	result->stage = S;

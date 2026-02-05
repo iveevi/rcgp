@@ -42,10 +42,7 @@ inline auto operator*(std::nullptr_t, std::function <void ()> &&fn)
 {
 	Tracer::singleton.type_cache.clear();
 	auto sbr = std::make_shared <Block> ();
-	{
-		jems::scope scope(sbr);
-		fn();
-	}
+	{ jems::scope scope(sbr); fn(); }
 	sbr->name = "recorded";
 	return sbr;
 }

@@ -136,4 +136,7 @@ using std430 = detail::layout_rules <detail::std430_policy, T>;
 template <typename T>
 using scalar = detail::layout_rules <detail::scalar_policy, T>;
 
+template <typename T, template <typename> typename L = std430>
+using apply_t = scaffold_lookup <typename L <T> ::hint, T, true> ::type;
+
 } // namespace rcpg::layouts

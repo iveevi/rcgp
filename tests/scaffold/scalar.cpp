@@ -1,6 +1,6 @@
 #include <rcgp.hpp>
 
-namespace rcgp {
+using namespace rcgp;
 
 // Plain POD fields should pack tightly with natural alignments (scalar layout keeps C++ rules).
 struct A {
@@ -11,7 +11,7 @@ struct A {
 	$reflection(a, b, c);
 };
 
-using MA = TypeMirror <A, layouts::scalar>;
+using MA = layouts::apply_t <A, layouts::scalar>;
 static_assert(alignof(MA) == 4);
 static_assert(sizeof(MA) == 12);
 static_assert(offsetof(MA, a) == 0);
@@ -26,7 +26,7 @@ struct Vec2Tail {
 	$reflection(uv, weight);
 };
 
-using MVec2Tail = TypeMirror <Vec2Tail, layouts::scalar>;
+using MVec2Tail = layouts::apply_t <Vec2Tail, layouts::scalar>;
 static_assert(alignof(MVec2Tail) == 4);
 static_assert(sizeof(MVec2Tail) == 12);
 static_assert(offsetof(MVec2Tail, uv) == 0);
@@ -40,7 +40,7 @@ struct Padding {
 	$reflection(x, v);
 };
 
-using MPadding = TypeMirror <Padding, layouts::scalar>;
+using MPadding = layouts::apply_t <Padding, layouts::scalar>;
 static_assert(alignof(MPadding) == 4);
 static_assert(sizeof(MPadding) == 16);
 static_assert(offsetof(MPadding, x) == 0);
@@ -54,7 +54,7 @@ struct Nested {
 	$reflection(pos, temp);
 };
 
-using MNested = TypeMirror <Nested, layouts::scalar>;
+using MNested = layouts::apply_t <Nested, layouts::scalar>;
 static_assert(alignof(MNested) == 4);
 static_assert(sizeof(MNested) == 16);
 static_assert(offsetof(MNested, pos) == 0);
@@ -69,7 +69,7 @@ struct Outer {
 	$reflection(id, inner, flags);
 };
 
-using MOuter = TypeMirror <Outer, layouts::scalar>;
+using MOuter = layouts::apply_t <Outer, layouts::scalar>;
 static_assert(alignof(MOuter) == 4);
 static_assert(sizeof(MOuter) == 24);
 static_assert(offsetof(MOuter, id) == 0);
@@ -83,7 +83,7 @@ struct VectorArray {
 	$reflection(elements);
 };
 
-using MVectorArray = TypeMirror <VectorArray, layouts::scalar>;
+using MVectorArray = layouts::apply_t <VectorArray, layouts::scalar>;
 static_assert(alignof(MVectorArray) == 4);
 static_assert(sizeof(MVectorArray) == 24);
 static_assert(alignof(decltype(MVectorArray::elements)::value_type) == 4);
@@ -98,10 +98,8 @@ struct RuntimeBuffer {
 	$reflection(count, values);
 };
 
-using MRuntimeBuffer = TypeMirror <RuntimeBuffer, layouts::scalar>;
+using MRuntimeBuffer = layouts::apply_t <RuntimeBuffer, layouts::scalar>;
 static_assert(alignof(MRuntimeBuffer) == 8); // std::vector base typically 8 on 64-bit.
 static_assert(offsetof(MRuntimeBuffer, count) == 0);
 static_assert(offsetof(MRuntimeBuffer, values) == 8);
 static_assert(alignof(typename decltype(MRuntimeBuffer::values)::value_type) == 4);
-
-} // namespace rcgp

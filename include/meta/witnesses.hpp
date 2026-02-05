@@ -1,21 +1,10 @@
 #pragma once
 
 #include "contract.hpp"
-#include "layouts.hpp"
 #include "static_string.hpp"
 #include "resource_translations.hpp"
 
 namespace rcgp {
-
-// Type mirrors
-// TODO: get rid of this...
-template <typename T, template <typename> typename L = layouts::std430>
-using TypeMirror = decltype([] {
-	using layout = L <T>;
-	using hint = layout::hint;
-	using type = scaffold_lookup <hint, T, true> ::type;
-	return type();
-} ());
 
 // Type mirror and witness
 template <typename T>

@@ -39,69 +39,66 @@ void main()
     uint lvar1;
     mat4 lvar2;
     uint lvar3;
-    uint lvar4;
-    mat4 lvar5;
+    uvec3 lvar4;
+    lvar4 = gl_WorkGroupID;
+    uint lvar5;
+    lvar5 = lvar4.x;
     uint lvar6;
-    uvec3 lvar7;
-    lvar7 = gl_WorkGroupID;
-    uint lvar8;
-    lvar8 = lvar7.x;
-    uint lvar9;
-    lvar9 = lvar7.y;
-    bool lvar10;
-    lvar10 = (((lvar9 * pc.task_group_width) + lvar8) < pc.meshlet_count);
-    if (lvar10) {
+    lvar6 = lvar4.y;
+    bool lvar7;
+    lvar7 = (((lvar6 * pc.task_group_width) + lvar5) < pc.meshlet_count);
+    if (lvar7) {
+        uint lvar8;
+        uint lvar9;
+        uint lvar10;
         uint lvar11;
-        uint lvar12;
-        uint lvar13;
-        uint lvar14;
-        vec4 lvar15;
-        vec3 lvar16;
-        lvar16 = vec3(r0b0.value[((lvar9 * pc.task_group_width) + lvar8)].bounds);
-        float lvar17;
-        lvar17 = r0b0.value[((lvar9 * pc.task_group_width) + lvar8)].bounds.w;
-        bool lvar18;
-        lvar18 = true;
-        uint lvar19;
-        lvar19 = 0;
+        vec4 lvar12;
+        vec3 lvar13;
+        lvar13 = vec3(r0b0.value[((lvar6 * pc.task_group_width) + lvar5)].bounds);
+        float lvar14;
+        lvar14 = r0b0.value[((lvar6 * pc.task_group_width) + lvar5)].bounds.w;
+        bool lvar15;
+        lvar15 = true;
+        uint lvar16;
+        lvar16 = 0;
         while (true) {
-            uint lvar20;
-            lvar20 = 6;
-            bool lvar21;
-            lvar21 = (lvar19 < lvar20);
-            if ((!lvar21)) {
+            uint lvar17;
+            lvar17 = 6;
+            bool lvar18;
+            lvar18 = (lvar16 < lvar17);
+            if ((!lvar18)) {
                 break;
             }
-            vec4 lvar22;
-            vec3 lvar23;
-            lvar23 = vec3(pc.frustum_planes[lvar19]);
-            float lvar24;
-            lvar24 = pc.frustum_planes[lvar19].w;
-            dot(lvar23, lvar16);
-            float lvar25;
-            lvar25 = dot(lvar23, lvar16);
-            float lvar26;
-            lvar26 = -1;
-            bool lvar27;
-            lvar27 = ((lvar25 + lvar24) < (lvar26 * lvar17));
-            if (lvar27) {
-                bool lvar28;
-                lvar28 = false;
-                lvar18 = lvar28;
+            vec4 lvar19;
+            vec3 lvar20;
+            lvar20 = vec3(pc.frustum_planes[lvar16]);
+            float lvar21;
+            lvar21 = pc.frustum_planes[lvar16].w;
+            dot(lvar20, lvar13);
+            float lvar22;
+            lvar22 = dot(lvar20, lvar13);
+            float lvar23;
+            lvar23 = -1;
+            bool lvar24;
+            lvar24 = ((lvar22 + lvar21) < (lvar23 * lvar14));
+            if (lvar24) {
+                bool lvar25;
+                lvar25 = false;
+                lvar15 = lvar25;
             }
+            uint lvar26;
+            lvar26 = 1;
+            lvar16 = (lvar16 + lvar26);
+        }
+        if (lvar15) {
+            task_payload.meshlet = ((lvar6 * pc.task_group_width) + lvar5);
+            uint lvar27;
+            lvar27 = 1;
+            uint lvar28;
+            lvar28 = 1;
             uint lvar29;
             lvar29 = 1;
-            lvar19 = (lvar19 + lvar29);
-        }
-        if (lvar18) {
-            task_payload.meshlet = ((lvar9 * pc.task_group_width) + lvar8);
-            uint lvar30;
-            lvar30 = 1;
-            uint lvar31;
-            lvar31 = 1;
-            uint lvar32;
-            lvar32 = 1;
-            EmitMeshTasksEXT(lvar32, lvar31, lvar30);
+            EmitMeshTasksEXT(lvar29, lvar28, lvar27);
         }
     }
 }

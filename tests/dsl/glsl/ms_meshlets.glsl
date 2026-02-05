@@ -63,47 +63,44 @@ void main()
     mat4 lvar3;
     uint lvar4;
     uint lvar5;
-    mat4 lvar6;
+    uint lvar6;
     uint lvar7;
-    uint lvar8;
-    uint lvar9;
-    uint lvar10;
-    vec4 lvar11;
+    vec4 lvar8;
     SetMeshOutputsEXT(r0b0.value[task_payload.meshlet].vertex_count, r0b0.value[task_payload.meshlet].primitive_count);
-    uint lvar12;
-    lvar12 = 0;
+    uint lvar9;
+    lvar9 = 0;
     while (true) {
-        bool lvar13;
-        lvar13 = (lvar12 < r0b0.value[task_payload.meshlet].vertex_count);
-        if ((!lvar13)) {
+        bool lvar10;
+        lvar10 = (lvar9 < r0b0.value[task_payload.meshlet].vertex_count);
+        if ((!lvar10)) {
             break;
         }
-        uint lvar14;
-        vec4 lvar15;
-        vec4 lvar16;
-        lvar16 = (pc.view_proj * r0b0.value[r0b0.value[(r0b0.value[task_payload.meshlet].vertex_offset + lvar12)]]);
-        vec4 lvar17;
-        gl_MeshVerticesEXT[lvar12].gl_Position = lvar16;
-        vec3 lvar18;
-        vec3 lvar19;
-        lout0[lvar12] = r0b0.value[task_payload.meshlet];
-        uint lvar20;
-        lvar20 = 1;
-        lvar12 = (lvar12 + lvar20);
+        uint lvar11;
+        vec4 lvar12;
+        vec4 lvar13;
+        lvar13 = (pc.view_proj * r0b0.value[r0b0.value[(r0b0.value[task_payload.meshlet].vertex_offset + lvar9)]]);
+        vec4 lvar14;
+        gl_MeshVerticesEXT[lvar9].gl_Position = lvar13;
+        vec3 lvar15;
+        vec3 lvar16;
+        lout0[lvar9] = r0b0.value[task_payload.meshlet];
+        uint lvar17;
+        lvar17 = 1;
+        lvar9 = (lvar9 + lvar17);
     }
-    uint lvar21;
-    lvar21 = 0;
+    uint lvar18;
+    lvar18 = 0;
     while (true) {
-        bool lvar22;
-        lvar22 = (lvar21 < r0b0.value[task_payload.meshlet].primitive_count);
-        if ((!lvar22)) {
+        bool lvar19;
+        lvar19 = (lvar18 < r0b0.value[task_payload.meshlet].primitive_count);
+        if ((!lvar19)) {
             break;
         }
-        uvec3 lvar23;
-        uvec3 lvar24;
-        gl_PrimitiveTriangleIndicesEXT[lvar21] = r0b0.value[(r0b0.value[task_payload.meshlet].primitive_offset + lvar21)];
-        uint lvar25;
-        lvar25 = 1;
-        lvar21 = (lvar21 + lvar25);
+        uvec3 lvar20;
+        uvec3 lvar21;
+        gl_PrimitiveTriangleIndicesEXT[lvar18] = r0b0.value[(r0b0.value[task_payload.meshlet].primitive_offset + lvar18)];
+        uint lvar22;
+        lvar22 = 1;
+        lvar18 = (lvar18 + lvar22);
     }
 }
