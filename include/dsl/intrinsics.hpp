@@ -194,6 +194,12 @@ vector <T, N> dFdyFine(const vector <T, N> &v)
 	return vector <T, N> ::reinterpret(jems::builtin_intrinsic(BuiltinIntrinsicCode::eDFdyFine, v));
 }
 
-} // namespace rcgp
+template <typename T>
+T select(const boolean &cond, const T &a, const T &b)
+{
+	return T::reinterpret(jems::builtin_intrinsic(BuiltinIntrinsicCode::eSelect, cond, a, b));
+}
 
-#include "pygen_intrinsics_instantiations.hpp"
+// TODO: shorthand for jems::builtin_intrinsic(BuiltinIntrinsicCode:...);
+
+} // namespace rcgp

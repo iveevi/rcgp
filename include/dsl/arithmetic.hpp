@@ -33,5 +33,3 @@ matrix <T, N, M> operator*(const matrix <T, N, K> &a, const matrix <T, K, M> &b)
 }
 
 } // namespace rcgp
-
-#include "pygen_arithmetic_instantiations.hpp"

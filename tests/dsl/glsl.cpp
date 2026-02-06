@@ -431,3 +431,19 @@ add_test(for_loop)
 	}
 	)");
 };
+
+add_test(branching)
+{
+	auto sr = $subroutine(sr)() {
+		i32 c = 12;
+		$if (c > 11) {
+			c = c + i32(1);
+		} $elif (c < 11 and c > 5) {
+			c = c + i32(2);
+		} $else {
+			c = c + i32(3);
+		};
+	};
+	
+	assert_glsl_match_file(sr, "glsl/sr_branching.glsl");
+};

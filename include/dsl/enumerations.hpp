@@ -1,80 +1,79 @@
 #pragma once
 
-#include <string_view>
-
 namespace rcgp {
 
-// TODO: refactor repr file to pygen_enumerations_repr.cpp
 enum class OperationCode {
-	eAdd,
-	eSubtract,
-	eMultiply,
-	eDivide,
-	eEqual,
-	eNotEqual,
-	eLess,
-	eLessEqual,
-	eGreater,
-	eGreaterEqual,
-	eLogicalAnd,
-	eLogicalOr,
-	eLogicalXor,
-	eLogicalNot,
-	eBitAnd,
-	eBitOr,
-	eBitXor,
-	eBitNot,
-	eShiftLeft,
-	eShiftRight,
-	eMod,
+	eAdd,          // @glsl:+
+	eSubtract,     // @glsl:-
+	eMultiply,     // @glsl:*
+	eDivide,       // @glsl:/
+	eEqual,        // @glsl:==
+	eNotEqual,     // @glsl:!=
+	eLess,         // @glsl:<
+	eLessEqual,    // @glsl:<=
+	eGreater,      // @glsl:>
+	eGreaterEqual, // @glsl:>=
+	eLogicalAnd,   // @glsl:&&
+	eLogicalOr,    // @glsl:||
+	eLogicalXor,   // @glsl:^
+	eLogicalNot,   // @glsl:!
+	eBitAnd,       // @glsl:&
+	eBitOr,        // @glsl:|
+	eBitXor,       // @glsl:^
+	eBitNot,       // @glsl:~
+	eShiftLeft,    // @glsl:<<
+	eShiftRight,   // @glsl:>>
+	eMod,          // @glsl:%
 };
 
-std::string_view repr(OperationCode value);
+const char *repr(OperationCode value);
+const char *repr_glsl(OperationCode value);
 
 enum class Primitive {
-	eBool,
-	eInt32,
-	eUInt32,
-	eFloat,
-	eUVec2,
-	eUVec3,
-	eUVec4,
-	eIVec2,
-	eIVec3,
-	eIVec4,
-	eVec2,
-	eVec3,
-	eVec4,
-	eIMat2x2,
-	eIMat2x3,
-	eIMat2x4,
-	eIMat3x2,
-	eIMat3x3,
-	eIMat3x4,
-	eIMat4x2,
-	eIMat4x3,
-	eIMat4x4,
-	eUMat2x2,
-	eUMat2x3,
-	eUMat2x4,
-	eUMat3x2,
-	eUMat3x3,
-	eUMat3x4,
-	eUMat4x2,
-	eUMat4x3,
-	eUMat4x4,
-	eFMat2x2,
-	eFMat2x3,
-	eFMat2x4,
-	eFMat3x2,
-	eFMat3x3,
-	eFMat3x4,
-	eFMat4x2,
-	eFMat4x3,
-	eFMat4x4,
+	eBool,    // @glsl:bool
+	eInt32,   // @glsl:int
+	eUInt32,  // @glsl:uint
+	eFloat,   // @glsl:float
+	eUVec2,   // @glsl:uvec2
+	eUVec3,   // @glsl:uvec3
+	eUVec4,   // @glsl:uvec4
+	eIVec2,   // @glsl:ivec2
+	eIVec3,   // @glsl:ivec3
+	eIVec4,   // @glsl:ivec4
+	eVec2,    // @glsl:vec2
+	eVec3,    // @glsl:vec3
+	eVec4,    // @glsl:vec4
+	eIMat2x2, // @glsl:imat2
+	eIMat2x3, // @glsl:imat2x3
+	eIMat2x4, // @glsl:imat2x4
+	eIMat3x2, // @glsl:imat3x2
+	eIMat3x3, // @glsl:imat3
+	eIMat3x4, // @glsl:imat3x4
+	eIMat4x2, // @glsl:imat4x2
+	eIMat4x3, // @glsl:imat4x3
+	eIMat4x4, // @glsl:imat4
+	eUMat2x2, // @glsl:umat2
+	eUMat2x3, // @glsl:umat2x3
+	eUMat2x4, // @glsl:umat2x4
+	eUMat3x2, // @glsl:umat3x2
+	eUMat3x3, // @glsl:umat3
+	eUMat3x4, // @glsl:umat3x4
+	eUMat4x2, // @glsl:umat4x2
+	eUMat4x3, // @glsl:umat4x3
+	eUMat4x4, // @glsl:umat4
+	eFMat2x2, // @glsl:mat2
+	eFMat2x3, // @glsl:mat2x3
+	eFMat2x4, // @glsl:mat2x4
+	eFMat3x2, // @glsl:mat3x2
+	eFMat3x3, // @glsl:mat3
+	eFMat3x4, // @glsl:mat3x4
+	eFMat4x2, // @glsl:mat4x2
+	eFMat4x3, // @glsl:mat4x3
+	eFMat4x4, // @glsl:mat4
 };
 
-std::string_view repr(Primitive value);
+const char *repr(Primitive value);
+const char *repr_glsl(Primitive value);
 
 enum class GlobalResourceKind {
 	ePushConstant,
@@ -83,15 +82,16 @@ enum class GlobalResourceKind {
 	eSampler,
 };
 
-std::string_view repr(GlobalResourceKind value);
+const char *repr(GlobalResourceKind value);
 
 enum class GlobalResourceLayout {
-	eNone,
-	eScalar,
-	eStd430,
+	eNone,   // @glsl:?
+	eScalar, // @glsl:scalar
+	eStd430, // @glsl:std430
 };
 
-std::string_view repr(GlobalResourceLayout value);
+const char *repr(GlobalResourceLayout value);
+const char *repr_glsl(GlobalResourceLayout value);
 
 enum class GlobalResourceAccess {
 	eRead,
@@ -99,65 +99,69 @@ enum class GlobalResourceAccess {
 	eReadWrite,
 };
 
-std::string_view repr(GlobalResourceAccess value);
+const char *repr(GlobalResourceAccess value);
 
 enum class SystemValue {
-	eClipPosition,
-	eInstanceIndex,
-	eVertexIndex,
-	eLocalInvocationID,
-	eWorkGroupID,
-	eGlobalInvocationID,
-	eTaskPayload,
-	eMeshVertices,
-	ePrimitiveTriangleIndices,
+	eClipPosition,              // @glsl:gl_Position
+	eInstanceIndex,             // @glsl:gl_InstanceIndex
+	eVertexIndex,               // @glsl:gl_VertexIndex
+	eLocalInvocationID,         // @glsl:gl_LocalInvocationID
+	eWorkGroupID,               // @glsl:gl_WorkGroupID
+	eGlobalInvocationID,        // @glsl:gl_GlobalInvocationID
+	eTaskPayload,               // @glsl:task_payload
+	eMeshVertices,              // @glsl:gl_MeshVerticesEXT
+	ePrimitiveTriangleIndices,  // @glsl:gl_PrimitiveTriangleIndicesEXT
 };
 
-std::string_view repr(SystemValue value);
+const char *repr(SystemValue value);
+const char *repr_glsl(SystemValue value);
 
 enum class RateProperties {
-	eSmooth,
-	eFlat,
-	eNoPerspective,
+	eSmooth,        // @glsl:smooth
+	eFlat,          // @glsl:flat
+	eNoPerspective, // @glsl:noperspective
 };
 
-std::string_view repr(RateProperties value);
+const char *repr(RateProperties value);
+const char *repr_glsl(RateProperties value);
 
 enum class MeshPrimitive {
 	eTriangles,
 };
 
-std::string_view repr(MeshPrimitive value);
+const char *repr(MeshPrimitive value);
 
 enum class BuiltinIntrinsicCode {
-	eAbs,
-	eCos,
-	eCross,
-	eDFdx,
-	eDFdxFine,
-	eDFdy,
-	eDFdyFine,
-	eDot,
-	eInverse,
-	eLength,
-	eMax,
-	ePow,
+	eAbs,               // @glsl:abs
+	eCos,               // @glsl:cos
+	eCross,             // @glsl:cross
+	eDFdx,              // @glsl:dFdx
+	eDFdxFine,          // @glsl:dFdxFine
+	eDFdy,              // @glsl:dFdy
+	eDFdyFine,          // @glsl:dFdyFine
+	eDot,               // @glsl:dot
+	eInverse,           // @glsl:inverse
+	eLength,            // @glsl:length
+	eMax,               // @glsl:max
+	ePow,               // @glsl:pow
 	eToFloat,
-	eMin,
-	eNormalize,
-	eSample,
-	eSin,
-	eTan,
-	eTranspose,
-	eSetMeshOutputsEXT,
-	eEmitMeshTasksEXT,
+	eMin,               // @glsl:min
+	eNormalize,         // @glsl:normalize
+	eSample,            // @glsl:texture
+	eSin,               // @glsl:sin
+	eTan,               // @glsl:tan
+	eTranspose,         // @glsl:transpose
+	eSetMeshOutputsEXT, // @glsl:SetMeshOutputsEXT
+	eEmitMeshTasksEXT,  // @glsl:EmitMeshTasksEXT
 	eBreak,
 	eContinue,
 	eDiscard,
-	eSqrt,
+	eSqrt,              // @glsl:sqrt
+	eSelect,
 };
 
-std::string_view repr(BuiltinIntrinsicCode value);
+const char *repr(BuiltinIntrinsicCode value);
+const char *repr_glsl(BuiltinIntrinsicCode value);
 
 enum class SwizzleCode {
 	// Level 1
@@ -197,7 +201,7 @@ enum class SwizzleCode {
 	eWWXX, eWWXY, eWWXZ, eWWXW, eWWYX, eWWYY, eWWYZ, eWWYW, eWWZX, eWWZY, eWWZZ, eWWZW, eWWWX, eWWWY, eWWWZ, eWWWW,
 };
 
-std::string_view repr(SwizzleCode value);
+const char *repr(SwizzleCode value);
 
 enum class ShaderStage {
 	eSubroutine,
@@ -208,6 +212,6 @@ enum class ShaderStage {
 	eMesh,
 };
 
-std::string_view repr(ShaderStage value);
+const char *repr(ShaderStage value);
 
 } // namespace rcgp

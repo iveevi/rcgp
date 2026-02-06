@@ -9,128 +9,6 @@
 
 namespace rcgp {
 
-// TODO: separate cpp file for this...
-static auto g_rate_strings = std::array {
-	"smooth",
-	"flat",
-	"noperspective",
-};
-
-static auto g_resource_layouts = std::array {
-	"?",
-	"scalar",
-	"std430",
-};
-
-static auto g_system_values = std::array {
-	// TODO: generate with script with @glsl comments
-	"gl_Position",
-	"gl_InstanceIndex",
-	"gl_VertexIndex",
-	"gl_LocalInvocationID",
-	"gl_WorkGroupID",
-	"gl_GlobalInvocationID",
-	"task_payload",
-	"gl_MeshVerticesEXT",
-	"gl_PrimitiveTriangleIndicesEXT",
-};
-
-static auto g_operation_code = std::array {
-	"+",
-	"-",
-	"*",
-	"/",
-	"==",
-	"!=",
-	"<",
-	"<=",
-	">",
-	">=",
-	"&&",
-	"||",
-	"^",
-	"!",
-	"&",
-	"|",
-	"^",
-	"~",
-	"<<",
-	">>",
-	"%",
-};
-
-static auto g_intrinsic_code = std::array {
-	// TODO: also use @glsl trick...
-	"abs",
-	"cos",
-	"cross",
-	"dFdx",
-	"dFdxFine",
-	"dFdy",
-	"dFdyFine",
-	"dot",
-	"inverse",
-	"length",
-	"max",
-	"pow",
-	"float",
-	"min",
-	"normalize",
-	"texture",
-	"sin",
-	"tan",
-	"transpose",
-	"SetMeshOutputsEXT",
-	"EmitMeshTasksEXT",
-	"break",
-	"continue",
-	"discard",
-	"sqrt",
-};
-
-static auto g_primitive_types = std::array {
-	"bool",
-	"int",
-	"uint",
-	"float",
-	"uvec2",
-	"uvec3",
-	"uvec4",
-	"ivec2",
-	"ivec3",
-	"ivec4",
-	"vec2",
-	"vec3",
-	"vec4",
-	"imat2",
-	"imat2x3",
-	"imat2x4",
-	"imat3x2",
-	"imat3",
-	"imat3x4",
-	"imat4x2",
-	"imat4x3",
-	"imat4",
-	"umat2",
-	"umat2x3",
-	"umat2x4",
-	"umat3x2",
-	"umat3",
-	"umat3x4",
-	"umat4x2",
-	"umat4x3",
-	"umat4",
-	"mat2",
-	"mat2x3",
-	"mat2x4",
-	"mat3x2",
-	"mat3",
-	"mat3x4",
-	"mat4x2",
-	"mat4x3",
-	"mat4",
-};
-
 struct GLSLEmitter {
 	const SharedBlockReference &main;
 	std::vector <SharedBlockReference> subroutines;
@@ -206,7 +84,7 @@ TypeRepr type_repr(const GLSLEmitter &em, const Reference &ref)
 	vswitch (type) {
 	vcase(Primitive): {
 		auto &pt = type.as <Primitive> ();
-		auto str = g_primitive_types.at(std::to_underlying(pt));
+		auto str = repr_glsl(pt);
 		return { str, "" };
 	}
 	vcase(Struct): {
@@ -241,7 +119,7 @@ std::string lval_repr(const GLSLEmitter &em, const Reference &ref)
 	}
 	vcase(SystemValue): {
 		auto sysval = ref->as <SystemValue> ();
-		return g_system_values.at(std::to_underlying(sysval));
+		return repr_glsl(sysval);
 	}
 	vcase(GlobalResource): {
 		auto &grsrc = ref->as <GlobalResource> ();
@@ -293,7 +171,7 @@ std::string expr_repr(const GLSLEmitter &em, const Reference &ref);
 
 std::string opn_repr(const GLSLEmitter &em, const Operation &opn)
 {
-	auto s = g_operation_code.at(std::to_underlying(opn.code));
+	auto s = repr_glsl(opn.code);
 	if (opn.code == OperationCode::eLogicalNot
 			or opn.code == OperationCode::eBitNot)
 		return std::format("({}{})", s, expr_repr(em, opn.a));
@@ -341,15 +219,23 @@ std::string expr_repr(const GLSLEmitter &em, const Reference &ref)
 		return opn_repr(em, opn);
 	}
 	vcase(BuiltinIntrinsic): {
+		// TODO: separate method
 		auto &bintr = ref->as <BuiltinIntrinsic> ();
 		switch (bintr.code) {
 		case BuiltinIntrinsicCode::eBreak: return "break";
 		case BuiltinIntrinsicCode::eContinue: return "continue";
 		case BuiltinIntrinsicCode::eDiscard: return "discard";
+		case BuiltinIntrinsicCode::eSelect:
+			return std::format(
+				"({} ? {} : {})",
+				expr_repr(em, bintr.args.at(0)),
+				expr_repr(em, bintr.args.at(1)),
+				expr_repr(em, bintr.args.at(2))
+			);
 		default:
 			break;
 		}
-		auto ftn = g_intrinsic_code.at(std::to_underlying(bintr.code));
+		auto ftn = repr_glsl(bintr.code);
 		return std::format("{}({})", ftn, args(bintr.args));
 	}
 	vcase(Swizzle): {
@@ -413,10 +299,11 @@ void emit_statement(GLSLEmitter &em, const Reference &ref)
 		}
 
 		if (branch.fallback) {
-			em.emit_line("else");
+			em.emit_line("else {");
 			em.indentation++;
 			emit_body(em, branch.fallback.value());
 			em.indentation--;
+			em.emit_line("}");
 		}
 
 		return;
@@ -543,7 +430,7 @@ void emit_stage_io(GLSLEmitter &em)
 	for (auto &tin : tins) {
 		auto repr = type_repr(em, tin.type);
 		if (em.main->stage == ShaderStage::eFragment) {
-			auto rate = g_rate_strings.at(std::to_underlying(tin.properties));
+			auto rate = repr_glsl(tin.properties);
 			em.emit_fmt_line("layout (location = {}) {} in {} lin{}{};",
 				tin.argi, rate, repr.base, tin.argi, repr.suffix);
 		} else {
@@ -560,7 +447,7 @@ void emit_stage_io(GLSLEmitter &em)
 		auto repr = type_repr(em, tout.type);
 		if (em.main->stage == ShaderStage::eVertex
 			or em.main->stage == ShaderStage::eMesh) {
-			auto rate = g_rate_strings.at(std::to_underlying(tout.properties));
+			auto rate = repr_glsl(tout.properties);
 			em.emit_fmt_line("layout (location = {}) {} out {} lout{}{};",
 				tout.argi, rate, repr.base, tout.argi, repr.suffix);
 		} else {
@@ -631,7 +518,7 @@ std::string buffer_access(const GlobalResource &grsrc)
 
 void emit_resource(GLSLEmitter &em, const GlobalResource &grsrc)
 {
-	auto layout = g_resource_layouts.at(std::to_underlying(grsrc.layout));
+	auto layout = repr_glsl(grsrc.layout);
 	if (grsrc.kind == GlobalResourceKind::ePushConstant) {
 		auto offset = grsrc.offset.value_or(0);
 		auto repr = type_repr(em, grsrc.type);

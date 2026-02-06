@@ -83,6 +83,7 @@ using enable_if = std::conditional_t <B, T, std::nullptr_t>;
 
 #define $shader(type, ...)	rcgp_##type << [__VA_ARGS__ __VA_OPT__(,) rcgp_context
 #define $subroutine(name, ...)	(_fn_tag <ShaderStage::eSubroutine> (#name)) << [__VA_ARGS__ __VA_OPT__(,) rcgp_context
+#define $decl(name) auto name = $subroutine(name)
 
 #define $enable_if(cond, arg) (ENABLE_IF, cond, arg)
 

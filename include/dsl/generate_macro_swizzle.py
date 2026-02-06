@@ -1,9 +1,10 @@
 from itertools import product
 from pathlib import Path
-import sys
 
+root = Path(__file__).resolve().parents[2]
+includes = root / 'include' / 'dsl'
 
-def generate() -> list[str]:
+def main():
     lines = ['#pragma once']
     for dim in range(2, 5):
         components = 'xyzw'[:dim]
@@ -18,17 +19,12 @@ def generate() -> list[str]:
                 var = ''.join(var)
                 code = 'e' + var.upper()
                 lines.append(f'\t[[no_unique_address]] swizzle_component <SwizzleCode::{code}, self, C{l}> {var}; ' + '\\')
-    return lines
 
+    lines.append('')
+    lines.append('')
 
-def main() -> int:
-    lines = generate()
-    if len(sys.argv) > 1:
-        Path(sys.argv[1]).write_text('\n'.join(lines) + '\n\n')
-    else:
-        print('\n'.join(lines) + '\n\n')
-    return 0
-
+    file = includes / 'pygen_macro_swizzle.hpp'
+    file.write_text('\n'.join(lines))
 
 if __name__ == '__main__':
-    raise SystemExit(main())
+    main()
