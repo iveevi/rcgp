@@ -5,11 +5,11 @@
 #include <functional>
 #include <vector>
 
-#include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
 
 #include "device.hpp"
 #include "image.hpp"
+#include "vk.hpp"
 
 namespace rcgp {
 

@@ -35,9 +35,14 @@ auto apply_gvrs(const Device &device, const GVRs &, Blocks &... blocks)
 
 	auto dsls = wrappers_to_dsls(device, descriptor_gvrs());
 
-	auto layout_info = vk::PipelineLayoutCreateInfo().setSetLayouts(dsls);
-	if constexpr (push_constant_gvrs::size > 0)
-		layout_info.setPushConstantRanges(pcrs);
+	auto layout_info = vk::PipelineLayoutCreateInfo();
+	layout_info.setLayoutCount = dsls.size();
+	layout_info.pSetLayouts = dsls.data();
+
+	if constexpr (push_constant_gvrs::size > 0) {
+		layout_info.pushConstantRangeCount = pcrs.size();
+		layout_info.pPushConstantRanges = pcrs.data();
+	}
 
 	auto layout = device.logical.createPipelineLayout(layout_info);
 

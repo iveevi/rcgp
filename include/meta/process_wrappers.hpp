@@ -55,39 +55,44 @@ auto one_wrapper_to_dsl(const Device &device, const stage_wrapper <ref, Ss...> &
 				dtype = vk::DescriptorType::eStorageBuffer;
 			}
 
-			dslbs[I] = vk::DescriptorSetLayoutBinding()
-				.setBinding(I)
-				.setDescriptorCount(1)
-				.setDescriptorType(dtype)
-				.setStageFlags(stage_flags);
+			dslbs[I] = vk::DescriptorSetLayoutBinding {
+				.binding = I,
+				.descriptorType = dtype,
+				.descriptorCount = 1,
+				.stageFlags = stage_flags,
+			};
 		};
 
 		constexpr_for(Is, bindings,
 			(fill_one.template operator() <Is> (), ...)
 		);
 
-		auto dsl_info = vk::DescriptorSetLayoutCreateInfo()
-			.setBindings(dslbs);
+		auto dsl_info = vk::DescriptorSetLayoutCreateInfo {
+			.bindingCount = dslbs.size(),
+			.pBindings = dslbs.data(),
+		};
 
 		return device.logical.createDescriptorSetLayout(dsl_info);
 	} else {
 		vk::DescriptorType dtype = vk::DescriptorType::eUniformBuffer;
-		if constexpr (is_sampler_v <Reference>) {
+		if constexpr (is_sampler_v <Reference>)
 			dtype = vk::DescriptorType::eCombinedImageSampler;
-		} else if constexpr (is_storage_buffer_v <Reference>) {
+		else if constexpr (is_storage_buffer_v <Reference>)
 			dtype = vk::DescriptorType::eStorageBuffer;
-		}
 
 		auto dslbs = std::array {
-			vk::DescriptorSetLayoutBinding()
-				.setBinding(0)
-				.setDescriptorCount(1)
-				.setDescriptorType(dtype)
-				.setStageFlags(stage_flags)
+			vk::DescriptorSetLayoutBinding {
+				.binding = 0,
+				.descriptorType = dtype,
+				.descriptorCount = 1,
+				.stageFlags = stage_flags,
+			}
 		};
 
-		auto dsl_info = vk::DescriptorSetLayoutCreateInfo()
-			.setBindings(dslbs);
+		auto dsl_info = vk::DescriptorSetLayoutCreateInfo {
+			.bindingCount = dslbs.size(),
+			.pBindings = dslbs.data(),
+		};
 
 		return device.logical.createDescriptorSetLayout(dsl_info);
 	}
@@ -120,10 +125,11 @@ auto wrappers_to_pcs(const Tlist <Wrappers...> &)
 
 			offset = align_up(static_cast <size_t> (offset), alignof(T));
 			
-			ranges[index++] = vk::PushConstantRange()
-				.setOffset(offset)
-				.setSize(sizeof(T))
-				.setStageFlags(W::flags);
+			ranges[index++] = vk::PushConstantRange {
+				.stageFlags = W::flags,
+				.offset = offset,
+				.size = sizeof(T),
+			};
 
 			map.emplace(W::contract::address, offset);
 

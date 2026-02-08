@@ -1,6 +1,7 @@
-#include "rhi/window.hpp"
-
 #include <utility>
+
+#include "rhi/vk.hpp"
+#include "rhi/window.hpp"
 
 namespace rcgp {
 
@@ -151,19 +152,18 @@ Window Window::from(const Session &session, const Device &device, const Options 
 
 	auto surface_capabilities = pdev.getSurfaceCapabilitiesKHR(surface);
 
-	auto swapchain_info = vk::SwapchainCreateInfoKHR()
-		.setImageArrayLayers(1)
-		.setImageColorSpace(vk::ColorSpaceKHR::eSrgbNonlinear)
-		.setImageExtent(result.extent())
-		.setImageFormat(result.format)
-		.setMinImageCount(surface_capabilities.minImageCount)
-		.setOldSwapchain(nullptr)
-		.setPresentMode(options.present_mode)
-		.setImageUsage(
-			vk::ImageUsageFlagBits::eColorAttachment
-			| vk::ImageUsageFlagBits::eTransferDst
-		)
-		.setSurface(surface);
+	vk::SwapchainCreateInfoKHR swapchain_info {};
+	swapchain_info.imageArrayLayers = 1;
+	swapchain_info.imageColorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
+	swapchain_info.imageExtent = result.extent();
+	swapchain_info.imageFormat = result.format;
+	swapchain_info.minImageCount = surface_capabilities.minImageCount;
+	swapchain_info.oldSwapchain = nullptr;
+	swapchain_info.presentMode = options.present_mode;
+	swapchain_info.imageUsage =
+		vk::ImageUsageFlagBits::eColorAttachment
+		| vk::ImageUsageFlagBits::eTransferDst;
+	swapchain_info.surface = surface;
 
 	result.swapchain = ldev.createSwapchainKHR(swapchain_info);
 
@@ -175,22 +175,22 @@ Window Window::from(const Session &session, const Device &device, const Options 
 		image.device = device.logical;
 		image.handle = handle;
 		image.layout = vk::ImageLayout::ePresentSrcKHR;
-		image.description.extent = vk::Extent3D(result.extent(), 1);
+		image.description.extent = vk::Extent3D { options.width, options.height, 1 };
 		image.description.format = result.format;
 		image.description.aspect = vk::ImageAspectFlagBits::eColor;
 
-		auto view_info = vk::ImageViewCreateInfo()
-			.setImage(handle)
-			.setViewType(vk::ImageViewType::e2D)
-			.setSubresourceRange(
-				vk::ImageSubresourceRange()
-					.setAspectMask(vk::ImageAspectFlagBits::eColor)
-					.setBaseArrayLayer(0)
-					.setBaseMipLevel(0)
-					.setLayerCount(1)
-					.setLevelCount(1)
-			)
-			.setFormat(result.format);
+		vk::ImageSubresourceRange view_range {};
+		view_range.aspectMask = vk::ImageAspectFlagBits::eColor;
+		view_range.baseArrayLayer = 0;
+		view_range.baseMipLevel = 0;
+		view_range.layerCount = 1;
+		view_range.levelCount = 1;
+
+		vk::ImageViewCreateInfo view_info {};
+		view_info.image = handle;
+		view_info.viewType = vk::ImageViewType::e2D;
+		view_info.subresourceRange = view_range;
+		view_info.format = result.format;
 
 		image.view = ldev.createImageView(view_info);
 
@@ -200,8 +200,8 @@ Window Window::from(const Session &session, const Device &device, const Options 
 	result.frame_index = 0;
 	result.frames_in_flight = result.images.size();
 
-	auto fence_info = vk::FenceCreateInfo()
-		.setFlags(vk::FenceCreateFlagBits::eSignaled);
+	vk::FenceCreateInfo fence_info {};
+	fence_info.flags = vk::FenceCreateFlagBits::eSignaled;
 
 	auto semaphore_info = vk::SemaphoreCreateInfo();
 

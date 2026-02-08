@@ -4,8 +4,7 @@
 #include <map>
 #include <vector>
 
-#include <vulkan/vulkan.hpp>
-
+#include "vk.hpp"
 #include "../util/cti.hpp"
 
 namespace rcgp {
@@ -79,19 +78,25 @@ struct Subpass : vk::SubpassDescription {
 	)
 		: colors(colors_), depths(depths_), resolves(resolves_), inputs(inputs_)
 	{
-		setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+		pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
 
-		if constexpr (Colors > 0)
-			setColorAttachments(this->colors);
+		if constexpr (Colors > 0) {
+			colorAttachmentCount = colors.size();
+			pColorAttachments = colors.data();
+		}
 
-		if constexpr (Depths > 0)
-			setPDepthStencilAttachment(&this->depths.front());
+		if constexpr (Inputs > 0) {
+			pInputAttachments = inputs.data();
+			inputAttachmentCount = inputs.size();
+		}
 
-		if constexpr (Resolves > 0)
-			setResolveAttachments(this->resolves);
+		if constexpr (Depths > 0) {
+			pDepthStencilAttachment = depths.data();
+		}
 
-		if constexpr (Inputs > 0)
-			setInputAttachments(this->inputs);
+		if constexpr (Resolves > 0) {
+			pResolveAttachments = resolves.data();
+		}
 	}
 };
 

@@ -9,7 +9,20 @@
 
 namespace rcgp {
 
-std::vector <uint32_t> ShaderCompiler::glsl_to_spirv(const std::string &glsl, const EShLanguage &stage) const
+static EShLanguage stage_to_esh(ShaderStage S)
+{
+	switch (S) {
+	case ShaderStage::eVertex: return EShLangVertex;
+	case ShaderStage::eFragment: return EShLangFragment;
+	case ShaderStage::eCompute: return EShLangCompute;
+	case ShaderStage::eTask: return EShLangTask;
+	case ShaderStage::eMesh: return EShLangMesh;
+	default:
+		return EShLangCompute;
+	}
+}
+
+std::vector <uint32_t> ShaderCompiler::glsl_to_spirv(const std::string &glsl, const ShaderStage &stage) const
 {
 	auto defaults = GetDefaultResources();
 
@@ -21,7 +34,9 @@ std::vector <uint32_t> ShaderCompiler::glsl_to_spirv(const std::string &glsl, co
 	options.generateDebugInfo = debug_info;
 	options.disableOptimizer = false;
 
-	glslang::TShader shader(stage);
+	auto esh_stage = stage_to_esh(stage);
+
+	glslang::TShader shader(esh_stage);
 
 	shader.setStrings(cstr, 1);
 	shader.setEnvTarget(
@@ -52,7 +67,7 @@ std::vector <uint32_t> ShaderCompiler::glsl_to_spirv(const std::string &glsl, co
 	}
 
 	std::vector <uint32_t> spirv;
-	glslang::GlslangToSpv(*program.getIntermediate(stage), spirv, &options);
+	glslang::GlslangToSpv(*program.getIntermediate(esh_stage), spirv, &options);
 	return spirv;
 }
 

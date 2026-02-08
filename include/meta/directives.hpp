@@ -19,7 +19,7 @@ namespace rcgp {
 
 // TODO: later encode the number of attachments, and subpass progression
 template <size_t N>
-inline auto begin_render_pass(
+auto begin_render_pass(
 	const vk::RenderPass &render_pass,
 	const vk::Framebuffer &framebuffer,
 	const vk::Rect2D &render_area,
@@ -27,11 +27,13 @@ inline auto begin_render_pass(
 )
 {
 	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
-		auto rp_begin = vk::RenderPassBeginInfo()
-			.setRenderPass(render_pass)
-			.setFramebuffer(framebuffer)
-			.setRenderArea(render_area)
-			.setClearValues(clear_values);
+		auto rp_begin = vk::RenderPassBeginInfo {
+			.renderPass = render_pass,
+			.framebuffer = framebuffer,
+			.renderArea = render_area,
+			.clearValueCount = clear_values.size(),
+			.pClearValues = clear_values.data(),
+		};
 
 		cmd.beginRenderPass(rp_begin, vk::SubpassContents::eInline);
 	};
@@ -46,13 +48,15 @@ inline auto begin_rendering(
 )
 {
 	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
-		auto rendering = vk::RenderingInfo()
-			.setRenderArea(render_area)
-			.setLayerCount(1)
-			.setColorAttachments(color_attachments);
+		auto rendering = vk::RenderingInfo {
+			.renderArea = render_area,
+			.layerCount = 1,
+			.colorAttachmentCount = (uint32_t) color_attachments.size(),
+			.pColorAttachments = color_attachments.data(),
+		};
 
 		if (depth_attachment.has_value())
-			rendering.setPDepthAttachment(&depth_attachment.value());
+			rendering.pDepthAttachment = &depth_attachment.value();
 
 		cmd.beginRendering(rendering);
 	};
@@ -155,7 +159,7 @@ auto bind_vertex_buffers(const ResourceTypeFor <refs> &... buffers)
 }
 
 template <Topology T, typename Symbolic>
-inline auto bind_index_buffer(const IndexMirrorBuffer <Symbolic, layouts::scalar> &ibuffer)
+auto bind_index_buffer(const IndexMirrorBuffer <Symbolic, layouts::scalar> &ibuffer)
 {
 	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
 		if constexpr (std::is_same_v <Symbolic, array <vector <uint32_t, 3>>> ) {
@@ -261,7 +265,7 @@ inline auto manual_commands(auto F)
 }
 
 template <auto &... refs, typename ... SrcPhases, typename ... DstPhases>
-inline auto barriers(const Barrier <refs, SrcPhases, DstPhases> &... barriers)
+auto barriers(const Barrier <refs, SrcPhases, DstPhases> &... barriers)
 {
 	static constexpr size_t barrier_count =
 		(Barrier <refs, SrcPhases, DstPhases> ::count + ... + 0);
@@ -269,27 +273,34 @@ inline auto barriers(const Barrier <refs, SrcPhases, DstPhases> &... barriers)
 	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
 		std::array <vk::BufferMemoryBarrier2, barrier_count> buffer_barriers {};
 		size_t idx = 0;
+		
 		(barriers.write_to(buffer_barriers, idx), ...);
-		cmd.pipelineBarrier2(vk::DependencyInfo().setBufferMemoryBarriers(buffer_barriers));
+		
+		auto dep_info = vk::DependencyInfo {
+			.bufferMemoryBarrierCount = barrier_count,
+			.pBufferMemoryBarriers = buffer_barriers.data(),
+		};
+
+		cmd.pipelineBarrier2(dep_info);
 	};
 
 	return Commands <BarrierEffect <refs, SrcPhases, DstPhases>...> { binder };
 }
 
 template <typename ... Es, auto &ref, typename SrcPhase, typename DstPhase>
-inline auto operator|(const Commands <Es...> &cmds, const Barrier <ref, SrcPhase, DstPhase> &b)
+auto operator|(const Commands <Es...> &cmds, const Barrier <ref, SrcPhase, DstPhase> &b)
 {
 	return cmds | barriers(b);
 }
 
 template <auto &ref, typename SrcPhase, typename DstPhase, typename ... Es>
-inline auto operator|(const Barrier <ref, SrcPhase, DstPhase> &b, const Commands <Es...> &cmds)
+auto operator|(const Barrier <ref, SrcPhase, DstPhase> &b, const Commands <Es...> &cmds)
 {
 	return barriers(b) | cmds;
 }
 
 template <auto &ref, typename SrcPhase, typename DstPhase>
-inline auto operator|(const std::nullptr_t &, const Barrier <ref, SrcPhase, DstPhase> &b)
+auto operator|(const std::nullptr_t &, const Barrier <ref, SrcPhase, DstPhase> &b)
 {
 	return barriers(b);
 }
@@ -306,7 +317,7 @@ inline auto dispatch(uint32_t x, uint32_t y = 1, uint32_t z = 1)
 
 template <typename T, typename F>
 requires is_commands_v <std::invoke_result_t <F, T>>
-inline auto foreach(const std::vector <T> &container, F &&ftn)
+auto foreach(const std::vector <T> &container, F &&ftn)
 {
 	using C = std::invoke_result_t <F, T>;
 

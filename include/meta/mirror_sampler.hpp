@@ -11,10 +11,11 @@ struct MirrorSampler {
 	vk::ImageLayout layout = vk::ImageLayout::eShaderReadOnlyOptimal;
 
 	vk::DescriptorImageInfo descriptor_info() const {
-		return vk::DescriptorImageInfo()
-			.setSampler(sampler)
-			.setImageView(view)
-			.setImageLayout(layout);
+		return vk::DescriptorImageInfo {
+			.sampler = sampler,
+			.imageView = view,
+			.imageLayout = layout,
+		};
 	}
 
 	static MirrorSampler from(

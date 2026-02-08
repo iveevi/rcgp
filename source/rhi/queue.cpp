@@ -1,5 +1,7 @@
 #include "rhi/queue.hpp"
 
+#include <vector>
+
 namespace rcgp {
 
 void Queue::submit(
@@ -10,14 +12,15 @@ void Queue::submit(
 	const vk::Fence &fence
 ) const
 {
-	auto info = vk::SubmitInfo()
-		.setCommandBuffers(cmds)
-		.setWaitSemaphores(wait)
-		.setSignalSemaphores(signal)
-		.setWaitDstStageMask(wait_stage);
-
+	auto wait_stages = std::vector<vk::PipelineStageFlags>(wait.size(), wait_stage);
+	vk::SubmitInfo info {};
+	info.commandBufferCount = cmds.size();
+	info.pCommandBuffers = cmds.data();
 	info.waitSemaphoreCount = wait.size();
+	info.pWaitSemaphores = wait.data();
+	info.pWaitDstStageMask = wait_stages.data();
 	info.signalSemaphoreCount = signal.size();
+	info.pSignalSemaphores = signal.data();
 
 	vk::Queue::submit(info, fence);
 }
@@ -28,10 +31,12 @@ vk::Result Queue::present(
 	const vk::ArrayProxy <vk::Semaphore> &semaphores
 ) const
 {
-	auto info = vk::PresentInfoKHR()
-		.setSwapchains(swapchain)
-		.setImageIndices(index)
-		.setWaitSemaphores(semaphores);
+	vk::PresentInfoKHR info {};
+	info.swapchainCount = 1;
+	info.pSwapchains = &swapchain;
+	info.pImageIndices = &index;
+	info.waitSemaphoreCount = semaphores.size();
+	info.pWaitSemaphores = semaphores.data();
 
 	return presentKHR(info);
 }

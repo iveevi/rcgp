@@ -10,20 +10,20 @@ template <auto &... refs>
 constexpr auto sequence_to_vertex_bindings(const Tlist <contract <refs>...> &in)
 {
 	auto desc = [] <typename T, template <typename> typename L, vk::VertexInputRate R>
-	(const AttributeStream <T, L, R> &) {
+	(const AttributeStream <T, L, R> &, uint32_t binding) {
 		using M = layouts::apply_t <T, L>;
-		return vk::VertexInputBindingDescription()
-			.setStride(sizeof(M))
-			.setInputRate(R);
+		return vk::VertexInputBindingDescription {
+			.binding = binding,
+			.stride = sizeof(M),
+			.inputRate = R,
+		};
 	};
 
 	if constexpr (sizeof...(refs) == 0) {
 		return std::array <vk::VertexInputBindingDescription, 0> ();
 	} else {
 		return constexpr_for(Is, sizeof...(refs),
-			return std::array {
-				desc(refs).setBinding(Is)...
-			}
+			return std::array { desc(refs, Is)... }
 		);
 	}
 }
@@ -32,10 +32,13 @@ template <auto &... refs>
 constexpr auto sequence_to_vertex_attributes(const Tlist <contract <refs>...> &in)
 {
 	auto desc = [] <typename T, template <typename> typename L, vk::VertexInputRate R>
-	(const AttributeStream <T, L, R> &) {
-		return vk::VertexInputAttributeDescription()
-			.setFormat(symbolic_format <T> ::value)
-			.setOffset(0);
+	(const AttributeStream <T, L, R> &, uint32_t binding, uint32_t location) {
+		return vk::VertexInputAttributeDescription {
+			.location = location,
+			.binding = binding,
+			.format = symbolic_format <T> ::value,
+			.offset = 0,
+		};
 	};
 
 	if constexpr (sizeof...(refs) == 0) {
@@ -43,11 +46,7 @@ constexpr auto sequence_to_vertex_attributes(const Tlist <contract <refs>...> &i
 	} else {
 		size_t location = 0;
 		return constexpr_for(Is, sizeof...(refs),
-			return std::array {
-				desc(refs)
-					.setBinding(Is)
-					.setLocation(location++)...
-			}
+			return std::array { desc(refs, Is, location++)... }
 		);
 	}
 }

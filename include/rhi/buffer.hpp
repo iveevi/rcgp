@@ -1,7 +1,6 @@
 #pragma once
 
 #include <span>
-#include <vulkan/vulkan.hpp>
 
 #include "device.hpp"
 
@@ -39,10 +38,11 @@ struct Buffer {
 	}
 
 	vk::DescriptorBufferInfo descriptor_info() const {
-		return vk::DescriptorBufferInfo()
-			.setBuffer(handle)
-			.setOffset(offset)
-			.setRange(size);
+		vk::DescriptorBufferInfo result {};
+		result.buffer = handle;
+		result.offset = offset;
+		result.range = size;
+		return result;
 	}
 	
 	void destroy();
@@ -56,5 +56,6 @@ struct Buffer {
 };
 
 // TODO: arena allocator for buffers
+// TODO: interop with vma allocator?
 
 } // namespace rcgp

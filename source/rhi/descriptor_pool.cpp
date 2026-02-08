@@ -28,9 +28,10 @@ DescriptorPool DescriptorPool::from(const Device &device, const Options &info)
 	push(vk::DescriptorType::eInlineUniformBlockEXT, info.inline_uniform_blocks);
 	push(vk::DescriptorType::eAccelerationStructureKHR, info.acceleration_structures);
 
-	auto pool_info = vk::DescriptorPoolCreateInfo()
-		.setMaxSets(info.max_sets)
-		.setPoolSizes(sizes);
+	vk::DescriptorPoolCreateInfo pool_info {};
+	pool_info.maxSets = info.max_sets;
+	pool_info.poolSizeCount = sizes.size();
+	pool_info.pPoolSizes = sizes.data();
 
 	return DescriptorPool(device.logical.createDescriptorPool(pool_info));
 }

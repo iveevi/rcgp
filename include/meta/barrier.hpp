@@ -2,10 +2,8 @@
 
 #include <array>
 
-#include <vulkan/vulkan.hpp>
-
-#include "resources.hpp"
 #include "contract.hpp"
+#include "resources.hpp"
 #include "witnesses.hpp"
 
 namespace rcgp {
@@ -150,15 +148,13 @@ struct Barrier {
 		static_assert(buffer_resource <ResourceTypeFor <ref>>,
 			"Barrier requires a buffer-backed resource");
 		auto info = resource.descriptor_info();
-		barrier
-			.setBuffer(info.buffer)
-			.setOffset(info.offset)
-			.setSize(info.range);
-		barrier
-			.setSrcStageMask(to_vk_stage(SrcPhase::stage))
-			.setSrcAccessMask(to_vk_access(SrcPhase::stage, SrcPhase::access))
-			.setDstStageMask(to_vk_stage(DstPhase::stage))
-			.setDstAccessMask(to_vk_access(DstPhase::stage, DstPhase::access));
+		barrier.buffer = info.buffer;
+		barrier.offset = info.offset;
+		barrier.size = info.range;
+		barrier.srcStageMask = to_vk_stage(SrcPhase::stage);
+		barrier.srcAccessMask = to_vk_access(SrcPhase::stage, SrcPhase::access);
+		barrier.dstStageMask = to_vk_stage(DstPhase::stage);
+		barrier.dstAccessMask = to_vk_access(DstPhase::stage, DstPhase::access);
 	}
 
 	void write_to(std::span <vk::BufferMemoryBarrier2> out, size_t &idx) const {
@@ -185,15 +181,15 @@ struct Barrier <ref, SrcPhase, DstPhase> {
 			using Field = Structure::reflection::template field_type <I>;
 			if constexpr (buffer_resource <Field>) {
 				auto info = resource.template get <I> ().descriptor_info();
-				barriers[idx]
-					.setBuffer(info.buffer)
-					.setOffset(info.offset)
-					.setSize(info.range)
-					.setSrcStageMask(to_vk_stage(SrcPhase::stage))
-					.setSrcAccessMask(to_vk_access(SrcPhase::stage, SrcPhase::access))
-					.setDstStageMask(to_vk_stage(DstPhase::stage))
-					.setDstAccessMask(to_vk_access(DstPhase::stage, DstPhase::access));
-				idx++;
+				auto &barrier = barriers[idx++];
+				// TODO: this is common...
+				barrier.buffer = info.buffer;
+				barrier.offset = info.offset;
+				barrier.size = info.range;
+				barrier.srcStageMask = to_vk_stage(SrcPhase::stage);
+				barrier.srcAccessMask = to_vk_access(SrcPhase::stage, SrcPhase::access);
+				barrier.dstStageMask = to_vk_stage(DstPhase::stage);
+				barrier.dstAccessMask = to_vk_access(DstPhase::stage, DstPhase::access);
 			}
 		};
 

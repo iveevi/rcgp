@@ -1,10 +1,9 @@
 #pragma once
 
-#include <vulkan/vulkan.hpp>
-
 #include "../dsl/jems.hpp"
-#include "../util/error.hpp"
+#include "../rhi/vk.hpp"
 #include "../util/cti.hpp"
+#include "../util/error.hpp"
 #include "layouts.hpp"
 
 namespace rcgp {

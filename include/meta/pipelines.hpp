@@ -11,7 +11,6 @@ namespace rcgp {
 template <auto &ref, auto &... refs, size_t ... Is>
 constexpr auto set_index_for(const Tlist <group_allocation_record <refs, Is>...> &)
 {
-	// TODO: use constexpr_for?
 	constexpr auto matches = std::array {
 		std::same_as <
 			contract <ref>,
@@ -46,14 +45,17 @@ struct GenericPipeline {
 		const std::array <vk::DescriptorSetLayout, set_count> &dsls_
 	) : device(device_), handle(handle_), layout(layout_), dsls(dsls_) {}
 
+	// TODO: support allocating multiple refs
 	template <auto &ref>
 	auto new_descriptor(const DescriptorPool &pool) const {
 		constexpr auto set = set_index_for <ref> (GAMAP());
 		
 		auto dset = device.allocateDescriptorSets(
-			vk::DescriptorSetAllocateInfo()
-				.setDescriptorPool(pool)
-				.setSetLayouts(dsls[set])
+			vk::DescriptorSetAllocateInfo {
+				.descriptorPool = pool,
+				.descriptorSetCount = 1,
+				.pSetLayouts = &dsls[set],
+			}
 		).front();
 
 		return DescriptorFor <ref, false> (dset, set);

@@ -1,7 +1,6 @@
 #pragma once
 
-#include <vulkan/vulkan.hpp>
-
+#include "vk.hpp"
 #include "device.hpp"
 
 namespace rcgp {

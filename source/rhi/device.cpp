@@ -32,9 +32,9 @@ auto Device::find_memory_type(uint32_t filter, vk::MemoryPropertyFlags flags) co
 auto Device::new_command_buffers(const CommandPool &cpool, size_t count) const
 	-> std::vector <CommandBuffer>
 {
-	auto info = vk::CommandBufferAllocateInfo()
-		.setCommandBufferCount(count)
-		.setCommandPool(cpool);
+	vk::CommandBufferAllocateInfo info {};
+	info.commandBufferCount = count;
+	info.commandPool = cpool;
 
 	return logical.allocateCommandBuffers(info)
 		| std::views::transform([&] (auto x) { return CommandBuffer(x, &loader); })
@@ -44,9 +44,10 @@ auto Device::new_command_buffers(const CommandPool &cpool, size_t count) const
 auto Device::new_descriptor_sets(const DescriptorPool &dpool, const vk::ArrayProxy <vk::DescriptorSetLayout> &dsls) const
 	-> std::vector <vk::DescriptorSet>
 {
-	auto info = vk::DescriptorSetAllocateInfo()
-		.setDescriptorPool(dpool)
-		.setSetLayouts(dsls);
+	vk::DescriptorSetAllocateInfo info {};
+	info.descriptorPool = dpool;
+	info.descriptorSetCount = dsls.size();
+	info.pSetLayouts = dsls.data();
 
 	return logical.allocateDescriptorSets(info);
 }
@@ -75,9 +76,9 @@ TimestampQueryPool Device::new_timestamp_pool(vk::QueryResultFlags flags, size_t
 {
 	TimestampQueryPool tqpool;
 
-	auto info = vk::QueryPoolCreateInfo()
-		.setQueryCount(count)
-		.setQueryType(vk::QueryType::eTimestamp);
+	vk::QueryPoolCreateInfo info {};
+	info.queryCount = count;
+	info.queryType = vk::QueryType::eTimestamp;
 
 
 	auto properties = physical.getProperties();
@@ -155,47 +156,47 @@ Device Device::from(
 			continue;
 		}
 
-		queue_create_infos.emplace_back(
-			vk::DeviceQueueCreateInfo()
-				.setQueueFamilyIndex(idx)
-				.setQueuePriorities(priority)
-				.setQueueCount(1)
-		);
+		vk::DeviceQueueCreateInfo queue_info {};
+		queue_info.queueFamilyIndex = idx;
+		queue_info.queueCount = 1;
+		queue_info.pQueuePriorities = &priority;
+		queue_create_infos.emplace_back(queue_info);
 
 		device.queues.emplace(key, Queue(nullptr, idx, 0));
 	}
 
-	auto features13 = vk::PhysicalDeviceVulkan13Features()
-		.setSynchronization2(true)
-		.setMaintenance4(options.maintenance4);
+	vk::PhysicalDeviceVulkan13Features features13 {};
+	features13.synchronization2 = true;
+	features13.maintenance4 = options.maintenance4;
 
 	void *feature_chain = nullptr;
 
 	vk::PhysicalDeviceScalarBlockLayoutFeatures scalar_layout;
 	if (options.scalar_block_layout) {
-		scalar_layout.setScalarBlockLayout(true);
-		scalar_layout.setPNext(feature_chain);
+		scalar_layout.scalarBlockLayout = true;
+		scalar_layout.pNext = feature_chain;
 		feature_chain = &scalar_layout;
 	}
 
 	vk::PhysicalDeviceMeshShaderFeaturesEXT mesh_features;
 	if (options.mesh_shaders) {
-		mesh_features
-			.setTaskShader(true)
-			.setMeshShader(true);
-		mesh_features.setPNext(feature_chain);
+		mesh_features.taskShader = true;
+		mesh_features.meshShader = true;
+		mesh_features.pNext = feature_chain;
 		feature_chain = &mesh_features;
 	}
 
 	if (options.dynamic_rendering)
-		features13.setDynamicRendering(true);
+		features13.dynamicRendering = true;
 
-	features13.setPNext(feature_chain);
+	features13.pNext = feature_chain;
 
-	auto device_info = vk::DeviceCreateInfo()
-		.setQueueCreateInfos(queue_create_infos)
-		.setPEnabledExtensionNames(options.extensions)
-		.setPNext(&features13);
+	vk::DeviceCreateInfo device_info {};
+	device_info.queueCreateInfoCount = queue_create_infos.size();
+	device_info.pQueueCreateInfos = queue_create_infos.data();
+	device_info.enabledExtensionCount = options.extensions.size();
+	device_info.ppEnabledExtensionNames = options.extensions.data();
+	device_info.pNext = &features13;
 
 	device.logical = device.physical.createDevice(device_info);
 

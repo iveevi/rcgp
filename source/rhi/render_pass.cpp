@@ -16,9 +16,10 @@ vk::AttachmentDescription &Attachments::operator[](const std::string &key) &
 vk::AttachmentReference Attachments::reference(const std::string &key, vk::ImageLayout layout) const
 {
 	auto idx = mapping.at(key);
-	return vk::AttachmentReference()
-		.setAttachment(idx)
-		.setLayout(layout);
+	auto result = vk::AttachmentReference();
+	result.attachment = idx;
+	result.layout = layout;
+	return result;
 }
 
 } // namespace rcgp

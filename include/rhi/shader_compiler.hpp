@@ -3,8 +3,7 @@
 #include <string>
 #include <vector>
 
-#include <vulkan/vulkan.hpp>
-#include <glslang/Public/ShaderLang.h>
+#include "../dsl/enumerations.hpp"
 
 namespace rcgp {
 
@@ -12,7 +11,7 @@ struct ShaderCompiler {
 	bool debug_info = true;
 	uint32_t version = 460;
 
-	std::vector <uint32_t> glsl_to_spirv(const std::string &glsl, const EShLanguage &stage) const;
+	std::vector <uint32_t> glsl_to_spirv(const std::string &glsl, const ShaderStage &stage) const;
 };
 
 } // namespace rcgp

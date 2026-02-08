@@ -45,10 +45,11 @@ struct MirrorBuffer <T, L, F> : Buffer {
 	}
 
 	vk::DescriptorBufferInfo descriptor_info() const {
-		return vk::DescriptorBufferInfo()
-			.setBuffer(handle)
-			.setOffset(offset)
-			.setRange(sizeof(value_type));
+		return vk::DescriptorBufferInfo {
+			.buffer = handle,
+			.offset = offset,
+			.range = sizeof(value_type),
+		};
 	}
 
 	static MirrorBuffer from(
@@ -119,10 +120,11 @@ struct MirrorBuffer <T, L, F> : Buffer {
 	}
 
 	vk::DescriptorBufferInfo descriptor_info() const {
-		return vk::DescriptorBufferInfo()
-			.setBuffer(handle)
-			.setOffset(offset)
-			.setRange(size);
+		return vk::DescriptorBufferInfo {
+			.buffer = handle,
+			.offset = offset,
+			.range = size,
+		};
 	}
 };
 

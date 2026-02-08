@@ -43,19 +43,17 @@ void set_descriptor_write_and_union(
 {
 	using enum vk::DescriptorType;
 
-	write // ...
-		.setDstSet(set)
-		.setDstBinding(I);
+	write.dstSet = set;
+	write.dstBinding = I;
+	write.descriptorCount = 1;
 
 	auto dinfo = resource.descriptor_info();
 	if constexpr (is_sampler_v <T>) {
-		write // ...
-			.setDescriptorType(eCombinedImageSampler)
-			.setImageInfo(info.image = dinfo);
+		write.descriptorType = eCombinedImageSampler;
+		write.pImageInfo = &(info.image = dinfo);
 	} else if constexpr (is_storage_buffer_v <T>) {
-		write // ...
-			.setDescriptorType(eStorageBuffer)
-			.setBufferInfo(info.buffer = dinfo);
+		write.descriptorType = eStorageBuffer;
+		write.pBufferInfo = &(info.buffer = dinfo);
 	} else {
 		static_error("unsupported resource type "_ss + $ss_type(T));
 	}

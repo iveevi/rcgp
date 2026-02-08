@@ -39,6 +39,9 @@ def main():
     asm_src, glsl_src = [], []
 
     for src in [asm_src, glsl_src]:
+        src.append('#include <array>')
+        src.append('#include <utility>')
+        src.append('')
         src.append('#include "dsl/enumerations.hpp"')
         src.append('')
         src.append('namespace rcgp {')

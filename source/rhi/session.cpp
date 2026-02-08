@@ -77,31 +77,34 @@ auto Session::from(const Options &options) -> std::tuple <
 
 	session->trap_on_error = options.trap_on_error;
 	session->validation_callback = options.validation_callback;
-	auto debug_info = vk::DebugUtilsMessengerCreateInfoEXT()
-		.setMessageType(debug_type_flags)
-		.setMessageSeverity(debug_severity_flags)
-		.setPfnUserCallback(general_validation_callback)
-		.setPUserData(session.get());
+	vk::DebugUtilsMessengerCreateInfoEXT debug_info {};
+	debug_info.messageType = debug_type_flags;
+	debug_info.messageSeverity = debug_severity_flags;
+	debug_info.pfnUserCallback = general_validation_callback;
+	debug_info.pUserData = session.get();
 
-	auto app_info = vk::ApplicationInfo()
-		.setApiVersion(VK_API_VERSION_1_4)
-		.setApplicationVersion(options.application_version)
-		.setPApplicationName(options.application_name)
-		.setEngineVersion(options.engine_version)
-		.setPEngineName(options.engine_name);
+	vk::ApplicationInfo app_info {};
+	app_info.apiVersion = VK_API_VERSION_1_4;
+	app_info.applicationVersion = options.application_version;
+	app_info.pApplicationName = options.application_name;
+	app_info.engineVersion = options.engine_version;
+	app_info.pEngineName = options.engine_name;
 
-	auto validation_features = vk::ValidationFeaturesEXT()
-		.setEnabledValidationFeatures(options.validation_features);
+	vk::ValidationFeaturesEXT validation_features {};
+	validation_features.enabledValidationFeatureCount = options.validation_features.size();
+	validation_features.pEnabledValidationFeatures = options.validation_features.data();
 
-	auto instance_info = vk::InstanceCreateInfo()
-		.setPApplicationInfo(&app_info)
-		.setPEnabledLayerNames(layers)
-		.setPEnabledExtensionNames(extensions);
+	vk::InstanceCreateInfo instance_info {};
+	instance_info.pApplicationInfo = &app_info;
+	instance_info.enabledLayerCount = layers.size();
+	instance_info.ppEnabledLayerNames = layers.data();
+	instance_info.enabledExtensionCount = extensions.size();
+	instance_info.ppEnabledExtensionNames = extensions.data();
 
 	if (options.validation) {
-		instance_info.setPNext(&validation_features);
+		instance_info.pNext = &validation_features;
 		if (options.validate_instance)
-			validation_features.setPNext(&debug_info);
+			validation_features.pNext = &debug_info;
 	}
 
 	session->handle = vk::createInstance(instance_info, nullptr, dld);

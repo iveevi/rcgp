@@ -70,18 +70,18 @@ auto Buffer::from(
 	result.usage = usage;
 	result.properties = properties;
 
-	auto buffer_info = vk::BufferCreateInfo()
-		.setSharingMode(vk::SharingMode::eExclusive)
-		.setSize(size)
-		.setUsage(usage);
+	vk::BufferCreateInfo buffer_info {};
+	buffer_info.sharingMode = vk::SharingMode::eExclusive;
+	buffer_info.size = size;
+	buffer_info.usage = usage;
 
 	result.handle = device.logical.createBuffer(buffer_info);
 
 	auto requirements = device.logical.getBufferMemoryRequirements(result.handle);
 	auto memory_index = device.find_memory_type(requirements.memoryTypeBits, properties);
-	auto memory_info = vk::MemoryAllocateInfo()
-		.setAllocationSize(requirements.size)
-		.setMemoryTypeIndex(memory_index);
+	vk::MemoryAllocateInfo memory_info {};
+	memory_info.allocationSize = requirements.size;
+	memory_info.memoryTypeIndex = memory_index;
 
 	result.backing = device.logical.allocateMemory(memory_info);
 	device.logical.bindBufferMemory(result.handle, result.backing, 0);

@@ -39,12 +39,13 @@ struct Device {
 		static_assert(std::same_as <Extent, vk::Extent2D>
 			|| std::same_as <Extent, vk::Extent3D>);
 
-		auto fb_info = vk::FramebufferCreateInfo()
-			.setRenderPass(render_pass)
-			.setAttachments(attachments)
-			.setWidth(extent.width)
-			.setHeight(extent.height)
-			.setLayers(layers);
+		auto fb_info = vk::FramebufferCreateInfo();
+		fb_info.renderPass = render_pass;
+		fb_info.attachmentCount = attachments.size();
+		fb_info.pAttachments = attachments.data();
+		fb_info.width = extent.width;
+		fb_info.height = extent.height;
+		fb_info.layers = layers;
 
 		return logical.createFramebuffer(fb_info);
 	}
@@ -54,18 +55,27 @@ struct Device {
 	auto new_descriptor_sets(const DescriptorPool &dpool, const vk::ArrayProxy <vk::DescriptorSetLayout> &dsls) const -> std::vector <vk::DescriptorSet>;
 
 	auto new_shader_module(std::span <const uint32_t> spirv) const -> vk::ShaderModule {
-		auto info = vk::ShaderModuleCreateInfo()
-			.setCodeSize(spirv.size() * sizeof(uint32_t))
-			.setPCode(spirv.data());
-
-		return logical.createShaderModule(info);
+		auto sm_info = vk::ShaderModuleCreateInfo();
+		sm_info.codeSize = spirv.size_bytes();
+		sm_info.pCode = spirv.data();
+		return logical.createShaderModule(sm_info);
 	}
-	
+
+	// TODO: un-template this...
 	template <typename ... Ts>
 	auto new_render_pass(const Attachments &attachments, Ts ... subpasses) const {
-		auto rp_info = vk::RenderPassCreateInfo()
-			.setAttachments(attachments.descriptions)
-			.setSubpasses(subpasses...);
+		auto rp_info = vk::RenderPassCreateInfo();
+		rp_info.attachmentCount = attachments.descriptions.size();
+		rp_info.pAttachments = attachments.descriptions.data();
+		rp_info.subpassCount = sizeof...(subpasses);
+
+		auto subpass_descritions = std::array <
+			vk::SubpassDescription,
+			sizeof...(subpasses)
+		> { subpasses... };
+
+		rp_info.subpassCount = subpass_descritions.size();
+		rp_info.pSubpasses = subpass_descritions.data();
 
 		return RenderPass <Ts...> (logical.createRenderPass(rp_info));
 	}
