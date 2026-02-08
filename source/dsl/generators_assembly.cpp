@@ -93,7 +93,7 @@ std::string emit_type(AsmEmitter &em, const Type &type)
 		break;
 	}
 
-	fatal("unhandled type in emit_type: {}", type.repr());
+	fatal("unhandled type in emit_type: %s", type.repr().c_str());
 }
 
 std::string emit_instr_value(AsmEmitter &em, const Reference &ref)
@@ -197,7 +197,7 @@ std::string emit_instr_value(AsmEmitter &em, const Reference &ref)
 		break;
 	};
 	
-	fatal("unhandled instruction in emit_instr_value: {}", ref->repr());
+	fatal("unhandled instruction in emit_instr_value: %s", ref->repr().c_str());
 }
 
 void emit_block(AsmEmitter &em, const SharedBlockReference &sbr);
@@ -296,7 +296,7 @@ void emit_instr(AsmEmitter &em, const Reference &ref)
 		break;
 	}
 
-	fatal("unhandled instruction in emit_instr: {}", ref->repr());
+	fatal("unhandled instruction in emit_instr: %s", ref->repr().c_str());
 }
 
 void emit_block(AsmEmitter &em, const SharedBlockReference &sbr)

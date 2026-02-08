@@ -123,4 +123,54 @@ std::string Return::repr() const
 	return std::format("Return({})", argi);
 }
 
+std::string Instruction::repr() const
+{
+	vswitch ((*this)) {
+	vcase(Argument):
+		return as <Argument> ().repr();
+	vcase(ArrayAccess):
+		return as <ArrayAccess> ().repr();
+	vcase(Block):
+		return as <Block> ().repr();
+	vcase(BuiltinIntrinsic):
+		return as <BuiltinIntrinsic> ().repr();
+	vcase(Constant):
+		return as <Constant> ().repr();
+	vcase(Construct):
+		return as <Construct> ().repr();
+	vcase(FieldAccess):
+		return as <FieldAccess> ().repr();
+	vcase(SystemValue):
+		return std::string(rcgp::repr(as <SystemValue> ()));
+	vcase(GlobalResource):
+		return as <GlobalResource> ().repr();
+	vcase(Branch):
+		return as <Branch> ().repr();
+	vcase(Loop):
+		return as <Loop> ().repr();
+	vcase(Local):
+		return as <Local> ().repr();
+	vcase(Invocation):
+		return as <Invocation> ().repr();
+	vcase(Operation):
+		return as <Operation> ().repr();
+	vcase(Store):
+		return as <Store> ().repr();
+	vcase(Swizzle):
+		return as <Swizzle> ().repr();
+	vcase(StageInput):
+		return as <StageInput> ().repr();
+	vcase(StageOutput):
+		return as <StageOutput> ().repr();
+	vcase(Return):
+		return as <Return> ().repr();
+	vcase(Type):
+		return as <Type> ().repr();
+	default:
+		break;
+	}
+
+	return "Instruction(unknown)";
+}
+
 } // namespace rcgp

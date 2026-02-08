@@ -5,7 +5,6 @@
 #include <glslang/SPIRV/GlslangToSpv.h>
 
 #include "rhi/shader_compiler.hpp"
-#include "util/timer.hpp"
 
 namespace rcgp {
 
@@ -26,7 +25,6 @@ std::vector <uint32_t> ShaderCompiler::glsl_to_spirv(const std::string &glsl, co
 {
 	auto defaults = GetDefaultResources();
 
-	TSCOPE("compile glsl to spirv");
 
 	const char *cstr[] = { glsl.c_str() };
 

@@ -46,7 +46,7 @@ const Type &get_type(const SharedBlockReference &sbr, const Reference &ref)
 		break;
 	}
 
-	fatal("unhandled instruction in get_type: {}", ref->repr());
+	fatal("unhandled instruction in get_type: %s", ref->repr().c_str());
 }
 
 const Struct &get_struct(const SharedBlockReference &sbr, const Reference &ref)

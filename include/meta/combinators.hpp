@@ -5,7 +5,6 @@
 #include "../rhi/pipelines.hpp"
 #include "../rhi/shader_compiler.hpp"
 #include "../rhi/shader_compiler.hpp"
-#include "../util/timer.hpp"
 #include "input_assembly.hpp"
 #include "pipelines.hpp"
 #include "process_gvrs.hpp"
@@ -68,7 +67,6 @@ struct RasterizationCombinator {
 	requires is_vertex_shader_v <VertexShader>
 		and is_fragment_shader_v <FragmentShader>
 	auto operator()(VertexShader &vertex_shader, FragmentShader &fragment_shader) const {
-		TSCOPE("rasterization combinator");
 
 		// TODO: return a Tlist of error static strings?
 		// probably needs a error <auto s>
@@ -129,7 +127,6 @@ struct ComputeCombinator {
 	template <typename ComputeShader>
 	requires is_compute_shader_v <ComputeShader>
 	auto operator()(ComputeShader &compute_shader) const {
-		TSCOPE("compute combinator");
 
 		auto gvrs = ComputeShader::gvrs;
 		auto [layout, dsls, gamap] = apply_gvrs(device, gvrs, compute_shader);
@@ -159,7 +156,6 @@ struct MeshShadingCombinator {
 
 	template <typename TaskShader, typename MeshShader, typename FragmentShader>
 	auto operator()(TaskShader &task, MeshShader &mesh, FragmentShader &fragment) const {
-		TSCOPE("mesh shading combinator");
 
 		auto gvrs = merge_stage_wrappers(tlist_concat(
 			TaskShader::gvrs,

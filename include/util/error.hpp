@@ -1,17 +1,18 @@
 #pragma once
 
-#include <iostream>
-#include <print>
+namespace rcgp {
 
-#define assertion(c) 								\
-	if (not (c)) {								\
-		std::println(std::cerr, "rcgp: assertion failed: {}", #c);	\
-		std::flush(std::cerr);						\
-		__builtin_trap();						\
-	}
+[[noreturn]] void assertion_failed(const char *condition, const char *file, int line);
+[[noreturn]] void fatalf(const char *format, ...);
 
-#define fatal(...) {								\
-		std::println(std::cerr, "rcgp: " __VA_ARGS__);			\
-		std::flush(std::cerr);						\
-		__builtin_trap();						\
-	}
+} // namespace rcgp
+
+#define assertion(c) do {							\
+	if (not (c)) {							\
+		::rcgp::assertion_failed(#c, __FILE__, __LINE__);	\
+	}								\
+} while (0)
+
+#define fatal(...) do {					\
+	::rcgp::fatalf(__VA_ARGS__);			\
+} while (0)

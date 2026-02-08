@@ -32,14 +32,7 @@ struct Instruction : variant <
 	Instruction(const variant_self &base, DebugInfo debug_info_ = {})
 		: variant_self(base), debug_info(debug_info_) {}
 
-	std::string repr() const {
-		return std::visit([&] <typename T> (T x) -> std::string {
-			if constexpr (std::same_as <T, SystemValue>)
-				return std::string(rcgp::repr(this->as <SystemValue> ()));
-			else
-				return x.repr();
-		}, *this);
-	}
+	std::string repr() const;
 };
 
 } // namespace rcgp

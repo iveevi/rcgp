@@ -2,9 +2,10 @@
 #include <regex>
 #include <queue>
 
+#include <fmt/format.h>
+
 #include "dsl/generators.hpp"
 #include "dsl/instructions.hpp"
-#include "util/timer.hpp"
 #include "util/error.hpp"
 
 namespace rcgp {
@@ -101,7 +102,7 @@ TypeRepr type_repr(const GLSLEmitter &em, const Reference &ref)
 		break;
 	}
 
-	fatal("unhandled case for type_repr: {}", ref->repr());
+	fatal("unhandled case for type_repr: %s", ref->repr().c_str());
 }
 
 std::string expr_repr(const GLSLEmitter &em, const Reference &ref);
@@ -162,7 +163,7 @@ std::string lval_repr(const GLSLEmitter &em, const Reference &ref)
 
 	auto ptr = ref.get();
 	if (not em.ids.contains(ptr))
-		fatal("no lval id entry for {}", ref->repr());
+		fatal("no lval id entry for %s", ref->repr().c_str());
 
 	return std::format("lvar{}", em.ids.at(ptr));
 }
@@ -252,7 +253,7 @@ std::string expr_repr(const GLSLEmitter &em, const Reference &ref)
 		break;
 	}
 
-	fatal("unhandled case for expr_repr: {}", ref->repr());
+	fatal("unhandled case for expr_repr: %s", ref->repr().c_str());
 }
 
 void emit_body(GLSLEmitter &em, const SharedBlockReference &sbr);
@@ -335,7 +336,7 @@ void emit_statement(GLSLEmitter &em, const Reference &ref)
 		break;
 	}
 	
-	fatal("unhandled case for emit_statement: {}", ref->repr());
+	fatal("unhandled case for emit_statement: %s", ref->repr().c_str());
 }
 
 void emit_body(GLSLEmitter &em, const SharedBlockReference &sbr)
@@ -513,7 +514,7 @@ std::string buffer_access(const GlobalResource &grsrc)
 		break;
 	}
 
-	fatal("unhandled case for buffer_access: {}", grsrc.repr());
+	fatal("unhandled case for buffer_access: %s", grsrc.repr().c_str());
 }
 
 void emit_resource(GLSLEmitter &em, const GlobalResource &grsrc)
@@ -710,7 +711,6 @@ auto top_sort(SbrMap &call_to, SbrMap &call_from)
 
 std::string generate_glsl(const SharedBlockReference &sbr)
 {
-	TSCOPE("generating glsl code");
 
 	auto em = GLSLEmitter {
 		.main = sbr,

@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "../rhi/command_buffer.hpp"
-#include "../util/timer.hpp"
 #include "command_normalization.hpp"
 
 namespace rcgp {
@@ -27,8 +26,6 @@ struct Commands : std::vector <command_operator> {
 
 	// TODO: must be in a satisfied state...
 	auto &operator()(CommandBuffer &cmd) const {
-		TSCOPE("commands serialization");
-		TNOTE("{} commands to trace", size());
 
 		SerializationContext aux;
 

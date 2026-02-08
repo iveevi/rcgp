@@ -335,8 +335,6 @@ auto foreach(const std::vector <T> &container, F &&ftn)
 	using C = std::invoke_result_t <F, T>;
 
 	auto binder = [=](const CommandBuffer &cmd, SerializationContext &sctx) {
-		TSCOPE("foreach serialization");
-		TNOTE("container size of {}", container.size());
 
 		for (auto &&value : container)
 			ftn(value).serialize(cmd, sctx);
