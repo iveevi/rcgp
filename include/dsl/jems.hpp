@@ -3,10 +3,13 @@
 #include <algorithm>
 
 #include "instructions.hpp"
-#include "primitive_of.hpp"
 #include "tracer.hpp"
 
 namespace rcgp::jems {
+
+struct null {
+	void override_reference(const Reference &ref) {}
+};
 
 class handle {
 protected:

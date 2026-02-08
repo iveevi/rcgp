@@ -4,7 +4,7 @@
 
 namespace rcgp {
 
-inline auto coerce_to_handle(std::nullptr_t value)
+inline auto coerce_to_handle(jems::null value)
 {
 	return jems::handle();
 }
@@ -20,7 +20,7 @@ auto coerce_to_handle(const T &value)
 {
 	auto field_handler = [&] <size_t I> () {
 		using field_t = typename T::fields::template get <I>;
-		if constexpr (std::is_same_v <field_t, std::nullptr_t>) {
+		if constexpr (std::is_same_v <field_t, jems::null>) {
 			return std::tuple <> ();
 		} else {
 			return std::tuple {

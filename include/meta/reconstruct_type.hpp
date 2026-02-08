@@ -42,7 +42,7 @@ auto reconstructor_for(std::type_identity <array <T, N>>, $location)
 	return jems::type_loc(loc, Array(base, N));
 }
 
-inline auto reconstructor_for(std::type_identity <std::nullptr_t>, $location)
+inline auto reconstructor_for(std::type_identity <jems::null>, $location)
 {
 	return jems::handle();
 }

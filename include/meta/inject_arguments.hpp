@@ -17,7 +17,7 @@ struct InjectionCounters {
 
 // nullptr type is a freebie
 template <ShaderStage S>
-void inject_one_argument(std::nullptr_t &value, InjectionCounters &counters) {}
+void inject_one_argument(jems::null &value, InjectionCounters &counters) {}
 
 // Fallback case with error reported
 template <ShaderStage S, typename T>

@@ -81,7 +81,7 @@ auto filter_real_parameters(Tlist <Ts...> a, Tlist <C, Us...> processing)
 	auto next = Tlist <Us...> {};
 	if constexpr (is_implicit_context_v <C>
 			or is_contract_v <C>
-			or std::is_same_v <C, std::nullptr_t>) {
+			or std::is_same_v <C, jems::null>) {
 		return filter_real_parameters(a, next);
 	} else {
 		auto b = Tlist <Ts..., C> {};
