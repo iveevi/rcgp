@@ -5,7 +5,7 @@
 namespace rcgp {
 
 // Forward declarations
-template <typename T, template <typename> typename L, vk::BufferUsageFlagBits F>
+template <typename T, template <typename> typename L, VkBufferUsageFlagBits F>
 struct MirrorBuffer;
 
 struct MirrorSampler;
@@ -17,9 +17,9 @@ struct resource_translation {};
 template <typename T>
 using resource_translation_handle_t = resource_translation <T> ::handle_type;
 
-template <typename T, template <typename> typename L, vk::VertexInputRate R>
+template <typename T, template <typename> typename L, VkVertexInputRate R>
 struct resource_translation <AttributeStream <T, L, R>> {
-	using handle_type = MirrorBuffer <array <T>, L, vk::BufferUsageFlagBits::eVertexBuffer>;
+	using handle_type = MirrorBuffer <array <T>, L, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT>;
 	using host_type = handle_type::value_type;
 };
 
@@ -32,13 +32,13 @@ struct resource_translation <PushConstant <T, L>> {
 
 template <typename T, template <typename> typename L>
 struct resource_translation <UniformBuffer <T, L>> {
-	using handle_type = MirrorBuffer <T, L, vk::BufferUsageFlagBits::eUniformBuffer>;
+	using handle_type = MirrorBuffer <T, L, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT>;
 	using host_type = handle_type::value_type;
 };
 
 template <typename T, template <typename> typename L, GlobalResourceAccess A>
 struct resource_translation <StorageBuffer <T, L, A>> {
-	using handle_type = MirrorBuffer <T, L, vk::BufferUsageFlagBits::eStorageBuffer>;
+	using handle_type = MirrorBuffer <T, L, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT>;
 	using host_type = handle_type::value_type;
 };
 

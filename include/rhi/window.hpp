@@ -46,11 +46,11 @@ enum class MouseButton : int {
 };
 
 struct Frame {
-	vk::SwapchainKHR swapchain;
-	vk::Fence fence;
-	vk::Semaphore presented;
-	vk::Semaphore rendered;
-	vk::Extent2D extent;
+	VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+	VkFence fence = VK_NULL_HANDLE;
+	VkSemaphore presented = VK_NULL_HANDLE;
+	VkSemaphore rendered = VK_NULL_HANDLE;
+	VkExtent2D extent {};
 	uint32_t image_index;
 };
 
@@ -60,10 +60,10 @@ using DragHandler = std::function <void (double xpos, double ypos, double dx, do
 
 struct Window {
 	GLFWwindow *handle;
-	vk::SurfaceKHR surface;
+	VkSurfaceKHR surface = VK_NULL_HANDLE;
 
-	vk::Format format;
-	vk::SwapchainKHR swapchain;
+	VkFormat format = VK_FORMAT_UNDEFINED;
+	VkSwapchainKHR swapchain = VK_NULL_HANDLE;
 	std::vector <Image> images;
 
 	std::vector <Frame> frames;
@@ -79,7 +79,7 @@ struct Window {
 	bool is_pressed(Key key) const;
 	void set_input_mode(int mode, int value) const;
 
-	vk::Extent2D extent() const;
+	VkExtent2D extent() const;
 
 	float aspect_ratio() const {
 		return float(extent().width) / extent().height;
@@ -95,7 +95,7 @@ struct Window {
 		uint32_t width;
 		uint32_t height;
 		const char *const title;
-		vk::PresentModeKHR present_mode;
+		VkPresentModeKHR present_mode;
 	};
 
 	static Window from(const Session &session, const Device &device, const Options &options);

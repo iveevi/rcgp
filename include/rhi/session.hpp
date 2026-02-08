@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <functional>
+#include <optional>
 #include <string_view>
 #include <tuple>
 
@@ -9,13 +10,18 @@
 
 namespace rcgp {
 
-using ValidationCallback = std::function <void (vk::DebugUtilsMessageSeverityFlagBitsEXT, std::string_view)>;
+using ValidationCallback = std::function <void (VkDebugUtilsMessageSeverityFlagBitsEXT, std::string_view)>;
 
 struct Session {
-	vk::Instance handle;
-	vk::DebugUtilsMessengerEXT debugger;
+	VkInstance handle = VK_NULL_HANDLE;
+	VkDebugUtilsMessengerEXT debugger = VK_NULL_HANDLE;
 	bool trap_on_error = true;
 	std::optional <ValidationCallback> validation_callback;
+
+	operator VkInstance() const
+	{
+		return handle;
+	}
 
 	Session() = default;
 	Session(const Session &) = delete;
@@ -30,12 +36,12 @@ struct Session {
 		bool validate_instance = true;
 		bool trap_on_error = true;
 		std::optional <ValidationCallback> validation_callback;
-		std::vector <vk::ValidationFeatureEnableEXT> validation_features;
+		std::vector <VkValidationFeatureEnableEXT> validation_features;
 	};
 
 	static auto from(const Options &info) -> std::tuple <
 		std::unique_ptr <Session>,
-		vk::detail::DispatchLoaderDynamic
+		DispatchLoader
 	>;
 };
 

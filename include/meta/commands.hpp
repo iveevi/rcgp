@@ -32,8 +32,10 @@ struct Commands : std::vector <command_operator> {
 
 		SerializationContext aux;
 
-		cmd.reset();
-		cmd.begin(vk::CommandBufferBeginInfo());
+		vkResetCommandBuffer(cmd.handle, 0);
+		VkCommandBufferBeginInfo info {};
+		info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		cmd.begin(info);
 
 		serialize(cmd, aux);
 

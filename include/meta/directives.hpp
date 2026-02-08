@@ -20,45 +20,45 @@ namespace rcgp {
 // TODO: later encode the number of attachments, and subpass progression
 template <size_t N>
 auto begin_render_pass(
-	const vk::RenderPass &render_pass,
-	const vk::Framebuffer &framebuffer,
-	const vk::Rect2D &render_area,
-	std::array <vk::ClearValue, N> clear_values
+	VkRenderPass render_pass,
+	VkFramebuffer framebuffer,
+	const VkRect2D &render_area,
+	std::array <VkClearValue, N> clear_values
 )
 {
 	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
-		auto rp_begin = vk::RenderPassBeginInfo {
-			.renderPass = render_pass,
-			.framebuffer = framebuffer,
-			.renderArea = render_area,
-			.clearValueCount = clear_values.size(),
-			.pClearValues = clear_values.data(),
-		};
+		VkRenderPassBeginInfo rp_begin {};
+		rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		rp_begin.renderPass = render_pass;
+		rp_begin.framebuffer = framebuffer;
+		rp_begin.renderArea = render_area;
+		rp_begin.clearValueCount = clear_values.size();
+		rp_begin.pClearValues = clear_values.data();
 
-		cmd.beginRenderPass(rp_begin, vk::SubpassContents::eInline);
+		vkCmdBeginRenderPass(cmd.handle, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 	};
 
 	return Commands <> { binder };
 }
 
 inline auto begin_rendering(
-	const vk::Rect2D &render_area,
-	std::vector <vk::RenderingAttachmentInfo> color_attachments,
-	std::optional <vk::RenderingAttachmentInfo> depth_attachment = std::nullopt
+	const VkRect2D &render_area,
+	std::vector <VkRenderingAttachmentInfo> color_attachments,
+	std::optional <VkRenderingAttachmentInfo> depth_attachment = std::nullopt
 )
 {
 	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
-		auto rendering = vk::RenderingInfo {
-			.renderArea = render_area,
-			.layerCount = 1,
-			.colorAttachmentCount = (uint32_t) color_attachments.size(),
-			.pColorAttachments = color_attachments.data(),
-		};
+		VkRenderingInfo rendering {};
+		rendering.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+		rendering.renderArea = render_area;
+		rendering.layerCount = 1;
+		rendering.colorAttachmentCount = uint32_t(color_attachments.size());
+		rendering.pColorAttachments = color_attachments.data();
 
 		if (depth_attachment.has_value())
 			rendering.pDepthAttachment = &depth_attachment.value();
 
-		cmd.beginRendering(rendering);
+		vkCmdBeginRendering(cmd.handle, &rendering);
 	};
 
 	return Commands <> { binder };
@@ -88,7 +88,7 @@ auto bind_pipeline(const Pipeline &pipeline)
 	auto &cid = PipelineMappings::cache.at(id);
 	auto binder = [=](const CommandBuffer &cmd, SerializationContext &sctx) {
 		sctx.pplid = id;
-		cmd.bindPipeline(cid.bind_point, pipeline.handle);
+		vkCmdBindPipeline(cmd.handle, cid.bind_point, pipeline.handle);
 	};
 
 	// TODO: load up the dependencies
@@ -106,11 +106,21 @@ auto bind_descriptors(const DescriptorFor <refs, true> &... descriptors)
 {
 	auto binder = [=](const CommandBuffer &cmd, SerializationContext &sctx) {
 		auto &cid = PipelineMappings::cache.at(sctx.pplid);
-		(cmd.bindDescriptorSets(
-			cid.bind_point,
-			cid.layout,
-			descriptors.set, { descriptors.handle }, {}
-		), ...);
+		([
+			&
+		] {
+			auto set = descriptors.handle;
+			vkCmdBindDescriptorSets(
+				cmd.handle,
+				cid.bind_point,
+				cid.layout,
+				descriptors.set,
+				1,
+				&set,
+				0,
+				nullptr
+			);
+		} (), ...);
 	};
 
 	return Commands <Resolvant <refs>...> { binder };
@@ -125,11 +135,13 @@ auto bind_push_constants(const ResourceTypeFor <refs> &... constants)
 		auto &cid = PipelineMappings::cache.at(sctx.pplid);
 		auto &pc_stages = cid.pc_stages;
 		auto &pc_offsets = cid.pc_offsets;
-		(cmd.pushConstants <ResourceTypeFor <refs>> (
+		(vkCmdPushConstants(
+			cmd.handle,
 			cid.layout,
 			pc_stages.at(&refs),
 			pc_offsets.at(&refs),
-			constants
+			sizeof(ResourceTypeFor <refs>),
+			&constants
 		), ...);
 	};
 
@@ -149,10 +161,11 @@ auto bind_vertex_buffers(const ResourceTypeFor <refs> &... buffers)
 
 		// TODO: if they are adjacent then a single dispatch is enough...
 		// we can cache that info here once per id...
-		// auto offsets = std::array <vk::DeviceSize, sizeof...(refs)> (0);
+		// auto offsets = std::array <VkDeviceSize, sizeof...(refs)> (0);
 		// auto buffers = std::array { handles... };
 
-		(cmd.bindVertexBuffers(vb_offsets.at(&refs), { handles }, { 0 }), ...);
+		constexpr VkDeviceSize offset = 0;
+		(vkCmdBindVertexBuffers(cmd.handle, vb_offsets.at(&refs), 1, &handles, &offset), ...);
 	};
 
 	return Commands <Resolvant <refs>...> { binder };
@@ -164,10 +177,10 @@ auto bind_index_buffer(const IndexMirrorBuffer <Symbolic, layouts::scalar> &ibuf
 	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
 		if constexpr (std::is_same_v <Symbolic, array <vector <uint32_t, 3>>> ) {
 			static_assert(T == Topology::eTriangleList, "unexpected index topology");
-			cmd.bindIndexBuffer(ibuffer.handle, 0, vk::IndexType::eUint32);
+			vkCmdBindIndexBuffer(cmd.handle, ibuffer.handle, 0, VK_INDEX_TYPE_UINT32);
 		} else if constexpr (std::is_same_v <Symbolic, array <scalar <uint32_t>>> ) {
 			static_assert(T == Topology::eTriangleFan, "unexpected index topology");
-			cmd.bindIndexBuffer(ibuffer.handle, 0, vk::IndexType::eUint32);
+			vkCmdBindIndexBuffer(cmd.handle, ibuffer.handle, 0, VK_INDEX_TYPE_UINT32);
 		} else {
 			static_error("unsupported index buffer type"_ss);
 		}
@@ -179,7 +192,7 @@ auto bind_index_buffer(const IndexMirrorBuffer <Symbolic, layouts::scalar> &ibuf
 inline auto draw_indexed(uint32_t count)
 {
 	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
-		cmd.drawIndexed(count, 1, 0, 0, 0);
+		vkCmdDrawIndexed(cmd.handle, count, 1, 0, 0, 0);
 	};
 
 	return Commands <
@@ -200,7 +213,7 @@ inline auto draw_mesh_tasks(uint32_t x, uint32_t y = 1, uint32_t z = 1)
 inline auto end_render_pass()
 {
 	auto binder = [](const CommandBuffer &cmd, SerializationContext &) {
-		cmd.endRenderPass();
+		vkCmdEndRenderPass(cmd.handle);
 	};
 
 	return Commands <> { binder };
@@ -209,7 +222,7 @@ inline auto end_render_pass()
 inline auto end_rendering()
 {
 	auto binder = [](const CommandBuffer &cmd, SerializationContext &) {
-		cmd.endRendering();
+		vkCmdEndRendering(cmd.handle);
 	};
 
 	return Commands <> { binder };
@@ -218,26 +231,26 @@ inline auto end_rendering()
 inline auto reset_query_pool(const TimestampQueryPool &tqpool, uint32_t first, uint32_t count)
 {
 	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
-		cmd.resetQueryPool(tqpool.handle, first, count);
+		vkCmdResetQueryPool(cmd.handle, tqpool.handle, first, count);
 	};
 
 	return Commands <> { binder };
 }
 
 inline auto write_timestamp(
-	vk::PipelineStageFlagBits stage,
+	VkPipelineStageFlagBits stage,
 	const TimestampQueryPool &tqpool,
 	uint32_t index
 )
 {
 	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
-		cmd.writeTimestamp(stage, tqpool.handle, index);
+		vkCmdWriteTimestamp(cmd.handle, stage, tqpool.handle, index);
 	};
 
 	return Commands <> { binder };
 }
 
-inline auto transition_image_layout(Image *image, vk::ImageLayout new_layout)
+inline auto transition_image_layout(Image *image, VkImageLayout new_layout)
 {
 	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
 		cmd.transition_image_layout(*image, new_layout);
@@ -271,17 +284,17 @@ auto barriers(const Barrier <refs, SrcPhases, DstPhases> &... barriers)
 		(Barrier <refs, SrcPhases, DstPhases> ::count + ... + 0);
 
 	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
-		std::array <vk::BufferMemoryBarrier2, barrier_count> buffer_barriers {};
+		std::array <VkBufferMemoryBarrier2, barrier_count> buffer_barriers {};
 		size_t idx = 0;
 		
 		(barriers.write_to(buffer_barriers, idx), ...);
 		
-		auto dep_info = vk::DependencyInfo {
-			.bufferMemoryBarrierCount = barrier_count,
-			.pBufferMemoryBarriers = buffer_barriers.data(),
-		};
+		VkDependencyInfo dep_info {};
+		dep_info.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+		dep_info.bufferMemoryBarrierCount = barrier_count;
+		dep_info.pBufferMemoryBarriers = buffer_barriers.data();
 
-		cmd.pipelineBarrier2(dep_info);
+		vkCmdPipelineBarrier2(cmd.handle, &dep_info);
 	};
 
 	return Commands <BarrierEffect <refs, SrcPhases, DstPhases>...> { binder };
@@ -309,7 +322,7 @@ auto operator|(const std::nullptr_t &, const Barrier <ref, SrcPhase, DstPhase> &
 inline auto dispatch(uint32_t x, uint32_t y = 1, uint32_t z = 1)
 {
 	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
-		cmd.dispatch(x, y, z);
+		vkCmdDispatch(cmd.handle, x, y, z);
 	};
 
 	return Commands <DependencySentinel> { binder };

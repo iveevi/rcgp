@@ -6,25 +6,25 @@ namespace rcgp {
 
 struct Image {
 	struct Description {
-		vk::Extent3D extent {};
-		vk::Format format = vk::Format::eUndefined;
-		vk::ImageUsageFlags usage {};
-		vk::MemoryPropertyFlags properties {};
-		vk::ImageTiling tiling = vk::ImageTiling::eOptimal;
-		vk::ImageAspectFlags aspect = vk::ImageAspectFlagBits::eColor;
+		VkExtent3D extent {};
+		VkFormat format = VK_FORMAT_UNDEFINED;
+		VkImageUsageFlags usage = 0;
+		VkMemoryPropertyFlags properties = 0;
+		VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
+		VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 	};
 
-	vk::Device device;
-	vk::Image handle;
-	vk::DeviceMemory backing;
-	vk::ImageView view;
-	vk::ImageLayout layout = vk::ImageLayout::eUndefined;
+	VkDevice device = VK_NULL_HANDLE;
+	VkImage handle = VK_NULL_HANDLE;
+	VkDeviceMemory backing = VK_NULL_HANDLE;
+	VkImageView view = VK_NULL_HANDLE;
+	VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 	Description description;
 
-	vk::Extent3D extent() const;
-	vk::ImageSubresourceLayers layers() const;
-	vk::ImageSubresourceRange range() const;
-	vk::DescriptorImageInfo descriptor_info(const vk::Sampler &sampler) const;
+	VkExtent3D extent() const;
+	VkImageSubresourceLayers layers() const;
+	VkImageSubresourceRange range() const;
+	VkDescriptorImageInfo descriptor_info(const VkSampler &sampler) const;
 	void destroy();
 
 	static Image from(const Device &device, const Description &info);

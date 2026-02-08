@@ -13,12 +13,12 @@ struct symbolic_format {
 };
 
 template <>
-struct symbolic_format <vec2> : std::integral_constant <vk::Format, vk::Format::eR32G32Sfloat> {};
+struct symbolic_format <vec2> : std::integral_constant <VkFormat, VK_FORMAT_R32G32_SFLOAT> {};
 
 template <>
-struct symbolic_format <vec3> : std::integral_constant <vk::Format, vk::Format::eR32G32B32Sfloat> {};
+struct symbolic_format <vec3> : std::integral_constant <VkFormat, VK_FORMAT_R32G32B32_SFLOAT> {};
 
 template <>
-struct symbolic_format <vec4> : std::integral_constant <vk::Format, vk::Format::eR32G32B32A32Sfloat> {};
+struct symbolic_format <vec4> : std::integral_constant <VkFormat, VK_FORMAT_R32G32B32A32_SFLOAT> {};
 
 } // namespace rcgp

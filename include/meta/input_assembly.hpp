@@ -9,10 +9,10 @@ namespace rcgp {
 template <auto &... refs>
 constexpr auto sequence_to_vertex_bindings(const Tlist <contract <refs>...> &in)
 {
-	auto desc = [] <typename T, template <typename> typename L, vk::VertexInputRate R>
+	auto desc = [] <typename T, template <typename> typename L, VkVertexInputRate R>
 	(const AttributeStream <T, L, R> &, uint32_t binding) {
 		using M = layouts::apply_t <T, L>;
-		return vk::VertexInputBindingDescription {
+		return VkVertexInputBindingDescription {
 			.binding = binding,
 			.stride = sizeof(M),
 			.inputRate = R,
@@ -20,7 +20,7 @@ constexpr auto sequence_to_vertex_bindings(const Tlist <contract <refs>...> &in)
 	};
 
 	if constexpr (sizeof...(refs) == 0) {
-		return std::array <vk::VertexInputBindingDescription, 0> ();
+		return std::array <VkVertexInputBindingDescription, 0> ();
 	} else {
 		return constexpr_for(Is, sizeof...(refs),
 			return std::array { desc(refs, Is)... }
@@ -31,9 +31,9 @@ constexpr auto sequence_to_vertex_bindings(const Tlist <contract <refs>...> &in)
 template <auto &... refs>
 constexpr auto sequence_to_vertex_attributes(const Tlist <contract <refs>...> &in)
 {
-	auto desc = [] <typename T, template <typename> typename L, vk::VertexInputRate R>
+	auto desc = [] <typename T, template <typename> typename L, VkVertexInputRate R>
 	(const AttributeStream <T, L, R> &, uint32_t binding, uint32_t location) {
-		return vk::VertexInputAttributeDescription {
+		return VkVertexInputAttributeDescription {
 			.location = location,
 			.binding = binding,
 			.format = symbolic_format <T> ::value,
@@ -42,7 +42,7 @@ constexpr auto sequence_to_vertex_attributes(const Tlist <contract <refs>...> &i
 	};
 
 	if constexpr (sizeof...(refs) == 0) {
-		return std::array <vk::VertexInputAttributeDescription, 0> ();
+		return std::array <VkVertexInputAttributeDescription, 0> ();
 	} else {
 		size_t location = 0;
 		return constexpr_for(Is, sizeof...(refs),

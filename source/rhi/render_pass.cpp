@@ -2,7 +2,7 @@
 
 namespace rcgp {
 
-vk::AttachmentDescription &Attachments::operator[](const std::string &key) &
+VkAttachmentDescription &Attachments::operator[](const std::string &key) &
 {
 	if (mapping.contains(key))
 		return descriptions[mapping[key]];
@@ -13,11 +13,10 @@ vk::AttachmentDescription &Attachments::operator[](const std::string &key) &
 	return descriptions.back();
 }
 
-vk::AttachmentReference Attachments::reference(const std::string &key, vk::ImageLayout layout) const
+VkAttachmentReference Attachments::reference(const std::string &key, VkImageLayout layout) const
 {
-	auto idx = mapping.at(key);
-	auto result = vk::AttachmentReference();
-	result.attachment = idx;
+	VkAttachmentReference result {};
+	result.attachment = mapping.at(key);
 	result.layout = layout;
 	return result;
 }

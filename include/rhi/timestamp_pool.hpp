@@ -8,7 +8,7 @@ namespace rcgp {
 
 struct TimestampQueryResult {
 	std::vector <uint64_t> stamps;
-	vk::QueryResultFlags flags;
+	VkQueryResultFlags flags;
 	double period;
 
 	std::optional <double> delta(size_t a, size_t b) const {
@@ -18,7 +18,7 @@ struct TimestampQueryResult {
 		}
 
 		auto K = period / 1'000'000.0f;
-		if (flags & vk::QueryResultFlagBits::eWithAvailability) {
+		if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT) {
 			if (stamps[2 * a + 1] != 0 && stamps[2 * b - 1] != 0)
 				return double(stamps[2 * b] - stamps[2 * a]) * K;
 			else
@@ -34,8 +34,8 @@ struct TimestampQueryResult {
 };
 
 struct TimestampQueryPool {
-	vk::QueryPool handle;
-	vk::QueryResultFlags flags;
+	VkQueryPool handle = VK_NULL_HANDLE;
+	VkQueryResultFlags flags = 0;
 	double period;
 	size_t count;
 };

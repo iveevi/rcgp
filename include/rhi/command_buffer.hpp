@@ -5,20 +5,24 @@
 
 namespace rcgp {
 
-struct CommandBuffer : vk::CommandBuffer {
-	using super = vk::CommandBuffer;
-
-	const vk::detail::DispatchLoaderDynamic *loader = nullptr;
+struct CommandBuffer {
+	VkCommandBuffer handle = VK_NULL_HANDLE;
+	const DispatchLoader *loader = nullptr;
 
 	CommandBuffer() = default;
 	CommandBuffer(
-		const vk::CommandBuffer &cmd,
-		const vk::detail::DispatchLoaderDynamic *loader = nullptr
-	);
+		VkCommandBuffer cmd,
+		const DispatchLoader *loader = nullptr
+	) : handle(cmd), loader(loader) {}
+
+	operator VkCommandBuffer() const
+	{
+		return handle;
+	}
 
 	const CommandBuffer &begin() const;
-	const CommandBuffer &begin(const vk::CommandBufferBeginInfo &info) const;
-	const CommandBuffer &transition_image_layout(Image &image, vk::ImageLayout new_layout) const;
+	const CommandBuffer &begin(const VkCommandBufferBeginInfo &info) const;
+	const CommandBuffer &transition_image_layout(Image &image, VkImageLayout new_layout) const;
 	const CommandBuffer &copy_buffer_to_image(const Buffer &staging, const Image &image) const;
 	const CommandBuffer &copy_image(const Image &src, const Image &dst) const;
 	const CommandBuffer &end() const;

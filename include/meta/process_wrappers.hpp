@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cstdlib>
 
 #include "../dsl/instruction_block.hpp"
 #include "../rhi/device.hpp"
@@ -38,25 +39,25 @@ auto one_wrapper_to_dsl(const Device &device, const stage_wrapper <ref, Ss...> &
 {
 	using Reference = reference_base_of <ref>;
 
-	auto stage_flags = (stage_to_flag(Ss) | ...);
+	auto stage_flags = VkShaderStageFlags((stage_to_flag(Ss) | ...));
 	if constexpr (is_resource_group_v <Reference>) {
 		using T = Reference::struct_type;
 
 		constexpr size_t bindings = T::field_count;
-		std::array <vk::DescriptorSetLayoutBinding, bindings> dslbs {};
+		std::array <VkDescriptorSetLayoutBinding, bindings> dslbs {};
 
 		auto fill_one = [&] <size_t I> () {
 			using Resource = T::fields::template get <I>;
 
-			vk::DescriptorType dtype = vk::DescriptorType::eUniformBuffer;
+			VkDescriptorType dtype = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 			if constexpr (is_sampler_v <Resource>) {
-				dtype = vk::DescriptorType::eCombinedImageSampler;
+				dtype = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 			} else if constexpr (is_storage_buffer_v <Resource>) {
-				dtype = vk::DescriptorType::eStorageBuffer;
+				dtype = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 			}
 
-			dslbs[I] = vk::DescriptorSetLayoutBinding {
-				.binding = I,
+			dslbs[I] = VkDescriptorSetLayoutBinding {
+				.binding = uint32_t(I),
 				.descriptorType = dtype,
 				.descriptorCount = 1,
 				.stageFlags = stage_flags,
@@ -67,21 +68,25 @@ auto one_wrapper_to_dsl(const Device &device, const stage_wrapper <ref, Ss...> &
 			(fill_one.template operator() <Is> (), ...)
 		);
 
-		auto dsl_info = vk::DescriptorSetLayoutCreateInfo {
-			.bindingCount = dslbs.size(),
-			.pBindings = dslbs.data(),
-		};
+		VkDescriptorSetLayoutCreateInfo dsl_info {};
+		dsl_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		dsl_info.bindingCount = dslbs.size();
+		dsl_info.pBindings = dslbs.data();
 
-		return device.logical.createDescriptorSetLayout(dsl_info);
+		auto dsl = VkDescriptorSetLayout(VK_NULL_HANDLE);
+		auto result = vkCreateDescriptorSetLayout(device.logical, &dsl_info, nullptr, &dsl);
+		if (result != VK_SUCCESS)
+			std::abort();
+		return dsl;
 	} else {
-		vk::DescriptorType dtype = vk::DescriptorType::eUniformBuffer;
+		VkDescriptorType dtype = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		if constexpr (is_sampler_v <Reference>)
-			dtype = vk::DescriptorType::eCombinedImageSampler;
+			dtype = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		else if constexpr (is_storage_buffer_v <Reference>)
-			dtype = vk::DescriptorType::eStorageBuffer;
+			dtype = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 
 		auto dslbs = std::array {
-			vk::DescriptorSetLayoutBinding {
+			VkDescriptorSetLayoutBinding {
 				.binding = 0,
 				.descriptorType = dtype,
 				.descriptorCount = 1,
@@ -89,12 +94,16 @@ auto one_wrapper_to_dsl(const Device &device, const stage_wrapper <ref, Ss...> &
 			}
 		};
 
-		auto dsl_info = vk::DescriptorSetLayoutCreateInfo {
-			.bindingCount = dslbs.size(),
-			.pBindings = dslbs.data(),
-		};
+		VkDescriptorSetLayoutCreateInfo dsl_info {};
+		dsl_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		dsl_info.bindingCount = dslbs.size();
+		dsl_info.pBindings = dslbs.data();
 
-		return device.logical.createDescriptorSetLayout(dsl_info);
+		auto dsl = VkDescriptorSetLayout(VK_NULL_HANDLE);
+		auto result = vkCreateDescriptorSetLayout(device.logical, &dsl_info, nullptr, &dsl);
+		if (result != VK_SUCCESS)
+			std::abort();
+		return dsl;
 	}
 }
 
@@ -102,7 +111,7 @@ template <typename ... Ts>
 auto wrappers_to_dsls(const Device &device, const Tlist <Ts...> &)
 {
 	if constexpr (sizeof...(Ts) == 0)
-		return std::array <vk::DescriptorSetLayout, 0> ();
+		return std::array <VkDescriptorSetLayout, 0> ();
 	else
 		return std::array { one_wrapper_to_dsl(device, Ts())... };
 }
@@ -112,10 +121,10 @@ auto wrappers_to_pcs(const Tlist <Wrappers...> &)
 {
 	push_constant_allocation_map map;
 	if constexpr (sizeof...(Wrappers) == 0) {
-		std::array <vk::PushConstantRange, 0> ranges;
+		std::array <VkPushConstantRange, 0> ranges;
 		return std::tuple { ranges, map };
 	} else {
-		std::array <vk::PushConstantRange, sizeof...(Wrappers)> ranges {};
+		std::array <VkPushConstantRange, sizeof...(Wrappers)> ranges {};
 
 		uint32_t offset = 0;
 		uint32_t index = 0;
@@ -125,7 +134,7 @@ auto wrappers_to_pcs(const Tlist <Wrappers...> &)
 
 			offset = align_up(static_cast <size_t> (offset), alignof(T));
 			
-			ranges[index++] = vk::PushConstantRange {
+			ranges[index++] = VkPushConstantRange {
 				.stageFlags = W::flags,
 				.offset = offset,
 				.size = sizeof(T),

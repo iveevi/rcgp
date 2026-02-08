@@ -1,15 +1,17 @@
 #include "rhi/image.hpp"
 
+#include <cstdlib>
+
 namespace rcgp {
 
-vk::Extent3D Image::extent() const
+VkExtent3D Image::extent() const
 {
 	return description.extent;
 }
 
-vk::ImageSubresourceLayers Image::layers() const
+VkImageSubresourceLayers Image::layers() const
 {
-	vk::ImageSubresourceLayers result {};
+	VkImageSubresourceLayers result {};
 	result.aspectMask = description.aspect;
 	result.mipLevel = 0;
 	result.baseArrayLayer = 0;
@@ -17,9 +19,9 @@ vk::ImageSubresourceLayers Image::layers() const
 	return result;
 }
 
-vk::ImageSubresourceRange Image::range() const
+VkImageSubresourceRange Image::range() const
 {
-	vk::ImageSubresourceRange result {};
+	VkImageSubresourceRange result {};
 	result.aspectMask = description.aspect;
 	result.baseArrayLayer = 0;
 	result.baseMipLevel = 0;
@@ -28,9 +30,9 @@ vk::ImageSubresourceRange Image::range() const
 	return result;
 }
 
-vk::DescriptorImageInfo Image::descriptor_info(const vk::Sampler &sampler) const
+VkDescriptorImageInfo Image::descriptor_info(const VkSampler &sampler) const
 {
-	vk::DescriptorImageInfo result {};
+	VkDescriptorImageInfo result {};
 	result.sampler = sampler;
 	result.imageView = view;
 	result.imageLayout = layout;
@@ -40,16 +42,16 @@ vk::DescriptorImageInfo Image::descriptor_info(const vk::Sampler &sampler) const
 void Image::destroy()
 {
 	if (view) {
-		device.destroyImageView(view);
+		vkDestroyImageView(device, view, nullptr);
 		view = nullptr;
 	}
 
 	if (backing) {
-		device.destroyImage(handle);
-		device.freeMemory(backing);
+		vkDestroyImage(device, handle, nullptr);
+		vkFreeMemory(device, backing, nullptr);
 		handle = nullptr;
 		backing = nullptr;
-		layout = vk::ImageLayout::eUndefined;
+		layout = VK_IMAGE_LAYOUT_UNDEFINED;
 	}
 }
 
@@ -62,44 +64,87 @@ Image Image::from(
 	result.device = device.logical;
 	result.description = info;
 
-	vk::ImageCreateInfo image_info {};
-	image_info.imageType = vk::ImageType::e2D;
+	VkImageCreateInfo image_info {};
+	image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	image_info.imageType = VK_IMAGE_TYPE_2D;
 	image_info.format = info.format;
-	image_info.extent = vk::Extent3D(info.extent.width, info.extent.height, 1);
+	image_info.extent = VkExtent3D {
+		info.extent.width,
+		info.extent.height,
+		1
+	};
 	image_info.mipLevels = 1;
 	image_info.arrayLayers = 1;
-	image_info.samples = vk::SampleCountFlagBits::e1;
+	image_info.samples = VK_SAMPLE_COUNT_1_BIT;
 	image_info.tiling = info.tiling;
 	image_info.usage = info.usage;
-	image_info.sharingMode = vk::SharingMode::eExclusive;
+	image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	image_info.initialLayout = result.layout;
 
-	result.handle = device.logical.createImage(image_info);
+	auto vk_image = VkImage(VK_NULL_HANDLE);
+	auto cresult = vkCreateImage(
+		device.logical,
+		&image_info,
+		nullptr,
+		&vk_image
+	);
+	if (cresult != VK_SUCCESS)
+		std::abort();
+	result.handle = vk_image;
 
-	auto requirements = device.logical.getImageMemoryRequirements(result.handle);
+	VkMemoryRequirements requirements {};
+	vkGetImageMemoryRequirements(device.logical, result.handle, &requirements);
 	auto memory_index = device.find_memory_type(requirements.memoryTypeBits, info.properties);
 
-	vk::MemoryAllocateInfo memory_info {};
+	VkMemoryAllocateInfo memory_info {};
+	memory_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	memory_info.allocationSize = requirements.size;
 	memory_info.memoryTypeIndex = memory_index;
 
-	result.backing = device.logical.allocateMemory(memory_info);
-	device.logical.bindImageMemory(result.handle, result.backing, 0);
+	auto vk_memory = VkDeviceMemory(VK_NULL_HANDLE);
+	cresult = vkAllocateMemory(
+		device.logical,
+		&memory_info,
+		nullptr,
+		&vk_memory
+	);
+	if (cresult != VK_SUCCESS)
+		std::abort();
+	result.backing = vk_memory;
 
-	vk::ImageSubresourceRange view_range {};
+	cresult = vkBindImageMemory(
+		device.logical,
+		result.handle,
+		result.backing,
+		0
+	);
+	if (cresult != VK_SUCCESS)
+		std::abort();
+
+	VkImageSubresourceRange view_range {};
 	view_range.aspectMask = info.aspect;
 	view_range.baseArrayLayer = 0;
 	view_range.baseMipLevel = 0;
 	view_range.layerCount = 1;
 	view_range.levelCount = 1;
 
-	vk::ImageViewCreateInfo view_info {};
+	VkImageViewCreateInfo view_info {};
+	view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 	view_info.image = result.handle;
-	view_info.viewType = vk::ImageViewType::e2D;
+	view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
 	view_info.subresourceRange = view_range;
 	view_info.format = info.format;
 
-	result.view = device.logical.createImageView(view_info);
+	auto vk_view = VkImageView(VK_NULL_HANDLE);
+	cresult = vkCreateImageView(
+		device.logical,
+		&view_info,
+		nullptr,
+		&vk_view
+	);
+	if (cresult != VK_SUCCESS)
+		std::abort();
+	result.view = vk_view;
 
 	return result;
 }

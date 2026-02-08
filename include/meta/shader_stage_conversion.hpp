@@ -5,23 +5,23 @@
 
 namespace rcgp {
 
-consteval vk::ShaderStageFlagBits stage_to_flag(ShaderStage S)
+consteval VkShaderStageFlagBits stage_to_flag(ShaderStage S)
 {
 	switch (S) {
-	case ShaderStage::eVertex: return vk::ShaderStageFlagBits::eVertex;
-	case ShaderStage::eFragment: return vk::ShaderStageFlagBits::eFragment;
-	case ShaderStage::eCompute: return vk::ShaderStageFlagBits::eCompute;
-	case ShaderStage::eTask: return vk::ShaderStageFlagBits::eTaskEXT;
-	case ShaderStage::eMesh: return vk::ShaderStageFlagBits::eMeshEXT;
+	case ShaderStage::eVertex: return VK_SHADER_STAGE_VERTEX_BIT;
+	case ShaderStage::eFragment: return VK_SHADER_STAGE_FRAGMENT_BIT;
+	case ShaderStage::eCompute: return VK_SHADER_STAGE_COMPUTE_BIT;
+	case ShaderStage::eTask: return VK_SHADER_STAGE_TASK_BIT_EXT;
+	case ShaderStage::eMesh: return VK_SHADER_STAGE_MESH_BIT_EXT;
 	default:
-		return vk::ShaderStageFlagBits::eAll;
+		return VK_SHADER_STAGE_ALL;
 	}
 }
 
 template <ShaderStage ... Ss>
-consteval vk::ShaderStageFlags stage_flags_of()
+consteval VkShaderStageFlags stage_flags_of()
 {
-	return (stage_to_flag(Ss) | ... | vk::ShaderStageFlags());
+	return (stage_to_flag(Ss) | ... | VkShaderStageFlags(0));
 }
 
 } // namespace rcgp

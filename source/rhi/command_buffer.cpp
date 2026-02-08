@@ -1,97 +1,89 @@
 #include <cstdlib>
 #include <iostream>
 #include <print>
+#include <tuple>
+#include <utility>
 
 #include "rhi/command_buffer.hpp"
 
 namespace rcgp {
 
-constexpr auto layout_to_stage_and_access(vk::ImageLayout layout)
-	-> std::pair <vk::PipelineStageFlags2, vk::AccessFlags2>
+constexpr auto layout_to_stage_and_access(VkImageLayout layout)
+	-> std::pair <VkPipelineStageFlags2, VkAccessFlags2>
 {
-	using enum vk::ImageLayout;
-
 	switch (layout) {
-	case eTransferSrcOptimal:
+	case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
 		return {
-			vk::PipelineStageFlagBits2::eTransfer,
-			vk::AccessFlagBits2::eTransferRead
+			VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+			VK_ACCESS_2_TRANSFER_READ_BIT
 		};
-	case eTransferDstOptimal:
+	case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
 		return {
-			vk::PipelineStageFlagBits2::eTransfer,
-			vk::AccessFlagBits2::eTransferWrite
+			VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+			VK_ACCESS_2_TRANSFER_WRITE_BIT
 		};
-	case eColorAttachmentOptimal:
+	case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
 		return {
-			vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-			vk::AccessFlagBits2::eColorAttachmentWrite
+			VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+			VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT
 		};
-	case eDepthStencilAttachmentOptimal:
+	case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
 		return {
-			vk::PipelineStageFlagBits2::eEarlyFragmentTests
-			| vk::PipelineStageFlagBits2::eLateFragmentTests,
-			vk::AccessFlagBits2::eDepthStencilAttachmentWrite
+			VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT
+			| VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
+			VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
 		};
-	case ePresentSrcKHR:
+	case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
 		return {
-			vk::PipelineStageFlagBits2::eBottomOfPipe,
-			vk::AccessFlagBits2::eNone
+			VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
+			0
 		};
-	case eShaderReadOnlyOptimal:
+	case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
 		return {
-			vk::PipelineStageFlagBits2::eFragmentShader,
-			vk::AccessFlagBits2::eShaderRead
+			VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+			VK_ACCESS_2_SHADER_READ_BIT
 		};
 	default:
-		return {
-			vk::PipelineStageFlagBits2::eNone,
-			vk::AccessFlagBits2::eNone
-		};
+		return { 0, 0 };
 	}
 }
 
 constexpr auto decompose_layout_transition(
-	vk::ImageLayout old_layout,
-	vk::ImageLayout new_layout
+	VkImageLayout old_layout,
+	VkImageLayout new_layout
 )
 {
-	// NOTE: three parts to this
-	// 1. check that old_layout and new_layout are compatible
-	// 2. old_layout -> src stage/access flags
-	// 3. new_layout -> dst stage/access flags
-	// TODO: need to check compatibility
 	auto [src_stage, src_access] = layout_to_stage_and_access(old_layout);
 	auto [dst_stage, dst_access] = layout_to_stage_and_access(new_layout);
 	return std::tuple(src_stage, src_access, dst_stage, dst_access);
 }
 
-CommandBuffer::CommandBuffer(
-	const vk::CommandBuffer &cmd,
-	const vk::detail::DispatchLoaderDynamic *loader
-)
-	: vk::CommandBuffer(cmd), loader(loader) {}
-
 const CommandBuffer &CommandBuffer::begin() const
 {
-	super::begin(vk::CommandBufferBeginInfo());
-	return *this;
+	VkCommandBufferBeginInfo info {};
+	info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	return begin(info);
 }
 
-const CommandBuffer &CommandBuffer::begin(const vk::CommandBufferBeginInfo &info) const
+const CommandBuffer &CommandBuffer::begin(const VkCommandBufferBeginInfo &info) const
 {
-	super::begin(info);
+	auto result = vkBeginCommandBuffer(handle, &info);
+	if (result != VK_SUCCESS) {
+		std::println(std::cerr, "failed to begin command buffer: {}", static_cast <int> (result));
+		std::abort();
+	}
 	return *this;
 }
 
-const CommandBuffer &CommandBuffer::transition_image_layout(Image &image, vk::ImageLayout new_layout) const
+const CommandBuffer &CommandBuffer::transition_image_layout(Image &image, VkImageLayout new_layout) const
 {
 	auto [
 		src_stage, src_access,
 		dst_stage, dst_access
 	] = decompose_layout_transition(image.layout, new_layout);
 
-	vk::ImageMemoryBarrier2 barrier {};
+	VkImageMemoryBarrier2 barrier {};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
 	barrier.image = image.handle;
 	barrier.oldLayout = image.layout;
 	barrier.newLayout = new_layout;
@@ -101,40 +93,49 @@ const CommandBuffer &CommandBuffer::transition_image_layout(Image &image, vk::Im
 	barrier.dstAccessMask = dst_access;
 	barrier.subresourceRange = image.range();
 
-	vk::DependencyInfo dependency {};
+	VkDependencyInfo dependency {};
+	dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
 	dependency.imageMemoryBarrierCount = 1;
 	dependency.pImageMemoryBarriers = &barrier;
-	pipelineBarrier2(dependency);
+	vkCmdPipelineBarrier2(handle, &dependency);
 
 	image.layout = new_layout;
-
 	return *this;
 }
 
 const CommandBuffer &CommandBuffer::copy_buffer_to_image(const Buffer &staging, const Image &image) const
 {
-	vk::BufferImageCopy copy {};
+	VkBufferImageCopy copy {};
 	copy.imageSubresource = image.layers();
 	copy.imageExtent = image.extent();
 
-	super::copyBufferToImage(staging.handle, image.handle, image.layout, copy);
+	vkCmdCopyBufferToImage(
+		handle,
+		staging.handle,
+		image.handle,
+		image.layout,
+		1,
+		&copy
+	);
 
 	return *this;
 }
 
 const CommandBuffer &CommandBuffer::copy_image(const Image &src, const Image &dst) const
 {
-	vk::ImageCopy copy {};
+	VkImageCopy copy {};
 	copy.srcSubresource = src.layers();
 	copy.dstSubresource = dst.layers();
 	copy.extent = src.extent();
 
-	super::copyImage(
+	vkCmdCopyImage(
+		handle,
 		src.handle,
 		src.layout,
 		dst.handle,
 		dst.layout,
-		copy
+		1,
+		&copy
 	);
 
 	return *this;
@@ -142,7 +143,11 @@ const CommandBuffer &CommandBuffer::copy_image(const Image &src, const Image &ds
 
 const CommandBuffer &CommandBuffer::end() const
 {
-	super::end();
+	auto result = vkEndCommandBuffer(handle);
+	if (result != VK_SUCCESS) {
+		std::println(std::cerr, "failed to end command buffer: {}", static_cast <int> (result));
+		std::abort();
+	}
 	return *this;
 }
 
@@ -152,7 +157,12 @@ const CommandBuffer &CommandBuffer::draw_mesh_tasks(uint32_t x, uint32_t y, uint
 		std::println(std::cerr, "draw_mesh_tasks requires a dynamic loader");
 		std::abort();
 	}
-	loader->vkCmdDrawMeshTasksEXT(*this, x, y, z);
+	if (loader->vkCmdDrawMeshTasksEXT == nullptr) {
+		std::println(std::cerr, "vkCmdDrawMeshTasksEXT is not available");
+		std::abort();
+	}
+
+	loader->vkCmdDrawMeshTasksEXT(handle, x, y, z);
 	return *this;
 }
 

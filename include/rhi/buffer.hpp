@@ -7,38 +7,38 @@
 namespace rcgp {
 
 struct Buffer {
-	vk::Device device;
-	vk::Buffer handle;
-	vk::DeviceMemory backing;
-	vk::DeviceSize offset = 0;
-	vk::DeviceSize size = 0;
-	vk::BufferUsageFlags usage;
-	vk::MemoryPropertyFlags properties;
+	VkDevice device = VK_NULL_HANDLE;
+	VkBuffer handle = VK_NULL_HANDLE;
+	VkDeviceMemory backing = VK_NULL_HANDLE;
+	VkDeviceSize offset = 0;
+	VkDeviceSize size = 0;
+	VkBufferUsageFlags usage = 0;
+	VkMemoryPropertyFlags properties = 0;
 
 	auto write(
 		const void *data,
 		size_t bytes,
-		vk::DeviceSize relative_offset = 0
+		VkDeviceSize relative_offset = 0
 	) const -> const Buffer &;
 
 	auto read(
 		void *data,
 		size_t bytes,
-		vk::DeviceSize relative_offset = 0
+		VkDeviceSize relative_offset = 0
 	) const -> const Buffer &;
 	
 	template <typename U>
-	auto &write(std::span <const U> memory, vk::DeviceSize offset = 0) const {
+	auto &write(std::span <const U> memory, VkDeviceSize offset = 0) const {
 		return write(memory.data(), memory.size_bytes(), offset);
 	}
 
 	template <typename U>
-	auto &read(std::span <U> memory, vk::DeviceSize offset = 0) const {
+	auto &read(std::span <U> memory, VkDeviceSize offset = 0) const {
 		return read(memory.data(), memory.size_bytes(), offset);
 	}
 
-	vk::DescriptorBufferInfo descriptor_info() const {
-		vk::DescriptorBufferInfo result {};
+	VkDescriptorBufferInfo descriptor_info() const {
+		VkDescriptorBufferInfo result {};
 		result.buffer = handle;
 		result.offset = offset;
 		result.range = size;
@@ -49,9 +49,9 @@ struct Buffer {
 
 	static auto from(
 		const Device &device,
-		vk::DeviceSize size,
-		vk::BufferUsageFlags usage,
-		vk::MemoryPropertyFlags properties
+		VkDeviceSize size,
+		VkBufferUsageFlags usage,
+		VkMemoryPropertyFlags properties
 	) -> Buffer;
 };
 

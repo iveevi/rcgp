@@ -10,8 +10,11 @@ namespace rcgp {
 
 template <auto &ref, bool resolved = true>
 struct DescriptorFor {
-	vk::DescriptorSet handle;
-	size_t set;
+	VkDescriptorSet handle = VK_NULL_HANDLE;
+	size_t set = 0;
+
+	DescriptorFor() = default;
+	DescriptorFor(VkDescriptorSet handle, size_t set) : handle(handle), set(set) {}
 };
 
 // Counting the number of bindings needed by a resource
@@ -29,30 +32,29 @@ constexpr size_t number_of_bindings = [] constexpr {
 
 // Temporary storage for descriptor infos
 union DescriptorInfoUnion {
-	vk::DescriptorImageInfo image;
-	vk::DescriptorBufferInfo buffer;
+	VkDescriptorImageInfo image;
+	VkDescriptorBufferInfo buffer;
 };
 
 template <typename T, size_t I>
 void set_descriptor_write_and_union(
 	const auto &resource,
-	const vk::DescriptorSet &set,
-	vk::WriteDescriptorSet &write,
+	const VkDescriptorSet &set,
+	VkWriteDescriptorSet &write,
 	DescriptorInfoUnion &info
 )
 {
-	using enum vk::DescriptorType;
-
+	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	write.dstSet = set;
 	write.dstBinding = I;
 	write.descriptorCount = 1;
 
 	auto dinfo = resource.descriptor_info();
 	if constexpr (is_sampler_v <T>) {
-		write.descriptorType = eCombinedImageSampler;
+		write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		write.pImageInfo = &(info.image = dinfo);
 	} else if constexpr (is_storage_buffer_v <T>) {
-		write.descriptorType = eStorageBuffer;
+		write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		write.pBufferInfo = &(info.buffer = dinfo);
 	} else {
 		static_error("unsupported resource type "_ss + $ss_type(T));
@@ -70,7 +72,7 @@ struct DescriptorWritePair {
 	static constexpr size_t bindings = number_of_bindings <Reference>;
 	std::array <DescriptorInfoUnion, bindings> info_unions;
 	
-	void bind(const std::span <vk::WriteDescriptorSet, bindings> &writes)
+	void bind(const std::span <VkWriteDescriptorSet, bindings> &writes)
 	requires is_resource_group_v <Reference> {
 		using T = Reference::struct_type;
 
@@ -90,7 +92,7 @@ struct DescriptorWritePair {
 		);
 	}
 	
-	void bind(const std::span <vk::WriteDescriptorSet, bindings> &writes)
+	void bind(const std::span <VkWriteDescriptorSet, bindings> &writes)
 	requires (not is_resource_group_v <Reference>) {
 		set_descriptor_write_and_union <Reference, 0> (
 			resource,
@@ -108,13 +110,13 @@ template <auto &...refs, bool ... rs>
 
 	static constexpr size_t writes_count = (std::decay_t <decltype(dwpairs)> ::bindings + ...);
 
-	std::array <vk::WriteDescriptorSet, writes_count> writes;
+	std::array <VkWriteDescriptorSet, writes_count> writes {};
 
 	auto progress = 0;
 	auto bind = [&](auto &dwpair) {
 		using pair_t = std::remove_reference_t <decltype(dwpair)>;
 		constexpr size_t size = pair_t::bindings;
-		auto span = std::span <vk::WriteDescriptorSet, size> {
+		auto span = std::span <VkWriteDescriptorSet, size> {
 			&writes[progress], size
 		};
 		dwpair.bind(span);
@@ -123,7 +125,7 @@ template <auto &...refs, bool ... rs>
 
 	(bind(dwpairs), ...);
 
-	logical.updateDescriptorSets(writes, nullptr);
+	vkUpdateDescriptorSets(logical, writes_count, writes.data(), 0, nullptr);
 
 	if constexpr (sizeof...(dwpairs) == 1) {
 		return DescriptorFor <refs...[0], true> (

@@ -10,16 +10,14 @@ enum class Topology {
 	eTriangleFan,
 };
 
-consteval vk::PrimitiveTopology translate_topology(Topology T)
+consteval VkPrimitiveTopology translate_topology(Topology T)
 {
-	using enum vk::PrimitiveTopology;
-
 	switch (T) {
-	case Topology::eTriangleList: return eTriangleList;
-	case Topology::eTriangleFan: return eTriangleFan;
+	case Topology::eTriangleList: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	case Topology::eTriangleFan: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
 	}
 
-	return vk::PrimitiveTopology::eTriangleList;
+	return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 }
 
 template <Topology T, typename I>

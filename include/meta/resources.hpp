@@ -17,7 +17,7 @@ struct resource_handle {
 template <
 	typename T,
 	template <typename> typename L = layouts::scalar,
-	vk::VertexInputRate R = vk::VertexInputRate::eVertex
+	VkVertexInputRate R = VK_VERTEX_INPUT_RATE_VERTEX
 > struct AttributeStream {
 	using handle_type = T;
 };
@@ -110,7 +110,7 @@ TYPE_TRAIT_INCLUDES(is_global_resource, ResourceGroup <T>);
 // Type traits for these resources
 TYPE_TRAIT(is_attribute_stream);
 
-template <typename T, template <typename> typename L, vk::VertexInputRate R>
+template <typename T, template <typename> typename L, VkVertexInputRate R>
 TYPE_TRAIT_INCLUDES(is_attribute_stream, AttributeStream <T, L, R>);
 
 TYPE_TRAIT(is_resource_group);

@@ -1,3 +1,6 @@
+#include <cstdlib>
+#include <iostream>
+#include <print>
 #include <utility>
 
 #include "rhi/vk.hpp"
@@ -91,14 +94,17 @@ void Window::set_input_mode(int mode, int value) const
 	glfwSetInputMode(handle, mode, value);
 }
 
-vk::Extent2D Window::extent() const
+VkExtent2D Window::extent() const
 {
 	int width;
 	int height;
 
 	glfwGetFramebufferSize(handle, &width, &height);
 
-	return vk::Extent2D(width, height);
+	return VkExtent2D {
+		static_cast <uint32_t> (width),
+		static_cast <uint32_t> (height),
+	};
 }
 
 Frame Window::next_frame()
@@ -130,8 +136,8 @@ void Window::on_drag(MouseButton button, DragHandler handler)
 
 Window Window::from(const Session &session, const Device &device, const Options &options)
 {
-	auto &ldev = device.logical;
-	auto &pdev = device.physical;
+	auto ldev = device.logical;
+	auto pdev = device.physical;
 
 	Window result;
 
@@ -144,55 +150,84 @@ Window Window::from(const Session &session, const Device &device, const Options 
 	glfwSetMouseButtonCallback(result.handle, dispatch_mouse_button);
 	glfwSetCursorPosCallback(result.handle, dispatch_cursor_pos);
 
-	VkSurfaceKHR surface;
-	glfwCreateWindowSurface(session.handle, result.handle, nullptr, &surface);
+	auto surface = VkSurfaceKHR(VK_NULL_HANDLE);
+	auto sresult = glfwCreateWindowSurface(session.handle, result.handle, nullptr, &surface);
+	if (sresult != VK_SUCCESS) {
+		std::println(std::cerr, "failed to create window surface: {}", static_cast <int> (sresult));
+		std::abort();
+	}
 	result.surface = surface;
 
-	result.format = vk::Format::eB8G8R8A8Unorm;
+	result.format = VK_FORMAT_B8G8R8A8_UNORM;
 
-	auto surface_capabilities = pdev.getSurfaceCapabilitiesKHR(surface);
+	VkSurfaceCapabilitiesKHR surface_capabilities {};
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(pdev, surface, &surface_capabilities);
 
-	vk::SwapchainCreateInfoKHR swapchain_info {};
-	swapchain_info.imageArrayLayers = 1;
-	swapchain_info.imageColorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
-	swapchain_info.imageExtent = result.extent();
-	swapchain_info.imageFormat = result.format;
-	swapchain_info.minImageCount = surface_capabilities.minImageCount;
-	swapchain_info.oldSwapchain = nullptr;
-	swapchain_info.presentMode = options.present_mode;
-	swapchain_info.imageUsage =
-		vk::ImageUsageFlagBits::eColorAttachment
-		| vk::ImageUsageFlagBits::eTransferDst;
+	VkSwapchainCreateInfoKHR swapchain_info {};
+	swapchain_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 	swapchain_info.surface = surface;
+	swapchain_info.minImageCount = surface_capabilities.minImageCount;
+	swapchain_info.imageFormat = result.format;
+	swapchain_info.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+	swapchain_info.imageExtent = result.extent();
+	swapchain_info.imageArrayLayers = 1;
+	swapchain_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	swapchain_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	swapchain_info.preTransform = surface_capabilities.currentTransform;
+	swapchain_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+	swapchain_info.presentMode = options.present_mode;
+	swapchain_info.clipped = VK_TRUE;
+	swapchain_info.oldSwapchain = VK_NULL_HANDLE;
 
-	result.swapchain = ldev.createSwapchainKHR(swapchain_info);
+	auto cresult = vkCreateSwapchainKHR(ldev, &swapchain_info, nullptr, &result.swapchain);
+	if (cresult != VK_SUCCESS) {
+		std::println(std::cerr, "failed to create swapchain: {}", static_cast <int> (cresult));
+		std::abort();
+	}
 
-	auto swapchain_images = ldev.getSwapchainImagesKHR(result.swapchain);
+	auto swapchain_image_count = uint32_t(0);
+	cresult = vkGetSwapchainImagesKHR(ldev, result.swapchain, &swapchain_image_count, nullptr);
+	if (cresult != VK_SUCCESS) {
+		std::println(std::cerr, "failed to query swapchain image count: {}", static_cast <int> (cresult));
+		std::abort();
+	}
+
+	auto swapchain_images = std::vector <VkImage> (swapchain_image_count);
+	cresult = vkGetSwapchainImagesKHR(ldev, result.swapchain, &swapchain_image_count, swapchain_images.data());
+	if (cresult != VK_SUCCESS) {
+		std::println(std::cerr, "failed to query swapchain images: {}", static_cast <int> (cresult));
+		std::abort();
+	}
 
 	result.images.reserve(swapchain_images.size());
-	for (auto &handle : swapchain_images) {
+	for (auto handle : swapchain_images) {
 		Image image;
-		image.device = device.logical;
+		image.device = ldev;
 		image.handle = handle;
-		image.layout = vk::ImageLayout::ePresentSrcKHR;
-		image.description.extent = vk::Extent3D { options.width, options.height, 1 };
+		image.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		image.description.extent = VkExtent3D { options.width, options.height, 1 };
 		image.description.format = result.format;
-		image.description.aspect = vk::ImageAspectFlagBits::eColor;
+		image.description.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 
-		vk::ImageSubresourceRange view_range {};
-		view_range.aspectMask = vk::ImageAspectFlagBits::eColor;
+		VkImageSubresourceRange view_range {};
+		view_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		view_range.baseArrayLayer = 0;
 		view_range.baseMipLevel = 0;
 		view_range.layerCount = 1;
 		view_range.levelCount = 1;
 
-		vk::ImageViewCreateInfo view_info {};
+		VkImageViewCreateInfo view_info {};
+		view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		view_info.image = handle;
-		view_info.viewType = vk::ImageViewType::e2D;
+		view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
 		view_info.subresourceRange = view_range;
 		view_info.format = result.format;
 
-		image.view = ldev.createImageView(view_info);
+		cresult = vkCreateImageView(ldev, &view_info, nullptr, &image.view);
+		if (cresult != VK_SUCCESS) {
+			std::println(std::cerr, "failed to create swapchain image view: {}", static_cast <int> (cresult));
+			std::abort();
+		}
 
 		result.images.push_back(image);
 	}
@@ -200,17 +235,33 @@ Window Window::from(const Session &session, const Device &device, const Options 
 	result.frame_index = 0;
 	result.frames_in_flight = result.images.size();
 
-	vk::FenceCreateInfo fence_info {};
-	fence_info.flags = vk::FenceCreateFlagBits::eSignaled;
+	VkFenceCreateInfo fence_info {};
+	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-	auto semaphore_info = vk::SemaphoreCreateInfo();
+	VkSemaphoreCreateInfo semaphore_info {};
+	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
 	result.frames.resize(result.frames_in_flight);
 	for (auto &frame : result.frames) {
 		frame.swapchain = result.swapchain;
-		frame.fence = ldev.createFence(fence_info);
-		frame.rendered = ldev.createSemaphore(semaphore_info);
-		frame.presented = ldev.createSemaphore(semaphore_info);
+		cresult = vkCreateFence(ldev, &fence_info, nullptr, &frame.fence);
+		if (cresult != VK_SUCCESS) {
+			std::println(std::cerr, "failed to create frame fence: {}", static_cast <int> (cresult));
+			std::abort();
+		}
+
+		cresult = vkCreateSemaphore(ldev, &semaphore_info, nullptr, &frame.rendered);
+		if (cresult != VK_SUCCESS) {
+			std::println(std::cerr, "failed to create render semaphore: {}", static_cast <int> (cresult));
+			std::abort();
+		}
+
+		cresult = vkCreateSemaphore(ldev, &semaphore_info, nullptr, &frame.presented);
+		if (cresult != VK_SUCCESS) {
+			std::println(std::cerr, "failed to create present semaphore: {}", static_cast <int> (cresult));
+			std::abort();
+		}
 	}
 
 	return result;

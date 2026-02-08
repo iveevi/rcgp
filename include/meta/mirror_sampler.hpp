@@ -1,33 +1,37 @@
 #pragma once
 
+#include <cstdlib>
+
 #include "../rhi/image.hpp"
 
 namespace rcgp {
 
 // TODO: need to template by dimension, etc
 struct MirrorSampler {
-	vk::Sampler sampler {};
-	vk::ImageView view {};
-	vk::ImageLayout layout = vk::ImageLayout::eShaderReadOnlyOptimal;
+	VkSampler sampler = VK_NULL_HANDLE;
+	VkImageView view = VK_NULL_HANDLE;
+	VkImageLayout layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-	vk::DescriptorImageInfo descriptor_info() const {
-		return vk::DescriptorImageInfo {
-			.sampler = sampler,
-			.imageView = view,
-			.imageLayout = layout,
-		};
+	VkDescriptorImageInfo descriptor_info() const {
+		VkDescriptorImageInfo info {};
+		info.sampler = sampler;
+		info.imageView = view;
+		info.imageLayout = layout;
+		return info;
 	}
 
 	static MirrorSampler from(
 		const Device &device,
-		const vk::SamplerCreateInfo &sinfo,
+		const VkSamplerCreateInfo &sinfo,
 		const Image &image,
-		vk::ImageLayout layout = vk::ImageLayout::eShaderReadOnlyOptimal
+		VkImageLayout layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 	) {
 		MirrorSampler sm;
-		sm.sampler = device.logical.createSampler(sinfo);
+		auto result = vkCreateSampler(device.logical, &sinfo, nullptr, &sm.sampler);
+		if (result != VK_SUCCESS)
+			std::abort();
 		sm.view = image.view;
-		sm.layout = (image.layout != vk::ImageLayout::eUndefined)
+		sm.layout = (image.layout != VK_IMAGE_LAYOUT_UNDEFINED)
 			? image.layout
 			: layout;
 		return sm;

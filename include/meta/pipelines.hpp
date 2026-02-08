@@ -31,34 +31,30 @@ template <typename GAMAP, typename GRCs>
 struct GenericPipeline {
 	static constexpr size_t set_count = GAMAP::size;
 	
-	vk::Device device;
-	vk::Pipeline handle;
-	vk::PipelineLayout layout;
-	std::array <vk::DescriptorSetLayout, set_count> dsls;
+	VkDevice device = VK_NULL_HANDLE;
+	VkPipeline handle = VK_NULL_HANDLE;
+	VkPipelineLayout layout = VK_NULL_HANDLE;
+	std::array <VkDescriptorSetLayout, set_count> dsls;
 
 	GenericPipeline() = default;
 
 	GenericPipeline(
-		const vk::Device &device_,
-		const vk::Pipeline &handle_,
-		const vk::PipelineLayout &layout_,
-		const std::array <vk::DescriptorSetLayout, set_count> &dsls_
+		VkDevice device_,
+		VkPipeline handle_,
+		VkPipelineLayout layout_,
+		const std::array <VkDescriptorSetLayout, set_count> &dsls_
 	) : device(device_), handle(handle_), layout(layout_), dsls(dsls_) {}
 
 	// TODO: support allocating multiple refs
 	template <auto &ref>
 	auto new_descriptor(const DescriptorPool &pool) const {
 		constexpr auto set = set_index_for <ref> (GAMAP());
-		
-		auto dset = device.allocateDescriptorSets(
-			vk::DescriptorSetAllocateInfo {
-				.descriptorPool = pool,
-				.descriptorSetCount = 1,
-				.pSetLayouts = &dsls[set],
-			}
-		).front();
 
-		return DescriptorFor <ref, false> (dset, set);
+		auto dsets = Device {
+			.logical = device,
+		}.new_descriptor_sets(pool, std::span <const VkDescriptorSetLayout> (&dsls[set], 1));
+
+		return DescriptorFor <ref, false> (dsets.front(), set);
 	}
 };
 

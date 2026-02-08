@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdlib>
+
 #include "process_wrappers.hpp"
 #include "group_allocation.hpp"
 
@@ -35,7 +37,8 @@ auto apply_gvrs(const Device &device, const GVRs &, Blocks &... blocks)
 
 	auto dsls = wrappers_to_dsls(device, descriptor_gvrs());
 
-	auto layout_info = vk::PipelineLayoutCreateInfo();
+	VkPipelineLayoutCreateInfo layout_info {};
+	layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	layout_info.setLayoutCount = dsls.size();
 	layout_info.pSetLayouts = dsls.data();
 
@@ -44,7 +47,10 @@ auto apply_gvrs(const Device &device, const GVRs &, Blocks &... blocks)
 		layout_info.pPushConstantRanges = pcrs.data();
 	}
 
-	auto layout = device.logical.createPipelineLayout(layout_info);
+	auto layout = VkPipelineLayout(VK_NULL_HANDLE);
+	auto result = vkCreatePipelineLayout(device.logical, &layout_info, nullptr, &layout);
+	if (result != VK_SUCCESS)
+		std::abort();
 
 	return std::tuple {
 		layout,

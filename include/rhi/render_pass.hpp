@@ -2,6 +2,7 @@
 
 #include <array>
 #include <map>
+#include <string>
 #include <vector>
 
 #include "vk.hpp"
@@ -10,21 +11,21 @@
 namespace rcgp {
 
 struct Attachments {
-	std::vector <vk::AttachmentDescription> descriptions;
+	std::vector <VkAttachmentDescription> descriptions;
 	std::map <std::string, uint32_t> mapping;
 
-	vk::AttachmentDescription &operator[](const std::string &key) &;
+	VkAttachmentDescription &operator[](const std::string &key) &;
 
-	vk::AttachmentReference reference(const std::string &key, vk::ImageLayout layout) const;
+	VkAttachmentReference reference(const std::string &key, VkImageLayout layout) const;
 };
 
 template <size_t N>
-struct color_attachments : std::array <vk::AttachmentReference, N> {
+struct color_attachments : std::array <VkAttachmentReference, N> {
 	template <typename ... Ts>
 	requires (sizeof...(Ts) == N)
 	color_attachments(Ts ... args)
-		: std::array <vk::AttachmentReference, N> {
-			Tas <vk::AttachmentReference> (args)...
+		: std::array <VkAttachmentReference, N> {
+			Tas <VkAttachmentReference> (args)...
 		} {}
 };
 
@@ -34,12 +35,12 @@ color_attachments(Ts...) -> color_attachments <sizeof...(Ts)>;
 color_attachments() -> color_attachments <0>;
 
 template <size_t N>
-struct depth_attachments : std::array <vk::AttachmentReference, N> {
+struct depth_attachments : std::array <VkAttachmentReference, N> {
 	template <typename ... Ts>
 	requires (sizeof...(Ts) == N)
 	depth_attachments(Ts ... args)
-		: std::array <vk::AttachmentReference, N> {
-			Tas <vk::AttachmentReference> (args)...
+		: std::array <VkAttachmentReference, N> {
+			Tas <VkAttachmentReference> (args)...
 		} {}
 };
 
@@ -49,12 +50,12 @@ depth_attachments(Ts...) -> depth_attachments <sizeof...(Ts)>;
 depth_attachments() -> depth_attachments <0>;
 
 template <size_t N>
-struct input_attachments : std::array <vk::AttachmentReference, N> {
+struct input_attachments : std::array <VkAttachmentReference, N> {
 	template <typename ... Ts>
 	requires (sizeof...(Ts) == N)
 	input_attachments(Ts ... args)
-		: std::array <vk::AttachmentReference, N> {
-			Tas <vk::AttachmentReference> (args)...
+		: std::array <VkAttachmentReference, N> {
+			Tas <VkAttachmentReference> (args)...
 		} {}
 };
 
@@ -64,7 +65,7 @@ input_attachments(Ts...) -> input_attachments <sizeof...(Ts)>;
 input_attachments() -> input_attachments <0>;
 
 template <size_t Colors, size_t Depths, size_t Resolves, size_t Inputs>
-struct Subpass : vk::SubpassDescription {
+struct Subpass : VkSubpassDescription {
 	color_attachments <Colors> colors {};
 	depth_attachments <Depths> depths {};
 	color_attachments <Resolves> resolves {};
@@ -78,7 +79,7 @@ struct Subpass : vk::SubpassDescription {
 	)
 		: colors(colors_), depths(depths_), resolves(resolves_), inputs(inputs_)
 	{
-		pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+		pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
 		if constexpr (Colors > 0) {
 			colorAttachmentCount = colors.size();
@@ -112,6 +113,16 @@ auto subpass(
 }
 
 template <typename ... Ts>
-struct RenderPass : vk::RenderPass {};
+struct RenderPass {
+	VkRenderPass handle = VK_NULL_HANDLE;
+
+	RenderPass() = default;
+	RenderPass(VkRenderPass handle) : handle(handle) {}
+
+	operator VkRenderPass() const
+	{
+		return handle;
+	}
+};
 
 } // namespace rcgp

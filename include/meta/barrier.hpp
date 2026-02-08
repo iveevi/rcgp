@@ -62,58 +62,58 @@ inline constexpr PhaseTag <PipelineStage::eCompute, ResourceAccess::eReadWrite> 
 inline constexpr PhaseTag <PipelineStage::eHost, ResourceAccess::eRead> HostRead {};
 
 
-constexpr vk::PipelineStageFlags2 to_vk_stage(PipelineStage stage)
+constexpr VkPipelineStageFlags2 to_vk_stage(PipelineStage stage)
 {
 	using enum PipelineStage;
 	switch (stage) {
-	case eCompute: return vk::PipelineStageFlagBits2::eComputeShader;
-	case eVertex: return vk::PipelineStageFlagBits2::eVertexShader;
-	case eFragment: return vk::PipelineStageFlagBits2::eFragmentShader;
-	case eTransfer: return vk::PipelineStageFlagBits2::eTransfer;
-	case eHost: return vk::PipelineStageFlagBits2::eHost;
+	case eCompute: return VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+	case eVertex: return VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT;
+	case eFragment: return VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+	case eTransfer: return VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+	case eHost: return VK_PIPELINE_STAGE_2_HOST_BIT;
 	case eNone: break;
 	}
-	return {};
+	return 0;
 }
 
-constexpr vk::AccessFlags2 to_vk_access(PipelineStage stage, ResourceAccess access)
+constexpr VkAccessFlags2 to_vk_access(PipelineStage stage, ResourceAccess access)
 {
 	switch (stage) {
 	case PipelineStage::eCompute:
 	case PipelineStage::eVertex:
 	case PipelineStage::eFragment:
 		switch (access) {
-		case ResourceAccess::eRead: return vk::AccessFlagBits2::eShaderRead;
-		case ResourceAccess::eWrite: return vk::AccessFlagBits2::eShaderWrite;
-		case ResourceAccess::eReadWrite: return vk::AccessFlagBits2::eShaderRead | vk::AccessFlagBits2::eShaderWrite;
+		case ResourceAccess::eRead: return VK_ACCESS_2_SHADER_READ_BIT;
+		case ResourceAccess::eWrite: return VK_ACCESS_2_SHADER_WRITE_BIT;
+		case ResourceAccess::eReadWrite: return VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
 		case ResourceAccess::eNone: break;
 		}
 		break;
 	case PipelineStage::eTransfer:
 		switch (access) {
-		case ResourceAccess::eRead: return vk::AccessFlagBits2::eTransferRead;
-		case ResourceAccess::eWrite: return vk::AccessFlagBits2::eTransferWrite;
-		case ResourceAccess::eReadWrite: return vk::AccessFlagBits2::eTransferRead | vk::AccessFlagBits2::eTransferWrite;
+		case ResourceAccess::eRead: return VK_ACCESS_2_TRANSFER_READ_BIT;
+		case ResourceAccess::eWrite: return VK_ACCESS_2_TRANSFER_WRITE_BIT;
+		case ResourceAccess::eReadWrite: return VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT;
 		case ResourceAccess::eNone: break;
 		}
 		break;
 	case PipelineStage::eHost:
 		switch (access) {
-		case ResourceAccess::eRead: return vk::AccessFlagBits2::eHostRead;
-		case ResourceAccess::eWrite: return vk::AccessFlagBits2::eHostWrite;
-		case ResourceAccess::eReadWrite: return vk::AccessFlagBits2::eHostRead | vk::AccessFlagBits2::eHostWrite;
+		case ResourceAccess::eRead: return VK_ACCESS_2_HOST_READ_BIT;
+		case ResourceAccess::eWrite: return VK_ACCESS_2_HOST_WRITE_BIT;
+		case ResourceAccess::eReadWrite: return VK_ACCESS_2_HOST_READ_BIT | VK_ACCESS_2_HOST_WRITE_BIT;
 		case ResourceAccess::eNone: break;
 		}
 		break;
 	case PipelineStage::eNone:
 		break;
 	}
-	return {};
+	return 0;
 }
 
 template <typename T>
 concept buffer_resource = requires(const T &resource) {
-	{ resource.descriptor_info() } -> std::same_as <vk::DescriptorBufferInfo>;
+	{ resource.descriptor_info() } -> std::same_as <VkDescriptorBufferInfo>;
 };
 
 template <typename T>
@@ -140,7 +140,7 @@ struct Barrier {
 	using dst_phase = DstPhase;
 
 	static constexpr size_t count = 1;
-	vk::BufferMemoryBarrier2 barrier;
+	VkBufferMemoryBarrier2 barrier;
 
 	Barrier() = default;
 
@@ -157,7 +157,7 @@ struct Barrier {
 		barrier.dstAccessMask = to_vk_access(DstPhase::stage, DstPhase::access);
 	}
 
-	void write_to(std::span <vk::BufferMemoryBarrier2> out, size_t &idx) const {
+	void write_to(std::span <VkBufferMemoryBarrier2> out, size_t &idx) const {
 		out[idx++] = barrier;
 	}
 };
@@ -168,7 +168,7 @@ struct Barrier <ref, SrcPhase, DstPhase> {
 	using Reference = reference_base_of <ref>;
 
 	static constexpr size_t count = buffer_bindings_for_group <Reference> ();
-	std::array <vk::BufferMemoryBarrier2, count> barriers {};
+	std::array <VkBufferMemoryBarrier2, count> barriers {};
 
 	Barrier() = default;
 
@@ -198,7 +198,7 @@ struct Barrier <ref, SrcPhase, DstPhase> {
 		);
 	}
 
-	void write_to(std::span <vk::BufferMemoryBarrier2> out, size_t &idx) const {
+	void write_to(std::span <VkBufferMemoryBarrier2> out, size_t &idx) const {
 		for (auto &entry : barriers)
 			out[idx++] = entry;
 	}

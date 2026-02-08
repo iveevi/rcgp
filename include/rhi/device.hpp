@@ -1,6 +1,11 @@
 #pragma once
 
+#include <array>
+#include <cstdint>
+#include <cstdlib>
+#include <map>
 #include <span>
+#include <type_traits>
 #include <vector>
 
 #include "session.hpp"
@@ -21,25 +26,26 @@ template <auto &ref, bool resolved>
 struct DescriptorWritePair;
 
 struct Device {
-	vk::Device logical;
-	vk::PhysicalDevice physical;
-	vk::PhysicalDeviceMemoryProperties properties;
-	vk::detail::DispatchLoaderDynamic loader;
+	VkDevice logical = VK_NULL_HANDLE;
+	VkPhysicalDevice physical = VK_NULL_HANDLE;
+	VkPhysicalDeviceMemoryProperties properties {};
+	DispatchLoader loader;
 	std::map <const char *, Queue> queues;
 
-	auto find_memory_type(uint32_t filter, vk::MemoryPropertyFlags flags) const -> uint32_t;
+	auto find_memory_type(uint32_t filter, VkMemoryPropertyFlags flags) const -> uint32_t;
 
 	template <typename Extent>
 	auto new_framebuffer(
-		const vk::RenderPass &render_pass,
-		const std::span <const vk::ImageView> &attachments,
+		VkRenderPass render_pass,
+		const std::span <const VkImageView> &attachments,
 		const Extent &extent,
 		uint32_t layers = 1
-	) const -> vk::Framebuffer {
-		static_assert(std::same_as <Extent, vk::Extent2D>
-			|| std::same_as <Extent, vk::Extent3D>);
+	) const -> VkFramebuffer {
+		static_assert(std::same_as <Extent, VkExtent2D>
+			|| std::same_as <Extent, VkExtent3D>);
 
-		auto fb_info = vk::FramebufferCreateInfo();
+		VkFramebufferCreateInfo fb_info {};
+		fb_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		fb_info.renderPass = render_pass;
 		fb_info.attachmentCount = attachments.size();
 		fb_info.pAttachments = attachments.data();
@@ -47,37 +53,51 @@ struct Device {
 		fb_info.height = extent.height;
 		fb_info.layers = layers;
 
-		return logical.createFramebuffer(fb_info);
+		auto framebuffer = VkFramebuffer(VK_NULL_HANDLE);
+		auto result = vkCreateFramebuffer(logical, &fb_info, nullptr, &framebuffer);
+		if (result != VK_SUCCESS)
+			std::abort();
+		return framebuffer;
 	}
 
 	// TODO: return neutral command buffers
 	auto new_command_buffers(const CommandPool &cpool, size_t count) const -> std::vector <CommandBuffer>;
-	auto new_descriptor_sets(const DescriptorPool &dpool, const vk::ArrayProxy <vk::DescriptorSetLayout> &dsls) const -> std::vector <vk::DescriptorSet>;
+	auto new_descriptor_sets(const DescriptorPool &dpool, const std::span <const VkDescriptorSetLayout> &dsls) const -> std::vector <VkDescriptorSet>;
 
-	auto new_shader_module(std::span <const uint32_t> spirv) const -> vk::ShaderModule {
-		auto sm_info = vk::ShaderModuleCreateInfo();
+	auto new_shader_module(std::span <const uint32_t> spirv) const -> VkShaderModule {
+		VkShaderModuleCreateInfo sm_info {};
+		sm_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		sm_info.codeSize = spirv.size_bytes();
 		sm_info.pCode = spirv.data();
-		return logical.createShaderModule(sm_info);
+
+		auto module = VkShaderModule(VK_NULL_HANDLE);
+		auto result = vkCreateShaderModule(logical, &sm_info, nullptr, &module);
+		if (result != VK_SUCCESS)
+			std::abort();
+		return module;
 	}
 
 	// TODO: un-template this...
 	template <typename ... Ts>
 	auto new_render_pass(const Attachments &attachments, Ts ... subpasses) const {
-		auto rp_info = vk::RenderPassCreateInfo();
-		rp_info.attachmentCount = attachments.descriptions.size();
-		rp_info.pAttachments = attachments.descriptions.data();
-		rp_info.subpassCount = sizeof...(subpasses);
-
-		auto subpass_descritions = std::array <
-			vk::SubpassDescription,
+		auto subpass_descriptions = std::array <
+			VkSubpassDescription,
 			sizeof...(subpasses)
 		> { subpasses... };
 
-		rp_info.subpassCount = subpass_descritions.size();
-		rp_info.pSubpasses = subpass_descritions.data();
+		VkRenderPassCreateInfo rp_info {};
+		rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		rp_info.attachmentCount = attachments.descriptions.size();
+		rp_info.pAttachments = attachments.descriptions.data();
+		rp_info.subpassCount = subpass_descriptions.size();
+		rp_info.pSubpasses = subpass_descriptions.data();
 
-		return RenderPass <Ts...> (logical.createRenderPass(rp_info));
+		auto render_pass = VkRenderPass(VK_NULL_HANDLE);
+		auto result = vkCreateRenderPass(logical, &rp_info, nullptr, &render_pass);
+		if (result != VK_SUCCESS)
+			std::abort();
+
+		return RenderPass <Ts...> (render_pass);
 	}
 
 	template <auto &...refs, bool ... rs>
@@ -87,12 +107,12 @@ struct Device {
 	bool acquire_image_for_frame(Frame &frame, uint64_t timeout = UINT64_MAX) const;
 
 	// Timestamp pool
-	TimestampQueryPool new_timestamp_pool(vk::QueryResultFlags flags, size_t count) const;
+	TimestampQueryPool new_timestamp_pool(VkQueryResultFlags flags, size_t count) const;
 	TimestampQueryResult get_timestamp_results(const TimestampQueryPool &tqpool) const;
 
 	struct Options {
 		std::vector <const char *> extensions;
-		std::map <const char *, vk::QueueFlags> queues;
+		std::map <const char *, VkQueueFlags> queues;
 		// TODO: more general handling for device
 		// features... custom enum?
 		bool mesh_shaders = false;
@@ -103,7 +123,7 @@ struct Device {
 
 	static Device from(
 		const Session &session,
-		vk::detail::DispatchLoaderDynamic &dld,
+		DispatchLoader &dld,
 		const Options &info
 	);
 };

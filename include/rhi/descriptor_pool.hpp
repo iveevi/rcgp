@@ -1,11 +1,20 @@
 #pragma once
 
-#include "vk.hpp"
 #include "device.hpp"
 
 namespace rcgp {
 
-struct DescriptorPool : vk::DescriptorPool {
+struct DescriptorPool {
+	VkDescriptorPool handle = VK_NULL_HANDLE;
+
+	DescriptorPool() = default;
+	DescriptorPool(VkDescriptorPool handle) : handle(handle) {}
+
+	operator VkDescriptorPool() const
+	{
+		return handle;
+	}
+
 	struct Options {
 		uint32_t max_sets = 0;
 		uint32_t samplers = 0;

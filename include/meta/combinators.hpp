@@ -153,7 +153,7 @@ struct ComputeCombinator {
 struct MeshShadingCombinator {
 	const Device &device;
 	const ShaderCompiler &compiler;
-	const vk::RenderPass &render_pass;
+	VkRenderPass render_pass = VK_NULL_HANDLE;
 	RasterizationOptions options;
 	DebugOptions debug;
 

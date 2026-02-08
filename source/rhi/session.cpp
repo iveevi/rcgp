@@ -10,10 +10,10 @@
 namespace rcgp {
 
 VKAPI_ATTR VKAPI_CALL
-vk::Bool32 general_validation_callback(
-	vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
-	vk::DebugUtilsMessageTypeFlagsEXT types,
-	const vk::DebugUtilsMessengerCallbackDataEXT *data,
+VkBool32 general_validation_callback(
+	VkDebugUtilsMessageSeverityFlagBitsEXT severity,
+	VkDebugUtilsMessageTypeFlagsEXT types,
+	const VkDebugUtilsMessengerCallbackDataEXT *data,
 	void *user_data
 )
 {
@@ -24,30 +24,28 @@ vk::Bool32 general_validation_callback(
 	else
 		std::println(std::cerr, "vulkan: {}", data->pMessage);
 
-	bool trap = context->trap_on_error && (severity == vk::DebugUtilsMessageSeverityFlagBitsEXT::eError);
+	bool trap = context->trap_on_error && (severity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT);
 	if (trap)
 		std::abort();
 
-	return false;
+	return VK_FALSE;
 }
 
 auto Session::from(const Options &options) -> std::tuple <
 	std::unique_ptr <Session>,
-	vk::detail::DispatchLoaderDynamic
+	DispatchLoader
 >
 {
 	auto product = std::tuple {
 		std::make_unique <Session> (),
-		vk::detail::DispatchLoaderDynamic(),
+		DispatchLoader(),
 	};
 
 	auto &[session, dld] = product;
 
 	glfw::boot();
 
-	vk::detail::DynamicLoader dl;
-	auto vkGetInstanceProcAddr = dl.getProcAddress
-		<PFN_vkGetInstanceProcAddr> ("vkGetInstanceProcAddr");
+	auto vkGetInstanceProcAddr = ::vkGetInstanceProcAddr;
 
 	dld.init(vkGetInstanceProcAddr);
 
@@ -66,35 +64,39 @@ auto Session::from(const Options &options) -> std::tuple <
 	}
 
 	auto debug_severity_flags =
-		vk::DebugUtilsMessageSeverityFlagBitsEXT::eError
-		| vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning
-		| vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo;
+		VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT
+		| VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
+		| VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
 
 	auto debug_type_flags =
-		vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral
-		| vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation
-		| vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
+		VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
+		| VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
+		| VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 
 	session->trap_on_error = options.trap_on_error;
 	session->validation_callback = options.validation_callback;
-	vk::DebugUtilsMessengerCreateInfoEXT debug_info {};
+	VkDebugUtilsMessengerCreateInfoEXT debug_info {};
+	debug_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 	debug_info.messageType = debug_type_flags;
 	debug_info.messageSeverity = debug_severity_flags;
 	debug_info.pfnUserCallback = general_validation_callback;
 	debug_info.pUserData = session.get();
 
-	vk::ApplicationInfo app_info {};
+	VkApplicationInfo app_info {};
+	app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	app_info.apiVersion = VK_API_VERSION_1_4;
 	app_info.applicationVersion = options.application_version;
 	app_info.pApplicationName = options.application_name;
 	app_info.engineVersion = options.engine_version;
 	app_info.pEngineName = options.engine_name;
 
-	vk::ValidationFeaturesEXT validation_features {};
+	VkValidationFeaturesEXT validation_features {};
+	validation_features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
 	validation_features.enabledValidationFeatureCount = options.validation_features.size();
 	validation_features.pEnabledValidationFeatures = options.validation_features.data();
 
-	vk::InstanceCreateInfo instance_info {};
+	VkInstanceCreateInfo instance_info {};
+	instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	instance_info.pApplicationInfo = &app_info;
 	instance_info.enabledLayerCount = layers.size();
 	instance_info.ppEnabledLayerNames = layers.data();
@@ -107,12 +109,28 @@ auto Session::from(const Options &options) -> std::tuple <
 			validation_features.pNext = &debug_info;
 	}
 
-	session->handle = vk::createInstance(instance_info, nullptr, dld);
+	auto instance = VkInstance(VK_NULL_HANDLE);
+	auto iresult = vkCreateInstance(&instance_info, nullptr, &instance);
+	if (iresult != VK_SUCCESS) {
+		std::println(std::cerr, "failed to create vulkan instance: {}", static_cast <int> (iresult));
+		std::abort();
+	}
+	session->handle = instance;
 
 	dld.init(session->handle, vkGetInstanceProcAddr);
 
-	if (options.validation)
-		session->debugger = session->handle.createDebugUtilsMessengerEXT(debug_info, nullptr, dld);
+	if (options.validation && dld.vkCreateDebugUtilsMessengerEXT) {
+		auto debugger = VkDebugUtilsMessengerEXT(VK_NULL_HANDLE);
+		auto result = dld.vkCreateDebugUtilsMessengerEXT(
+			session->handle,
+			&debug_info,
+			nullptr,
+			&debugger
+		);
+
+		if (result == VK_SUCCESS)
+			session->debugger = debugger;
+	}
 
 	return product;
 }

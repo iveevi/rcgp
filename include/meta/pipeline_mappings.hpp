@@ -8,10 +8,10 @@
 namespace rcgp {
 
 struct PipelineMappings {
-	vk::PipelineLayout layout;
-	vk::PipelineBindPoint bind_point;
+	VkPipelineLayout layout = VK_NULL_HANDLE;
+	VkPipelineBindPoint bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
 	std::map <void *, size_t> pc_offsets;
-	std::map <void *, vk::ShaderStageFlags> pc_stages;
+	std::map <void *, VkShaderStageFlags> pc_stages;
 	std::map <void *, size_t> vb_offsets;
 
 	static inline std::map <size_t, PipelineMappings> cache;
@@ -30,7 +30,7 @@ struct stage_flags_for_seq;
 
 template <auto &ref>
 struct stage_flags_for_seq <ref, Tlist <>> {
-	static constexpr vk::ShaderStageFlags value = {};
+	static constexpr VkShaderStageFlags value = 0;
 };
 
 template <auto &ref, auto &other, ShaderStage ...Ss, typename ...Rest>
@@ -38,14 +38,14 @@ struct stage_flags_for_seq <
 	ref,
 	Tlist <stage_wrapper <other, Ss...>, Rest...>
 > {
-	static constexpr vk::ShaderStageFlags value =
+	static constexpr VkShaderStageFlags value =
 		std::same_as <contract <other>, contract <ref>>
 			? stage_flags_of <Ss...> ()
 			: stage_flags_for_seq <ref, Tlist <Rest...>> ::value;
 };
 
 template <auto &ref, typename Seq>
-constexpr vk::ShaderStageFlags stage_flags_for_v = stage_flags_for_seq <ref, Seq> ::value;
+constexpr VkShaderStageFlags stage_flags_for_v = stage_flags_for_seq <ref, Seq> ::value;
 
 template <typename ... Wrappers>
 void write_pb_infos(PipelineMappings &dst, Tlist <Wrappers...>)
@@ -70,7 +70,7 @@ auto pipeline_mappings(const RasterizationPipeline <T, AS, GAMAP, GRCs> &pipelin
 {
 	PipelineMappings result;
 	result.layout = pipeline.layout;
-	result.bind_point = vk::PipelineBindPoint::eGraphics;
+	result.bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
 	write_vb_offsets(result, AS());
 	write_pb_infos(result, GRCs());
 	return result;
@@ -81,7 +81,7 @@ auto pipeline_mappings(const ComputePipeline <GAMAP, GRCs> &pipeline)
 {
 	PipelineMappings result;
 	result.layout = pipeline.layout;
-	result.bind_point = vk::PipelineBindPoint::eCompute;
+	result.bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
 	write_pb_infos(result, GRCs());
 	return result;
 }
@@ -91,7 +91,7 @@ auto pipeline_mappings(const MeshShadingPipeline <GAMAP, GRCs> &pipeline)
 {
 	PipelineMappings result;
 	result.layout = pipeline.layout;
-	result.bind_point = vk::PipelineBindPoint::eGraphics;
+	result.bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
 	write_pb_infos(result, GRCs());
 	return result;
 }

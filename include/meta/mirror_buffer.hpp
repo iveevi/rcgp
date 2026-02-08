@@ -14,10 +14,10 @@ using dynamic_element_of_mirror = decltype([] {
 	return typename std::decay_t <decltype(dyn)> ::value_type();
 } ());
 
-template <typename T, template <typename> typename L, vk::BufferUsageFlagBits F>
+template <typename T, template <typename> typename L, VkBufferUsageFlagBits F>
 struct MirrorBuffer : Buffer {};
 
-template <non_dynamic T, template <typename> typename L, vk::BufferUsageFlagBits F>
+template <non_dynamic T, template <typename> typename L, VkBufferUsageFlagBits F>
 struct MirrorBuffer <T, L, F> : Buffer {
 	using symbolic_type = T;
 	using value_type = layouts::apply_t <T, L>;
@@ -44,18 +44,18 @@ struct MirrorBuffer <T, L, F> : Buffer {
 		return *this;
 	}
 
-	vk::DescriptorBufferInfo descriptor_info() const {
-		return vk::DescriptorBufferInfo {
-			.buffer = handle,
-			.offset = offset,
-			.range = sizeof(value_type),
-		};
+	VkDescriptorBufferInfo descriptor_info() const {
+		VkDescriptorBufferInfo info {};
+		info.buffer = handle;
+		info.offset = offset;
+		info.range = sizeof(value_type);
+		return info;
 	}
 
 	static MirrorBuffer from(
 		const Device &device,
-		vk::MemoryPropertyFlags properties,
-		vk::BufferUsageFlags extra_usage = vk::BufferUsageFlagBits(0)
+		VkMemoryPropertyFlags properties,
+		VkBufferUsageFlags extra_usage = 0
 	) {
 		auto base = Buffer::from(device, sizeof(value_type), F | extra_usage, properties);
 
@@ -65,7 +65,7 @@ struct MirrorBuffer <T, L, F> : Buffer {
 	}
 };
 
-template <dynamic T, template <typename> typename L, vk::BufferUsageFlagBits F>
+template <dynamic T, template <typename> typename L, VkBufferUsageFlagBits F>
 struct MirrorBuffer <T, L, F> : Buffer {
 	using symbolic_type = T;
 	using value_type = layouts::apply_t <T, L>;
@@ -106,8 +106,8 @@ struct MirrorBuffer <T, L, F> : Buffer {
 	static MirrorBuffer from(
 		const Device &device,
 		size_t max_elements,
-		vk::MemoryPropertyFlags properties,
-		vk::BufferUsageFlags extra_usage = vk::BufferUsageFlagBits(0)
+		VkMemoryPropertyFlags properties,
+		VkBufferUsageFlags extra_usage = 0
 	) {
 		// TODO: dynamic_offset() static constexpr method
 		value_type data;
@@ -119,26 +119,26 @@ struct MirrorBuffer <T, L, F> : Buffer {
 		return result;
 	}
 
-	vk::DescriptorBufferInfo descriptor_info() const {
-		return vk::DescriptorBufferInfo {
-			.buffer = handle,
-			.offset = offset,
-			.range = size,
-		};
+	VkDescriptorBufferInfo descriptor_info() const {
+		VkDescriptorBufferInfo info {};
+		info.buffer = handle;
+		info.offset = offset;
+		info.range = size;
+		return info;
 	}
 };
 
 // Aliases for specific kinds of buffers
 template <typename T, template <typename> typename L>
-using VertexMirrorBuffer = MirrorBuffer <T, L, vk::BufferUsageFlagBits::eVertexBuffer>;
+using VertexMirrorBuffer = MirrorBuffer <T, L, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT>;
 
 template <typename T, template <typename> typename L>
-using IndexMirrorBuffer = MirrorBuffer <T, L, vk::BufferUsageFlagBits::eIndexBuffer>;
+using IndexMirrorBuffer = MirrorBuffer <T, L, VK_BUFFER_USAGE_INDEX_BUFFER_BIT>;
 
 template <typename T, template <typename> typename L>
-using UniformMirrorBuffer = MirrorBuffer <T, L, vk::BufferUsageFlagBits::eUniformBuffer>;
+using UniformMirrorBuffer = MirrorBuffer <T, L, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT>;
 
 template <typename T, template <typename> typename L>
-using StorageMirrorBuffer = MirrorBuffer <T, L, vk::BufferUsageFlagBits::eStorageBuffer>;
+using StorageMirrorBuffer = MirrorBuffer <T, L, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT>;
 
 } // namespace rcgp
