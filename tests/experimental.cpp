@@ -36,5 +36,5 @@ int main()
 {
 	// auto glsl = generate_glsl(fs);
 	auto glsl = generate_glsl(vs);
-	std::println("glsl:\n{}", glsl);
+	printf("glsl:\n%s\n", glsl.c_str());
 }

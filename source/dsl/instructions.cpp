@@ -1,3 +1,5 @@
+#include <utility>
+
 #include "dsl/instructions.hpp"
 #include "util/error.hpp"
 
@@ -133,6 +135,13 @@ void Block::set_workgroup_size(uint32_t x, uint32_t y, uint32_t z)
 		__builtin_trap();
 	}
 	workgroup_size = size;
+}
+
+Reference Block::add(Instruction instruction)
+{
+	auto result = std::make_shared <Instruction> (std::move(instruction));
+	emplace_back(result);
+	return result;
 }
 
 } // namespace rcgp

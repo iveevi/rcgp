@@ -1,5 +1,6 @@
 #pragma once
 
+// TODO: get rid of this header...
 #include <algorithm>
 
 #include "instructions.hpp"
@@ -44,16 +45,18 @@ struct scope {
 	}
 };
 
+// TODO: this approach is adding a LOT of overhead...
+// lets not template it like this...
 #define JEM(name, type)	\
 	template <typename ... Args>	\
 	struct name : handle {	\
 		name(Args ... args, const std::source_location &loc = std::source_location::current())	\
-			: handle(Tracer::singleton.active().add(type(args...), DebugInfo(loc))) {}	\
+			: handle(Tracer::singleton.active().add(Instruction(type(args...), DebugInfo(loc)))) {}	\
 	};	\
 	template <typename ... Args>	\
 	struct name##_loc : handle {	\
 		name##_loc (const std::source_location &loc, Args ... args) \
-			: handle(Tracer::singleton.active().add(type(args...), DebugInfo(loc))) {}	\
+			: handle(Tracer::singleton.active().add(Instruction(type(args...), DebugInfo(loc)))) {}	\
 	};	\
 	template <typename ... Args>	\
 	name(Args ...) -> name <Args...>;
@@ -90,7 +93,7 @@ struct type : handle {
 				blk.insert(blk.begin(), _ref);
 			return;
 		}
-		_ref = Tracer::singleton.active().add(t, DebugInfo(loc));
+		_ref = Tracer::singleton.active().add(Instruction(t, DebugInfo(loc)));
 		cache.emplace(std::move(key), _ref);
 	}
 };
@@ -109,7 +112,7 @@ struct type_loc : handle {
 				blk.insert(blk.begin(), _ref);
 			return;
 		}
-		_ref = Tracer::singleton.active().add(t, DebugInfo(loc));
+		_ref = Tracer::singleton.active().add(Instruction(t, DebugInfo(loc)));
 		cache.emplace(std::move(key), _ref);
 	}
 };

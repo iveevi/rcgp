@@ -123,6 +123,11 @@ std::string Return::repr() const
 	return std::format("Return({})", argi);
 }
 
+std::string Block::repr() const
+{
+	return "Block";
+}
+
 std::string Instruction::repr() const
 {
 	vswitch ((*this)) {

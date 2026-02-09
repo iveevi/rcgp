@@ -49,18 +49,9 @@ struct Block : std::vector <Reference> {
 	void apply_group_allocation_map(const group_allocation_map &map);
 	void apply_push_constant_allocation_map(const push_constant_allocation_map &map);
 
-	// TODO: use a script to generate instantiations
-	template <typename T>
-	Reference add(const T &sub, const DebugInfo aux)
-	{
-		auto result = std::make_shared <Instruction> (sub, aux);
-		emplace_back(result);
-		return result;
-	}
+	Reference add(Instruction instruction);
 
-	std::string repr() const {
-		return "Block";
-	}
+	std::string repr() const;
 };
 
 } // namespace rcgp

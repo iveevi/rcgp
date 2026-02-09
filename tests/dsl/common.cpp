@@ -184,7 +184,7 @@ std::string read_file_contents(const std::filesystem::path &path)
 {
 	std::ifstream fin(path);
         if (!fin.good()) {
-                std::println("failed to open file: {}", path.c_str());
+                fmt::println("failed to open file: {}", path.c_str());
 		std::abort();
         }
 
