@@ -3,6 +3,7 @@
 #include <fmt/format.h>
 
 #include "dsl/instructions.hpp"
+#include "dsl/block.hpp"
 
 namespace rcgp {
 

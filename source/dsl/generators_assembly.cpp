@@ -11,6 +11,7 @@
 #include <fmt/format.h>
 
 #include "dsl/generators.hpp"
+#include "dsl/block.hpp"
 #include "dsl/instructions.hpp"
 #include "util/error.hpp"
 

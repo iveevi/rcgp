@@ -5,6 +5,7 @@
 #include "../util/cti.hpp"
 #include "../dsl/array.hpp"
 #include "../dsl/aliases.hpp"
+#include "../dsl/block.hpp"
 #include "../dsl/projection.hpp"
 #include "reconstruct_type.hpp"
 

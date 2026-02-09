@@ -48,7 +48,6 @@ add_dependencies(rcgp
 	rcgp_generate_macro_swizzle
 	rcgp_generate_enumeration_strings
 )
-target_precompile_headers(rcgp PRIVATE <vulkan/vulkan.hpp>)
 target_link_libraries(rcgp PUBLIC
 	fmt glfw Vulkan::Vulkan
 	glslang::glslang glslang::glslang-default-resource-limits
@@ -57,10 +56,8 @@ target_link_libraries(rcgp PUBLIC
 # Runtime tests
 file(GLOB_RECURSE RCGP_DSL_TESTS CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/tests/dsl/*.cpp")
 add_executable(test EXCLUDE_FROM_ALL ${RCGP_DSL_TESTS})
-target_precompile_headers(test REUSE_FROM rcgp)
 target_link_libraries(test rcgp)
 
 # Experimental program
 add_executable(experimental EXCLUDE_FROM_ALL tests/experimental.cpp)
-target_precompile_headers(experimental REUSE_FROM rcgp)
 target_link_libraries(experimental rcgp)

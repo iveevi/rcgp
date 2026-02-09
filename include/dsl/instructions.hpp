@@ -3,7 +3,6 @@
 #include <source_location>
 
 #include "instruction_nodes.hpp"
-#include "instruction_block.hpp"
 
 namespace rcgp {
 
@@ -17,7 +16,6 @@ struct DebugInfo {
 struct Instruction : variant <
 	Argument,
 	ArrayAccess,
-	Block,
 	BuiltinIntrinsic,
 	Constant,
 	Construct,

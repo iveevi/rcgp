@@ -1,4 +1,6 @@
 #include "dsl/branching.hpp"
+#include "dsl/block.hpp"
+#include "dsl/instructions.hpp"
 
 namespace rcgp {
 

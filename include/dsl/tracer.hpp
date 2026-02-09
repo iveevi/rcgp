@@ -1,8 +1,5 @@
 #pragma once
 
-#include <cstdlib>
-#include <iostream>
-#include <print>
 #include <stack>
 #include <unordered_map>
 
@@ -15,10 +12,6 @@ struct Tracer {
 	std::unordered_map <std::string, Reference> type_cache;
 
 	Block &active() {
-		if (records.empty()) {
-			std::println(std::cerr, "no active record");
-			std::abort();
-		}
 		return *records.top();
 	}
 

@@ -1,8 +1,7 @@
 #pragma once
 
-#include <algorithm>
+#include <source_location>
 
-#include "instructions.hpp"
 #include "tracer.hpp"
 
 #define $location const std::source_location &loc = std::source_location::current()
@@ -10,40 +9,26 @@
 namespace rcgp::jems {
 
 struct scope {
-	scope(const SharedBlockReference &sbr) {
-		Tracer::singleton.records.emplace(sbr);
-	}
+	scope(const SharedBlockReference &sbr);
+	~scope();
 
-	~scope() {
-		Tracer::singleton.records.pop();
-	}
-
-	operator bool() const {
-		return true;
-	}
+	operator bool() const;
 };
 
 struct null {
-	void override_reference(const Reference &ref) {}
+	void override_reference(const Reference &ref);
 };
 
 class handle {
 protected:
 	Reference _ref;
 public:
-	handle(const Reference &ref_ = nullptr) : _ref(ref_) {}
+	handle(const Reference &ref_ = nullptr);
 
-	void override_reference(const Reference &ref_) {
-		_ref = ref_;
-	}
+	void override_reference(const Reference &ref_);
 
-	operator Reference &() {
-		return _ref;
-	}
-	
-	operator const Reference &() const {
-		return _ref;
-	}
+	operator Reference &();
+	operator const Reference &() const;
 };
 
 struct operation : handle {
@@ -52,12 +37,11 @@ struct operation : handle {
 		const Reference &a,
 		const Reference &b = {},
 		$location
-	) : handle($tsb.add(Instruction(Operation { code, a, b }, DebugInfo(loc)))) {}
+	);
 };
 
 struct constant : handle {
-	constant(const Constant &value, $location)
-		: handle($tsb.add(Instruction(value, DebugInfo(loc)))) {}
+	constant(const Constant &value, $location);
 };
 
 struct invocation : handle {
@@ -66,7 +50,7 @@ struct invocation : handle {
 		const std::vector <Reference> &args,
 		const std::vector <Reference> &returns,
 		$location
-	) : handle($tsb.add(Instruction(Invocation { sbr, args, returns }, DebugInfo(loc)))) {}
+	);
 };
 
 struct construct : handle {
@@ -74,7 +58,7 @@ struct construct : handle {
 		const Reference &type,
 		const std::vector <Reference> &args,
 		$location
-	) : handle($tsb.add(Instruction(Construct { type, args }, DebugInfo(loc)))) {}
+	);
 };
 
 struct argument : handle {
@@ -82,7 +66,7 @@ struct argument : handle {
 		const Reference &type,
 		uint32_t argi,
 		$location
-	) : handle($tsb.add(Instruction(Argument { type, argi }, DebugInfo(loc)))) {}
+	);
 };
 
 struct returns : handle {
@@ -90,7 +74,7 @@ struct returns : handle {
 		const Reference &type,
 		uint32_t argi,
 		$location
-	) : handle($tsb.add(Instruction(Return { type, argi }, DebugInfo(loc)))) {}
+	);
 };
 
 struct stage_input : handle {
@@ -99,7 +83,7 @@ struct stage_input : handle {
 		uint32_t argi,
 		RateProperties properties = {},
 		$location
-	) : handle($tsb.add(Instruction(StageInput { type, argi, properties }, DebugInfo(loc)))) {}
+	);
 };
 
 struct stage_output : handle {
@@ -108,7 +92,7 @@ struct stage_output : handle {
 		uint32_t argi,
 		RateProperties properties = {},
 		$location
-	) : handle($tsb.add(Instruction(StageOutput { type, argi, properties }, DebugInfo(loc)))) {}
+	);
 };
 
 struct global_resource : handle {
@@ -121,15 +105,11 @@ struct global_resource : handle {
 		std::optional <uint32_t> index = std::nullopt,
 		std::optional <uint32_t> offset = std::nullopt,
 		$location
-	) : handle($tsb.add(Instruction(
-		GlobalResource { type, kind, layout, access, group, index, offset },
-		DebugInfo(loc)
-	))) {}
+	);
 };
 
 struct system_value : handle {
-	system_value(SystemValue value, $location)
-		: handle($tsb.add(Instruction(value, DebugInfo(loc)))) {}
+	system_value(SystemValue value, $location);
 };
 
 struct builtin_intrinsic : handle {
@@ -137,7 +117,7 @@ struct builtin_intrinsic : handle {
 		BuiltinIntrinsicCode code,
 		const std::vector <Reference> &args = {},
 		$location
-	) : handle($tsb.add(Instruction(BuiltinIntrinsic { code, args }, DebugInfo(loc)))) {}
+	);
 };
 
 struct swizzle : handle {
@@ -145,7 +125,7 @@ struct swizzle : handle {
 		SwizzleCode code,
 		const Reference &value,
 		$location
-	) : handle($tsb.add(Instruction(Swizzle { code, value }, DebugInfo(loc)))) {}
+	);
 };
 
 struct array_access : handle {
@@ -153,7 +133,7 @@ struct array_access : handle {
 		const Reference &value,
 		const Reference &index,
 		$location
-	) : handle($tsb.add(Instruction(ArrayAccess { value, index }, DebugInfo(loc)))) {}
+	);
 };
 
 struct field_access : handle {
@@ -161,7 +141,7 @@ struct field_access : handle {
 		const Reference &value,
 		uint32_t fidx,
 		$location
-	) : handle($tsb.add(Instruction(FieldAccess { value, fidx }, DebugInfo(loc)))) {}
+	);
 };
 
 struct store : handle {
@@ -169,34 +149,19 @@ struct store : handle {
 		const Reference &destination,
 		const Reference &source,
 		$location
-	) : handle($tsb.add(Instruction(Store { destination, source }, DebugInfo(loc)))) {}
+	);
 };
 
 struct local : handle {
-	local(const Reference &type, $location)
-		: handle($tsb.add(Instruction(Local { type }, DebugInfo(loc)))) {}
+	local(const Reference &type, $location);
 };
 
 struct loop : handle {
-	loop(const SharedBlockReference &body, $location)
-		: handle($tsb.add(Instruction(Loop { body }, DebugInfo(loc)))) {}
+	loop(const SharedBlockReference &body, $location);
 };
 
 struct type : handle {
-	type(const Type &t, $location) {
-		auto key = t.repr();
-		// TODO: per block type cache
-		auto &cache = Tracer::singleton.type_cache;
-		if (auto it = cache.find(key); it != cache.end()) {
-			_ref = it->second;
-			auto &blk = Tracer::singleton.active();
-			if (std::find(blk.begin(), blk.end(), _ref) == blk.end())
-				blk.insert(blk.begin(), _ref);
-			return;
-		}
-		_ref = $tsb.add(Instruction(t, DebugInfo(loc)));
-		cache.emplace(key, _ref);
-	}
+	type(const Type &t, $location);
 };
 
 } // namespace rcgp::jems

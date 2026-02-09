@@ -2,7 +2,7 @@
 
 #include <array>
 
-#include "../dsl/instruction_block.hpp"
+#include "../dsl/block.hpp"
 #include "../rhi/device.hpp"
 #include "../util/align.hpp"
 #include "../util/cti.hpp"

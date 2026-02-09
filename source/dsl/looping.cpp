@@ -1,4 +1,5 @@
 #include "dsl/branching.hpp"
+#include "dsl/block.hpp"
 #include "dsl/jems.hpp"
 #include "dsl/looping.hpp"
 
