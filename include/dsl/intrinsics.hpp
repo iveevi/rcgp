@@ -5,7 +5,9 @@
 #include "matrix.hpp"
 #include "aliases.hpp"
 
-#define builtin(code, ...) jems::builtin_intrinsic(BuiltinIntrinsicCode::code, __VA_ARGS__)
+#define builtin(code, ...)					\
+	jems::builtin_intrinsic(BuiltinIntrinsicCode::code,	\
+		std::vector <Reference> { __VA_ARGS__ })
 
 namespace rcgp {
 

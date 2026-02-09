@@ -38,7 +38,10 @@ auto coerce_to_handle(const T &value)
 	);
 
 	return std::apply([&](auto &&... handles) {
-		return jems::construct(reconstruct_type <T> (), handles...);
+		return jems::construct(
+			reconstruct_type <T> (),
+			std::vector <Reference> { handles... }
+		);
 	}, args);
 }
 

@@ -2,9 +2,7 @@
 
 #include <cstdint>
 #include <optional>
-#include <source_location>
 #include <string>
-#include <type_traits>
 #include <vector>
 #include <memory>
 
@@ -63,10 +61,6 @@ struct Construct {
 	Reference type;
 	std::vector <Reference> args;
 
-	template <typename ... Args>
-	Construct(Reference type_, Args ... args_)
-		: type(type_), args { args_ ... } {}
-
 	std::string repr() const;
 };
 
@@ -104,12 +98,7 @@ struct Local {
 
 struct BuiltinIntrinsic {
 	BuiltinIntrinsicCode code;
-
 	std::vector <Reference> args;
-	
-	template <typename ... Args>
-	BuiltinIntrinsic(BuiltinIntrinsicCode code_, Args ... args_)
-		: code(code_), args { args_ ... } {}
 
 	std::string repr() const;
 };

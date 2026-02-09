@@ -57,10 +57,10 @@ template <uint32_t X, uint32_t Y = 1, uint32_t Z = 1>
 struct TaskGroup : WorkGroup <X, Y, Z> {
 	void dispatch_mesh_groups(u32 x, u32 y = 1, u32 z = 1, $location) const
 	{
-		jems::builtin_intrinsic_loc(
-			loc,
+		jems::builtin_intrinsic(
 			BuiltinIntrinsicCode::eEmitMeshTasksEXT,
-			x, y, z
+			std::vector <Reference> { x, y, z },
+			loc
 		);
 	}
 };
@@ -73,11 +73,11 @@ struct Interpolant : jems::handle {
 	template <typename U>
 	requires std::is_convertible_v <U, T>
 	Interpolant(const U &value, $location)
-		: handle(jems::stage_output_loc(loc,
-			reconstruct_type <T> (), 0, P
+		: handle(jems::stage_output(
+			reconstruct_type <T> (), 0, P, loc
 		))
 	{
-		jems::store_loc(loc, *this, T(value));
+		jems::store(*this, T(value), loc);
 	}
 };
 
@@ -228,11 +228,10 @@ struct MeshletPayload <P, MaxVertices, MaxPrimitives, void> {
 
 	void allocate(u32 vertices, u32 primitives, $location)
 	{
-		jems::builtin_intrinsic_loc(
-			loc,
+		jems::builtin_intrinsic(
 			BuiltinIntrinsicCode::eSetMeshOutputsEXT,
-			vertices,
-			primitives
+			std::vector <Reference> { vertices, primitives },
+			loc
 		);
 	}
 };
@@ -269,18 +268,19 @@ struct MeshletPayload : T {
 				$tsb.add_stage_output(tout);
 				$tsb.mesh_perprimitive_outputs.emplace(tout.argi, perprimitive);
 
-				this->template _rcgp_get <Is> ().override_reference(jems::stage_output(tout));
+				this->template _rcgp_get <Is> ().override_reference(
+					jems::stage_output(tout.type, tout.argi, tout.properties)
+				);
 			}(), ...)
 		);
 	}
 
 	void allocate(u32 vertices, u32 primitives, $location)
 	{
-		jems::builtin_intrinsic_loc(
-			loc,
+		jems::builtin_intrinsic(
 			BuiltinIntrinsicCode::eSetMeshOutputsEXT,
-			vertices,
-			primitives
+			std::vector <Reference> { vertices, primitives },
+			loc
 		);
 	}
 };

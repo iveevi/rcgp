@@ -128,11 +128,11 @@ void inject_one_argument(contract <ref> &value, InjectionCounters &counters)
 		if constexpr (S == ShaderStage::eSubroutine) {
 			auto arg = Argument(type, counters.argidx++);
 			$tsb.add_argument(arg);
-			value.override_reference(jems::argument(arg));
+			value.override_reference(jems::argument(arg.type, arg.argi));
 		} else {
 			auto tin = StageInput(type, counters.threadidx++);
 			$tsb.add_stage_input(tin);
-			value.override_reference(jems::stage_input(tin));
+			value.override_reference(jems::stage_input(tin.type, tin.argi, tin.properties));
 		}
 	} else {
 		// Regular case
@@ -149,12 +149,12 @@ void inject_one_argument(T &value, InjectionCounters &counters)
 		// Varying attribute
 		auto tin = StageInput(type, counters.threadidx++);
 		$tsb.add_stage_input(tin);
-		value.override_reference(jems::stage_input(tin));
+		value.override_reference(jems::stage_input(tin.type, tin.argi, tin.properties));
 	} else if constexpr (S == ShaderStage::eSubroutine) {
 		// Function argument
 		auto arg = Argument(type, counters.argidx++);
 		$tsb.add_argument(arg);
-		value.override_reference(jems::argument(arg));
+		value.override_reference(jems::argument(arg.type, arg.argi));
 	} else {
 		// Not supported
 		static_error("argument type "_ss + $ss_type(T)

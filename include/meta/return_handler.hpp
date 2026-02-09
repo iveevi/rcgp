@@ -77,15 +77,15 @@ void return_handler(T &value, size_t &argi)
 	if constexpr (S == ShaderStage::eSubroutine) {
 		auto ret = Return(type, argi++);
 		$tsb.add_return(ret);
-		ref = jems::returns(ret);
+		ref = jems::returns(ret.type, ret.argi);
 	} else if constexpr (S == ShaderStage::eVertex) {
 		auto sout = StageOutput(type, argi++, RateProperties::eSmooth);
 		$tsb.add_stage_output(sout);
-		ref = jems::stage_output(sout);
+		ref = jems::stage_output(sout.type, sout.argi, sout.properties);
 	} else if constexpr (S == ShaderStage::eFragment) {
 		auto sout = StageOutput(type, argi++);
 		$tsb.add_stage_output(sout);
-		ref = jems::stage_output(sout);
+		ref = jems::stage_output(sout.type, sout.argi, sout.properties);
 	} else {
 		static_assert(false);
 	}
@@ -101,7 +101,7 @@ void return_handler(T &value, size_t &argi)
 	auto type = reconstruct_type <T> ();
 	auto ret = Return(type, argi++);
 	$tsb.add_return(ret);
-	auto ref = jems::returns(ret);
+	auto ref = jems::returns(ret.type, ret.argi);
 	jems::store(ref, coerce_to_handle(value));
 }
 

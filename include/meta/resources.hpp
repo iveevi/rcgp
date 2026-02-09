@@ -49,9 +49,10 @@ template <native_scalar T, size_t D>
 struct Sampler : resource_handle {
 	struct handle_type : jems::handle {
 		auto sample(const vector <T, D> &x, $location) const {
-			auto result = jems::builtin_intrinsic_loc(
-				loc, BuiltinIntrinsicCode::eSample,
-				*this, x
+			auto result = jems::builtin_intrinsic(
+				BuiltinIntrinsicCode::eSample,
+				std::vector <Reference> { *this, x },
+				loc
 			);
 
 			return vector <T, 4> ::reinterpret(result);

@@ -16,12 +16,6 @@ using group_allocation_map = std::map <void *, uint32_t>;
 // Push constant to offset
 using push_constant_allocation_map = std::map <void *, uint32_t>;
 
-// DebugInfo information
-struct DebugInfo {
-	// TODO: node name
-	std::source_location origin;
-};
-
 // TODO: should transition to CFG style...
 // CFG nodes and a top level Module which include context info
 struct Block : std::vector <Reference> {
@@ -49,18 +43,9 @@ struct Block : std::vector <Reference> {
 	void apply_group_allocation_map(const group_allocation_map &map);
 	void apply_push_constant_allocation_map(const push_constant_allocation_map &map);
 
-	// TODO: use a script to generate instantiations
-	template <typename T>
-	Reference add(const T &sub, const DebugInfo aux)
-	{
-		auto result = std::make_shared <Instruction> (sub, aux);
-		emplace_back(result);
-		return result;
-	}
+	Reference add(const Instruction &instr);
 
-	std::string repr() const {
-		return "Block";
-	}
+	std::string repr() const;
 };
 
 } // namespace rcgp

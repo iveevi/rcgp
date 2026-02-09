@@ -10,10 +10,10 @@
 
 namespace rcgp {
 
-auto wrap_in_local(auto loc, auto type, auto ... cargs)
+auto wrap_in_local(auto loc, auto type, const std::vector <Reference> &cargs)
 {
-	auto c = jems::construct_loc(loc, type, cargs...);
-	auto l = jems::local_loc(loc, type);
+	auto c = jems::construct(type, cargs, loc);
+	auto l = jems::local(type, loc);
 	jems::store(l, c);
 	return l;
 }
@@ -27,7 +27,7 @@ public:
 
 	scalar() {
 		if (!Tracer::singleton.records.empty()) {
-			auto type = jems::type_loc(std::source_location::current(), primitive_of <T> ());
+			auto type = jems::type(primitive_of <T> (), std::source_location::current());
 			init_local_if_tracing(*this, type);
 		}
 	}
@@ -35,13 +35,13 @@ public:
 	scalar(const T &value, $location)
 		: handle() {
 		if (Tracer::singleton.records.empty()) {
-			_ref = jems::constant_loc(loc, value);
+			_ref = jems::constant(value, loc);
 			return;
 		}
 
-		auto local = jems::local(jems::type_loc(loc, primitive_of <T> ()));
+		auto local = jems::local(jems::type(primitive_of <T> (), loc));
 		_ref = local;
-		jems::store(local, jems::constant_loc(loc, value));
+		jems::store(local, jems::constant(value, loc));
 	}
 
 	scalar &operator=(const scalar &rhs) {

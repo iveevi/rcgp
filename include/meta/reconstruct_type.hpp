@@ -20,26 +20,26 @@ jems::handle reconstruct_type($location);
 template <typename T>
 auto reconstructor_for(std::type_identity <scalar <T>>, $location)
 {
-	return jems::type_loc(loc, primitive_of <T> ());
+	return jems::type(primitive_of <T> (), loc);
 }
 
 template <typename T, size_t N>
 auto reconstructor_for(std::type_identity <vector <T, N>>, $location)
 {
-	return jems::type_loc(loc, primitive_of <T, N> ());
+	return jems::type(primitive_of <T, N> (), loc);
 }
 
 template <typename T, size_t N, size_t M>
 auto reconstructor_for(std::type_identity <matrix <T, N, M>>, $location)
 {
-	return jems::type_loc(loc, primitive_of <T, N, M> ());
+	return jems::type(primitive_of <T, N, M> (), loc);
 }
 
 template <typename T, int64_t N>
 auto reconstructor_for(std::type_identity <array <T, N>>, $location)
 {
 	auto base = reconstruct_type <T> (loc);
-	return jems::type_loc(loc, Array(base, N));
+	return jems::type(Array(base, N), loc);
 }
 
 inline auto reconstructor_for(std::type_identity <jems::null>, $location)
@@ -64,7 +64,7 @@ auto reconstructor_for(std::type_identity <T>, $location)
 		(ftn.template operator() <Is> (), ...);
 	);
 
-	return jems::type_loc(loc, st);
+	return jems::type(st, loc);
 }
 
 template <typename T>

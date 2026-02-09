@@ -135,4 +135,11 @@ void Block::set_workgroup_size(uint32_t x, uint32_t y, uint32_t z)
 	workgroup_size = size;
 }
 
+Reference Block::add(const Instruction &instr)
+{
+	auto ref = std::make_shared <Instruction> (instr);
+	push_back(ref);
+	return ref;
+}
+
 } // namespace rcgp

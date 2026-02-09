@@ -52,14 +52,14 @@ public:
 	
 	vector_base(const scalar <T> &x, $location)
 		: handle(wrap_in_local(loc,
-			jems::type_loc(loc, primitive_of <T, 2> ()),
-			x, x
+			jems::type(primitive_of <T, 2> (), loc),
+			{ x, x }
 		)) {}
 	
 	vector_base(const scalar <T> &x, const scalar <T> &y, $location)
 		: handle(wrap_in_local(loc,
-			jems::type_loc(loc, primitive_of <T, 2> ()),
-			x, y
+			jems::type(primitive_of <T, 2> (), loc),
+			{ x, y }
 		)) {}
 };
 
@@ -79,26 +79,26 @@ public:
 
 	vector_base(const scalar <T> x, $location)
 		: handle(wrap_in_local(loc,
-			jems::type_loc(loc, primitive_of <T, 3> ()),
-			x, x, x
+			jems::type(primitive_of <T, 3> (), loc),
+			{ x, x, x }
 		)) {}
 
 	vector_base(const vector_base <T, 4> v, $location)
 		: handle(wrap_in_local(loc,
-			jems::type_loc(loc, primitive_of <T, 3> ()),
-			v
+			jems::type(primitive_of <T, 3> (), loc),
+			{ v }
 		)) {}
 	
 	vector_base(const vector_base <T, 2> &xy, const scalar <T> &z, $location)
 		: handle(wrap_in_local(loc,
-			jems::type_loc(loc, primitive_of <T, 3> ()),
-			xy, z
+			jems::type(primitive_of <T, 3> (), loc),
+			{ xy, z }
 		)) {}
 	
 	vector_base(const scalar <T> &x, const scalar <T> &y, const scalar <T> &z, $location)
 		: handle(wrap_in_local(loc,
-			jems::type_loc(loc, primitive_of <T, 3> ()),
-			x, y, z
+			jems::type(primitive_of <T, 3> (), loc),
+			{ x, y, z }
 		)) {}
 };
 
@@ -118,32 +118,32 @@ public:
 	
 	vector_base(const scalar <T> &x, $location)
 		: handle(wrap_in_local(loc,
-			jems::type_loc(loc, primitive_of <T, 4> ()),
-			x, x, x, x
+			jems::type(primitive_of <T, 4> (), loc),
+			{ x, x, x, x }
 		)) {}
 	
 	vector_base(const vector_base <T, 3> &xyz, const scalar <T> &w, $location)
 		: handle(wrap_in_local(loc,
-			jems::type_loc(loc, primitive_of <T, 4> ()),
-			xyz, w
+			jems::type(primitive_of <T, 4> (), loc),
+			{ xyz, w }
 		)) {}
 
 	vector_base(const vector_base <T, 2> &xy, const scalar <T> &z, const scalar <T> &w, $location)
 		: handle(wrap_in_local(loc,
-			jems::type_loc(loc, primitive_of <T, 4> ()),
-			xy, z, w
+			jems::type(primitive_of <T, 4> (), loc),
+			{ xy, z, w }
 		)) {}
 	
 	vector_base(const vector_base <T, 2> &xy, const vector_base <T, 2> &zw, $location)
 		: handle(wrap_in_local(loc,
-			jems::type_loc(loc, primitive_of <T, 4> ()),
-			xy, zw
+			jems::type(primitive_of <T, 4> (), loc),
+			{ xy, zw }
 		)) {}
 
 	vector_base(const scalar <T> &x, const scalar <T> &y, const scalar <T> &z, const scalar <T> &w, $location)
 		: handle(wrap_in_local(loc,
-			jems::type_loc(loc, primitive_of <T, 4> ()),
-			x, y, z, w
+			jems::type(primitive_of <T, 4> (), loc),
+			{ x, y, z, w }
 		)) {}
 };
 

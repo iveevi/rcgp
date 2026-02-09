@@ -34,10 +34,10 @@ _branch_holder::~_branch_holder()
 	if (elses.has_value())
 		fallback = trace_body(elses->body);
 
-	Tracer::singleton.active().add(Branch {
+	Tracer::singleton.active().add(Instruction(Branch {
 		std::move(segments),
 		std::move(fallback),
-	}, DebugInfo {});
+	}, DebugInfo {}));
 }
 
 _branch_holder operator+(_branch_holder &&a, _elif b)

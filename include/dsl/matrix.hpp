@@ -15,7 +15,7 @@ public:
 	matrix() {
 		if (Tracer::singleton.records.empty())
 			return;
-		auto type = jems::type_loc(std::source_location::current(), primitive_of <T, N, M> ());
+		auto type = jems::type(primitive_of <T, N, M> (), std::source_location::current());
 		init_local_if_tracing(*this, type);
 	}
 
@@ -23,7 +23,7 @@ public:
 	explicit matrix(const matrix <T, A, B> &other)
 		: handle(jems::construct(
 			jems::type(primitive_of <T, N, M> ()),
-			other
+			{ other }
 		)) {}
 
 	static auto reinterpret(const jems::handle &h) {
@@ -41,7 +41,7 @@ public:
 			return *this;
 		}
 
-		auto type = jems::type_loc(std::source_location::current(), primitive_of <T, N, M> ());
+		auto type = jems::type(primitive_of <T, N, M> (), std::source_location::current());
 		assign_or_store(*this, rhs, type);
 		return *this;
 	}
