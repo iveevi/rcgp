@@ -104,10 +104,10 @@ add_test(assignment_store)
 	  }
 	  $0 = Int32
 	  $1 = Local $0
-	  $2 = Local $0
-	  $3 = 7
-	  Store $2 $3
+	  $2 = 7
 	  Store $1 $2
+	  $3 = Local $0
+	  Store $3 $1
 	}
 	)");
 };
@@ -177,9 +177,6 @@ add_test(type_caching)
 	    stage: Subroutine,
 	    name: recorded,
 	  }
-	  $0 = Int32
-	  $1 = Local $0
-	  $2 = Local $0
 	}
 	)");
 };
@@ -230,12 +227,10 @@ add_test(swizzle_xyz)
 	    stage: Subroutine,
 	    name: recorded,
 	  }
-	  $0 = Vec4
-	  $1 = Local $0
-	  $2 = Swizzle($1: xyz)
-	  $3 = Vec3
-	  $4 = Local $3
-	  Store $4 $2
+	  $1 = Swizzle($0: xyz)
+	  $2 = Vec3
+	  $3 = Local $2
+	  Store $3 $1
 	}
 	)");
 };
@@ -258,16 +253,14 @@ add_test(field_access)
 	    name: recorded,
 	  }
 	  $0 = Float
-	  $1 = Local $0
-	  $2 = Int32
+	  $1 = Int32
+	  $2 = RecordingPair { x: $0, y: $1 }
 	  $3 = Local $2
-	  $4 = RecordingPair { x: $0, y: $2 }
-	  $5 = Local $4
-	  $6 = $5.x
-	  $7 = $5.y
-	  $8 = Add $6 $7
-	  $9 = Local $0
-	  Store $9 $8
+	  $4 = $3.x
+	  $5 = $3.y
+	  $6 = Add $4 $5
+	  $7 = Local $0
+	  Store $7 $6
 	}
 	)");
 };
@@ -291,10 +284,9 @@ add_test(array_access)
 	  $1 = Int32[4]
 	  $2 = Local $1
 	  $3 = Local $0
-	  $4 = Local $0
-	  $5 = 2
-	  Store $4 $5
-	  $6 = $2[$4]
+	  $4 = 2
+	  Store $3 $4
+	  $5 = $2[$3]
 	}
 	)");
 };
@@ -330,42 +322,40 @@ add_test(while_loop)
 	  }
 	  $0 = Int32
 	  $1 = Float
-	  $2 = Local $0
-	  $3 = Local $0
-	  $4 = Argument 0: $0
-	  $5 = Argument 1: $0
-	  $6 = Local $1
+	  $2 = Argument 0: $0
+	  $3 = Argument 1: $0
+	  $4 = Local $1
+	  $5 = 0
+	  Store $4 $5
+	  $6 = Local $0
 	  $7 = 0
 	  Store $6 $7
-	  $8 = Local $0
-	  $9 = 0
-	  Store $8 $9
-	  $10 = Block {
+	  $8 = Block {
 	    $0 = Int32
 	    $1 = Float
-	    $11 = Less $8 $4
-	    $12 = Bool
-	    $13 = Local $12
-	    Store $13 $11
-	    $14 = LogicalNot $13
-	    $15 = Local $12
-	    Store $15 $14
-	    $16 = Block {
+	    $9 = Less $6 $2
+	    $10 = Bool
+	    $11 = Local $10
+	    Store $11 $9
+	    $12 = LogicalNot $11
+	    $13 = Local $10
+	    Store $13 $12
+	    $14 = Block {
 	      Break
 	    }
-	    Branch $15: $16
-	    $17 = Add $6 $8
-	    $18 = Local $1
+	    Branch $13: $14
+	    $15 = Add $4 $6
+	    $16 = Local $1
+	    Store $16 $15
+	    Store $4 $16
+	    $17 = Add $6 $3
+	    $18 = Local $0
 	    Store $18 $17
 	    Store $6 $18
-	    $19 = Add $8 $5
-	    $20 = Local $0
-	    Store $20 $19
-	    Store $8 $20
 	  }
-	  Loop $10
-	  $21 = Return 0: $1
-	  Store $21 $6
+	  Loop $8
+	  $19 = Return 0: $1
+	  Store $19 $4
 	}
 	)");
 };
@@ -398,42 +388,40 @@ add_test(for_loop)
 	  }
 	  $0 = Int32
 	  $1 = Float
-	  $2 = Local $0
-	  $3 = Local $0
-	  $4 = Argument 0: $0
-	  $5 = Argument 1: $0
-	  $6 = Local $1
+	  $2 = Argument 0: $0
+	  $3 = Argument 1: $0
+	  $4 = Local $1
+	  $5 = 0
+	  Store $4 $5
+	  $6 = Local $0
 	  $7 = 0
 	  Store $6 $7
-	  $8 = Local $0
-	  $9 = 0
-	  Store $8 $9
-	  $10 = Block {
+	  $8 = Block {
 	    $0 = Int32
 	    $1 = Float
-	    $11 = Less $8 $4
-	    $12 = Bool
-	    $13 = Local $12
-	    Store $13 $11
-	    $14 = LogicalNot $13
-	    $15 = Local $12
-	    Store $15 $14
-	    $16 = Block {
+	    $9 = Less $6 $2
+	    $10 = Bool
+	    $11 = Local $10
+	    Store $11 $9
+	    $12 = LogicalNot $11
+	    $13 = Local $10
+	    Store $13 $12
+	    $14 = Block {
 	      Break
 	    }
-	    Branch $15: $16
-	    $17 = Add $6 $8
-	    $18 = Local $1
+	    Branch $13: $14
+	    $15 = Add $4 $6
+	    $16 = Local $1
+	    Store $16 $15
+	    Store $4 $16
+	    $17 = Add $6 $3
+	    $18 = Local $0
 	    Store $18 $17
 	    Store $6 $18
-	    $19 = Add $8 $5
-	    $20 = Local $0
-	    Store $20 $19
-	    Store $8 $20
 	  }
-	  Loop $10
-	  $21 = Return 0: $1
-	  Store $21 $6
+	  Loop $8
+	  $19 = Return 0: $1
+	  Store $19 $4
 	}
 	)");
 };

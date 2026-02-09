@@ -3,7 +3,6 @@
 #include <type_traits>
 
 #include "scalar.hpp"
-#include "local.hpp"
 #include "primitive_of.hpp"
 
 namespace rcgp {
@@ -12,16 +11,12 @@ template <native_scalar T, size_t N, size_t M>
 class matrix : public jems::handle {
 	explicit matrix(const jems::handle &h) : handle(h) {}
 public:
-	matrix() {
-		if (Tracer::singleton.records.empty())
-			return;
-		auto type = jems::type(primitive_of <T, N, M> (), std::source_location::current());
-		init_local_if_tracing(*this, type);
-	}
+	matrix() = default;
 
 	template <size_t A, size_t B>
 	explicit matrix(const matrix <T, A, B> &other)
-		: handle(jems::construct(
+		: handle(wrap_in_local(
+			std::source_location::current(),
 			jems::type(primitive_of <T, N, M> ()),
 			{ other }
 		)) {}
@@ -34,15 +29,9 @@ public:
 	}
 
 	matrix &operator=(const matrix &rhs) {
-		if (Tracer::singleton.records.empty()) {
-			Reference &self_ref = *this;
-			const Reference &rhs_ref = rhs;
-			self_ref = rhs_ref;
-			return *this;
-		}
-
-		auto type = jems::type(primitive_of <T, N, M> (), std::source_location::current());
-		assign_or_store(*this, rhs, type);
+		if (not _ref)
+			_ref = jems::local(jems::type(primitive_of <T, N, M> ()));
+		jems::store(_ref, rhs);
 		return *this;
 	}
 	
@@ -57,15 +46,5 @@ public:
 		return reinterpret(jems::operation(OperationCode::eMultiply, scalar <T> (-1), m));
 	}
 };
-
-extern template class matrix <int32_t, 2, 2>;
-extern template class matrix <int32_t, 3, 3>;
-extern template class matrix <int32_t, 4, 4>;
-extern template class matrix <uint32_t, 2, 2>;
-extern template class matrix <uint32_t, 3, 3>;
-extern template class matrix <uint32_t, 4, 4>;
-extern template class matrix <float, 2, 2>;
-extern template class matrix <float, 3, 3>;
-extern template class matrix <float, 4, 4>;
 
 } // namespace rcgp

@@ -57,62 +57,46 @@ layout (scalar, set = 0, binding = 0) readonly buffer Buffer0x0 {
 
 void main()
 {
-    uint lvar0;
-    uint lvar1;
-    uint lvar2;
-    mat4 lvar3;
-    uint lvar4;
-    uint lvar5;
-    uint lvar6;
-    uint lvar7;
-    vec4 lvar8;
     SetMeshOutputsEXT(r0b0.value[task_payload.meshlet].vertex_count, r0b0.value[task_payload.meshlet].primitive_count);
-    uint lvar9;
-    lvar9 = 0;
+    uint lvar0;
+    lvar0 = 0;
     while (true) {
-        bool lvar10;
-        lvar10 = (lvar9 < r0b0.value[task_payload.meshlet].vertex_count);
-        bool lvar11;
-        lvar11 = (!lvar10);
-        if (lvar11) {
+        bool lvar1;
+        lvar1 = (lvar0 < r0b0.value[task_payload.meshlet].vertex_count);
+        bool lvar2;
+        lvar2 = (!lvar1);
+        if (lvar2) {
             break;
         }
-        uint lvar12;
-        lvar12 = (r0b0.value[task_payload.meshlet].vertex_offset + lvar9);
-        uint lvar13;
-        vec4 lvar14;
-        vec4 lvar15;
-        lvar15 = (pc.view_proj * r0b0.value[r0b0.value[lvar12]]);
-        vec4 lvar16;
-        gl_MeshVerticesEXT[lvar9].gl_Position = lvar15;
-        vec3 lvar17;
-        vec3 lvar18;
-        lout0[lvar9] = r0b0.value[task_payload.meshlet];
-        uint lvar19;
-        lvar19 = 1;
-        uint lvar20;
-        lvar20 = (lvar9 + lvar19);
-        lvar9 = lvar20;
+        uint lvar3;
+        lvar3 = (r0b0.value[task_payload.meshlet].vertex_offset + lvar0);
+        vec4 lvar4;
+        lvar4 = (pc.view_proj * r0b0.value[r0b0.value[lvar3]]);
+        gl_MeshVerticesEXT[lvar0].gl_Position = lvar4;
+        lout0[lvar0] = r0b0.value[task_payload.meshlet];
+        uint lvar5;
+        lvar5 = 1;
+        uint lvar6;
+        lvar6 = (lvar0 + lvar5);
+        lvar0 = lvar6;
     }
-    uint lvar21;
-    lvar21 = 0;
+    uint lvar7;
+    lvar7 = 0;
     while (true) {
-        bool lvar22;
-        lvar22 = (lvar21 < r0b0.value[task_payload.meshlet].primitive_count);
-        bool lvar23;
-        lvar23 = (!lvar22);
-        if (lvar23) {
+        bool lvar8;
+        lvar8 = (lvar7 < r0b0.value[task_payload.meshlet].primitive_count);
+        bool lvar9;
+        lvar9 = (!lvar8);
+        if (lvar9) {
             break;
         }
-        uint lvar24;
-        lvar24 = (r0b0.value[task_payload.meshlet].primitive_offset + lvar21);
-        uvec3 lvar25;
-        uvec3 lvar26;
-        gl_PrimitiveTriangleIndicesEXT[lvar21] = r0b0.value[lvar24];
-        uint lvar27;
-        lvar27 = 1;
-        uint lvar28;
-        lvar28 = (lvar21 + lvar27);
-        lvar21 = lvar28;
+        uint lvar10;
+        lvar10 = (r0b0.value[task_payload.meshlet].primitive_offset + lvar7);
+        gl_PrimitiveTriangleIndicesEXT[lvar7] = r0b0.value[lvar10];
+        uint lvar11;
+        lvar11 = 1;
+        uint lvar12;
+        lvar12 = (lvar7 + lvar11);
+        lvar7 = lvar12;
     }
 }

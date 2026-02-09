@@ -16,22 +16,18 @@ layout (std430, push_constant) uniform PC {
 
 void main()
 {
-    vec3 lvar0;
-    mat4 lvar1;
-    mat4 lvar2;
+    float lvar0;
+    lvar0 = 1;
+    vec4 lvar1;
+    lvar1 = vec4(lin0, lvar0);
+    vec4 lvar2;
+    lvar2 = (pc.model * lvar1);
     mat4 lvar3;
-    float lvar4;
-    lvar4 = 1;
-    vec4 lvar5;
-    lvar5 = vec4(lin0, lvar4);
-    vec4 lvar6;
-    lvar6 = (pc.model * lvar5);
-    mat4 lvar7;
-    lvar7 = (pc.proj * pc.view);
-    vec4 lvar8;
-    lvar8 = (lvar7 * lvar6);
-    gl_Position = lvar8;
-    vec3 lvar9;
-    lvar9 = vec3(lvar6);
-    lout0 = lvar9;
+    lvar3 = (pc.proj * pc.view);
+    vec4 lvar4;
+    lvar4 = (lvar3 * lvar2);
+    gl_Position = lvar4;
+    vec3 lvar5;
+    lvar5 = vec3(lvar2);
+    lout0 = lvar5;
 }

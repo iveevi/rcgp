@@ -19,15 +19,9 @@ struct vector : public vector_base <T, N> {
 	}
 
 	vector &operator=(const vector &rhs) {
-		if (Tracer::singleton.records.empty()) {
-			Reference &self_ref = *this;
-			const Reference &rhs_ref = rhs;
-			self_ref = rhs_ref;
-			return *this;
-		}
-
-		auto type = jems::type(primitive_of <T, N> ());
-		assign_or_store(*this, rhs, type);
+		if (not this->_ref)
+			this->_ref = jems::local(jems::type(primitive_of <T, N> ()));
+		jems::store(this->_ref, rhs);
 		return *this;
 	}
 
@@ -102,20 +96,5 @@ struct vector : public vector_base <T, N> {
 		return reinterpret(jems::operation(OperationCode::eDivide, scalar <T> (s), v));
 	}
 };
-
-static_assert(sizeof(vector <int32_t, 2>) == sizeof(jems::handle));
-static_assert(sizeof(vector <uint32_t, 3>) == sizeof(jems::handle));
-static_assert(sizeof(vector <float, 4>) == sizeof(jems::handle));
-
-// TODO: separate header with all the specializations
-extern template struct vector <int32_t, 2>;
-extern template struct vector <int32_t, 3>;
-extern template struct vector <int32_t, 4>;
-extern template struct vector <uint32_t, 2>;
-extern template struct vector <uint32_t, 3>;
-extern template struct vector <uint32_t, 4>;
-extern template struct vector <float, 2>;
-extern template struct vector <float, 3>;
-extern template struct vector <float, 4>;
 
 } // namespace rcgp

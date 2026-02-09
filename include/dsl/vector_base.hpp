@@ -3,12 +3,22 @@
 #include <cstdlib>
 #include <type_traits>
 
-#include "local.hpp"
 #include "primitive_of.hpp"
 #include "pygen_macro_swizzle.hpp"
 #include "scalar.hpp"
 
 namespace rcgp {
+
+inline jems::local wrap_in_local(
+	const std::source_location &loc,
+	jems::type type,
+	const std::vector <Reference> &cargs)
+{
+	auto c = jems::construct(type, cargs, loc);
+	auto l = jems::local(type, loc);
+	jems::store(l, c);
+	return l;
+}
 
 template <SwizzleCode S, typename T, typename R>
 struct swizzle_component {
@@ -42,13 +52,7 @@ protected:
 public:
 	SWIZZLE_D2;
 
-	vector_base() {
-		// TODO: Tracer is_active()
-		if (not Tracer::singleton.records.empty()) {
-			auto type = jems::type(primitive_of <T, 2> ());
-			init_local_if_tracing(*this, type);
-		}
-	}
+	vector_base() = default;
 	
 	vector_base(const scalar <T> &x, $location)
 		: handle(wrap_in_local(loc,
@@ -70,12 +74,7 @@ protected:
 public:
 	SWIZZLE_D3;
 
-	vector_base() {
-		if (not Tracer::singleton.records.empty()) {
-			auto type = jems::type(primitive_of <T, 3> ());
-			init_local_if_tracing(*this, type);
-		}
-	}
+	vector_base() = default;
 
 	vector_base(const scalar <T> x, $location)
 		: handle(wrap_in_local(loc,
@@ -109,12 +108,7 @@ protected:
 public:
 	SWIZZLE_D4;
 
-	vector_base() {
-		if (not Tracer::singleton.records.empty()) {
-			auto type = jems::type(primitive_of <T, 4> ());
-			init_local_if_tracing(*this, type);
-		}
-	}
+	vector_base() = default;
 	
 	vector_base(const scalar <T> &x, $location)
 		: handle(wrap_in_local(loc,

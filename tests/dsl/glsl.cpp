@@ -88,19 +88,18 @@ add_test(vs_stream)
 
 	assert_glsl_match(vs, R"(
 	#version 460
-
+	
 	layout (location = 0) in vec3 lin0;
-
+	
 	layout (location = 0) smooth out vec3 lout0;
-
+	
 	void main()
 	{
-	    vec3 lvar0;
-	    float lvar1;
-	    lvar1 = 1;
-	    vec4 lvar2;
-	    lvar2 = vec4(lin0, lvar1);
-	    gl_Position = lvar2;
+	    float lvar0;
+	    lvar0 = 1;
+	    vec4 lvar1;
+	    lvar1 = vec4(lin0, lvar0);
+	    gl_Position = lvar1;
 	    lout0 = lin0;
 	}
 	)");
@@ -124,20 +123,17 @@ add_test(vs_multiple_io)
 	
 	assert_glsl_match(vs, R"(
 	#version 460
-
+	
 	layout (location = 0) in vec3 lin0;
 	layout (location = 1) in vec3 lin1;
 	layout (location = 2) in vec2 lin2;
-
+	
 	layout (location = 0) smooth out vec3 lout0;
 	layout (location = 1) smooth out vec3 lout1;
 	layout (location = 2) smooth out vec2 lout2;
-
+	
 	void main()
 	{
-	    vec2 lvar0;
-	    vec3 lvar1;
-	    vec3 lvar2;
 	    lout0 = lin0;
 	    lout1 = lin1;
 	    lout2 = lin2;
@@ -294,16 +290,14 @@ add_test(sr_return_primitives)
 	assert_glsl_match(sr, R"(
 	void sr(float arg0, uint arg1, out vec3 ret0, out uvec2 ret1)
 	{
-	    uint lvar0;
-	    float lvar1;
-	    vec3 lvar2;
-	    lvar2 = vec3(arg0, arg0, arg0);
-	    uint lvar3;
-	    lvar3 = 13;
-	    uvec2 lvar4;
-	    lvar4 = uvec2(arg1, lvar3);
-	    ret0 = lvar2;
-	    ret1 = lvar4;
+	    vec3 lvar0;
+	    lvar0 = vec3(arg0, arg0, arg0);
+	    uint lvar1;
+	    lvar1 = 13;
+	    uvec2 lvar2;
+	    lvar2 = uvec2(arg1, lvar1);
+	    ret0 = lvar0;
+	    ret1 = lvar2;
 	}
 	)");
 };
@@ -321,20 +315,19 @@ add_test(sr_return_aggregate)
 	void sr(float arg0, out Ray ret0)
 	{
 	    float lvar0;
-	    float lvar1;
-	    lvar1 = 0;
-	    vec3 lvar2;
-	    lvar2 = vec3(lvar1, lvar1, lvar1);
+	    lvar0 = 0;
+	    vec3 lvar1;
+	    lvar1 = vec3(lvar0, lvar0, lvar0);
+	    float lvar2;
+	    lvar2 = 1;
 	    float lvar3;
 	    lvar3 = 1;
-	    float lvar4;
-	    lvar4 = 1;
+	    vec3 lvar4;
+	    lvar4 = vec3(lvar3, arg0, lvar2);
+	    normalize(lvar4);
 	    vec3 lvar5;
-	    lvar5 = vec3(lvar4, arg0, lvar3);
-	    normalize(lvar5);
-	    vec3 lvar6;
-	    lvar6 = normalize(lvar5);
-	    ret0 = Ray(lvar2, lvar6);
+	    lvar5 = normalize(lvar4);
+	    ret0 = Ray(lvar1, lvar5);
 	}
 	)");
 };
@@ -410,28 +403,26 @@ add_test(for_loop)
 	assert_glsl_match(sr, R"(
 	void sr(int arg0, int arg1, out float ret0)
 	{
-	    int lvar0;
+	    float lvar0;
+	    lvar0 = 0;
 	    int lvar1;
-	    float lvar2;
-	    lvar2 = 0;
-	    int lvar3;
-	    lvar3 = 0;
+	    lvar1 = 0;
 	    while (true) {
-	        bool lvar4;
-	        lvar4 = (lvar3 < arg0);
-	        bool lvar5;
-	        lvar5 = (!lvar4);
-	        if (lvar5) {
+	        bool lvar2;
+	        lvar2 = (lvar1 < arg0);
+	        bool lvar3;
+	        lvar3 = (!lvar2);
+	        if (lvar3) {
 	            break;
 	        }
-	        float lvar6;
-	        lvar6 = (lvar2 + lvar3);
-	        lvar2 = lvar6;
-	        int lvar7;
-	        lvar7 = (lvar3 + arg1);
-	        lvar3 = lvar7;
+	        float lvar4;
+	        lvar4 = (lvar0 + lvar1);
+	        lvar0 = lvar4;
+	        int lvar5;
+	        lvar5 = (lvar1 + arg1);
+	        lvar1 = lvar5;
 	    }
-	    ret0 = lvar2;
+	    ret0 = lvar0;
 	}
 	)");
 };

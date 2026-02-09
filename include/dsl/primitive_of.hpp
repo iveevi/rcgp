@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include "enumerations.hpp"
 
 namespace rcgp {

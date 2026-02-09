@@ -20,23 +20,20 @@ add_test(vs_fs_io_rates)
 
 	assert_glsl_match(fs, R"(
 	#version 460
-
+	
 	layout (location = 0) smooth in float lin0;
 	layout (location = 1) noperspective in vec2 lin1;
 	layout (location = 2) flat in uvec4 lin2;
-
+	
 	layout (location = 0) out vec3 lout0;
-
+	
 	void main()
 	{
-	    uvec4 lvar0;
-	    vec2 lvar1;
-	    float lvar2;
-	    float lvar3;
-	    lvar3 = 1;
-	    vec3 lvar4;
-	    lvar4 = vec3(lvar3, lvar3, lvar3);
-	    lout0 = lvar4;
+	    float lvar0;
+	    lvar0 = 1;
+	    vec3 lvar1;
+	    lvar1 = vec3(lvar0, lvar0, lvar0);
+	    lout0 = lvar1;
 	}
 	)");
 };
