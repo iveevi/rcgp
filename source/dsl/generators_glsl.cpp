@@ -340,6 +340,19 @@ void emit_statement(GLSLEmitter &em, const Reference &ref)
 	fatal("unhandled case for emit_statement: {}", ref->repr());
 }
 
+bool has_side_effects(const BuiltinIntrinsicCode &code)
+{
+	static const std::set <BuiltinIntrinsicCode> side_effects {
+		BuiltinIntrinsicCode::eBreak,
+		BuiltinIntrinsicCode::eContinue,
+		BuiltinIntrinsicCode::eDiscard,
+		BuiltinIntrinsicCode::eEmitMeshTasksEXT,
+		BuiltinIntrinsicCode::eSetMeshOutputsEXT,
+	};
+
+	return side_effects.contains(code);
+}
+
 void emit_body(GLSLEmitter &em, const SharedBlockReference &sbr)
 {
 	// TODO: use heuristics to guage which instructions should be promoted
@@ -348,9 +361,12 @@ void emit_body(GLSLEmitter &em, const SharedBlockReference &sbr)
 
 	for (auto &instr : *sbr) {
 		vswitch (*instr) {
+		vcase(BuiltinIntrinsic): {
+			auto &bintr = instr->as <BuiltinIntrinsic> ();
+			if (not has_side_effects(bintr.code))
+				break;
+		}
 		vcase(Branch):
-		vcase(BuiltinIntrinsic):
-			// TODO: skip those without side effects
 		vcase(Invocation):
 		vcase(Local):
 		vcase(Loop):

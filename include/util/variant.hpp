@@ -1,6 +1,7 @@
 #pragma once
 
 #include <variant>
+#include <optional>
 
 namespace rcgp {
 
@@ -33,6 +34,14 @@ struct variant : std::variant <Args...> {
 	template <typename T>
 	const T &as() const {
 		return std::get <T> (*this);
+	}
+	
+	template <typename T>
+	std::optional <T> maybe() {
+		if (is <T> ())
+			return as <T> ();
+		else
+			return std::nullopt;
 	}
 
 	template <typename T>

@@ -2,7 +2,7 @@
 
 #define SUITE "recording_verbose"
 
-// Recording:
+// Recording (verbose):
 // Testing that our DSL records the correct instructions into the Blocks.
 
 struct RecordingPair {

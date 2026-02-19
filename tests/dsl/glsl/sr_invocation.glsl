@@ -42,7 +42,6 @@ void sr3(float arg0, out Ray ret0)
     lvar7 = 1;
     vec3 lvar8;
     lvar8 = vec3(lvar7, arg0, lvar6);
-    normalize(lvar8);
     vec3 lvar9;
     lvar9 = normalize(lvar8);
     ret0 = Ray(lvar5, lvar9);

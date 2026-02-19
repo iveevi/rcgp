@@ -70,7 +70,6 @@ void main()
             lvar13 = vec3(pc.frustum_planes[lvar9]);
             float lvar14;
             lvar14 = pc.frustum_planes[lvar9].w;
-            dot(lvar13, lvar6);
             float lvar15;
             lvar15 = dot(lvar13, lvar6);
             float lvar16;

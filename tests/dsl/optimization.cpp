@@ -1,15 +1,22 @@
 #include "common.hpp"
 #include "common_resources.hpp"
 
-#define SUITE "glsl"
+#include <dsl/optimization.hpp>
 
-// GLSL:
-// Testing that shader modules and subroutines are generated into reasonable
-// GLSL shader code.
+#define SUITE "optimization"
+
+// Optimization:
+// Testing that the optimization pass yields the correct instructions.
+
+static auto flags =
+	OptimizationPhases::eDeadCodeElimination
+	| OptimizationPhases::eLocalElision;
 
 add_test(vs_empty)
 {
 	auto vs = $shader(vertex)() {};
+
+	optimize(vs, OptimizationPhases::eDeadCodeElimination);
 
 	assert_glsl_match(vs, R"(
 	#version 460
@@ -27,16 +34,14 @@ add_test(vs_clip)
 		clip = float4(1);
 	};
 
+	optimize(vs, flags);
+
 	assert_glsl_match(vs, R"(
 	#version 460
 
 	void main()
 	{
-	    float lvar0;
-	    lvar0 = 1;
-	    vec4 lvar1;
-	    lvar1 = vec4(lvar0, lvar0, lvar0, lvar0);
-	    gl_Position = lvar1;
+	    gl_Position = vec4(1, 1, 1, 1);
 	}
 	)");
 };
@@ -50,6 +55,8 @@ add_test(vs_louts)
 			Flat { uint2(1, 4) },
 		};
 	};
+	
+	optimize(vs, flags);
 
 	assert_glsl_match(vs, R"(
 	#version 460
@@ -59,18 +66,8 @@ add_test(vs_louts)
 
 	void main()
 	{
-	    float lvar0;
-	    lvar0 = 1;
-	    vec3 lvar1;
-	    lvar1 = vec3(lvar0, lvar0, lvar0);
-	    lout0 = lvar1;
-	    uint lvar2;
-	    lvar2 = 4;
-	    uint lvar3;
-	    lvar3 = 1;
-	    uvec2 lvar4;
-	    lvar4 = uvec2(lvar3, lvar2);
-	    lout1 = lvar4;
+	    lout0 = vec3(1, 1, 1);
+	    lout1 = uvec2(1, 4);
 	}
 	)");
 };
@@ -85,6 +82,8 @@ add_test(vs_stream)
 		cpos = float4(p, 1);
 		return p;
 	};
+	
+	optimize(vs, flags);
 
 	assert_glsl_match(vs, R"(
 	#version 460
@@ -95,11 +94,7 @@ add_test(vs_stream)
 	
 	void main()
 	{
-	    float lvar0;
-	    lvar0 = 1;
-	    vec4 lvar1;
-	    lvar1 = vec4(lin0, lvar0);
-	    gl_Position = lvar1;
+	    gl_Position = vec4(lin0, 1);
 	    lout0 = lin0;
 	}
 	)");
@@ -120,6 +115,8 @@ add_test(vs_multiple_io)
 			Smooth <float2> { uv },
 		};
 	};
+	
+	optimize(vs, flags);
 	
 	assert_glsl_match(vs, R"(
 	#version 460
@@ -155,10 +152,13 @@ add_test(vs_push_constant)
 		cpos = view.proj * view.view * wpos;
 		return float3(wpos);
 	};
+	
+	optimize(vs, flags);
 
-	assert_glsl_match_file(vs, "glsl/vs_push_constant.glsl");
+	assert_glsl_match_file(vs, "optimization/vs_push_constant.glsl");
 };
 
+// TODO: readable version
 add_test(fr_diffuse_lighting)
 {
 	auto fs = $shader(fragment)(
@@ -189,12 +189,15 @@ add_test(fr_diffuse_lighting)
 
 		return color;
 	};
+	
+	optimize(fs, flags);
 
 	// TODO: get rid of side-effect (i.e. value based)
 	// free intrinsics that are by themselves...
-	assert_glsl_match_file(fs, "glsl/fr_diffuse_lighting.glsl");
+	assert_glsl_match_file(fs, "optimization/fr_diffuse_lighting.glsl");
 };
 
+// TODO: readable version
 add_test(ts_meshlets)
 {
 	auto ts = $shader(task)(
@@ -232,10 +235,13 @@ add_test(ts_meshlets)
 
 		return payload;
 	};
+
+	optimize(ts, flags);
 	
-	assert_glsl_match_file(ts, "glsl/ts_meshlets.glsl");
+	assert_glsl_match_file(ts, "optimization/ts_meshlets.glsl");
 };
 
+// TODO: readable version
 add_test(ms_meshlets)
 {
 	auto ms = $shader(mesh)(
@@ -278,7 +284,9 @@ add_test(ms_meshlets)
 		return out;
 	};
 
-	assert_glsl_match_file(ms, "glsl/ms_meshlets.glsl");
+	optimize(ms, flags);
+
+	assert_glsl_match_file(ms, "optimization/ms_meshlets.glsl");
 };
 
 add_test(sr_return_primitives)
@@ -286,18 +294,14 @@ add_test(sr_return_primitives)
 	auto sr = $subroutine(sr)(f32 x, u32 y) {
 		return std::tuple { float3(x), uint2(y, 13) };
 	};
+
+	optimize(sr, flags);
 	
 	assert_glsl_match(sr, R"(
 	void sr(float arg0, uint arg1, out vec3 ret0, out uvec2 ret1)
 	{
-	    vec3 lvar0;
-	    lvar0 = vec3(arg0, arg0, arg0);
-	    uint lvar1;
-	    lvar1 = 13;
-	    uvec2 lvar2;
-	    lvar2 = uvec2(arg1, lvar1);
-	    ret0 = lvar0;
-	    ret1 = lvar2;
+	    ret0 = vec3(arg0, arg0, arg0);
+	    ret1 = uvec2(arg1, 13);
 	}
 	)");
 };
@@ -310,23 +314,13 @@ add_test(sr_return_aggregate)
 			normalize(float3(1, z, 1)),
 		};
 	};
+
+	optimize(sr, flags);
 	
 	assert_glsl_match(sr, R"(
 	void sr(float arg0, out Ray ret0)
 	{
-	    float lvar0;
-	    lvar0 = 0;
-	    vec3 lvar1;
-	    lvar1 = vec3(lvar0, lvar0, lvar0);
-	    float lvar2;
-	    lvar2 = 1;
-	    float lvar3;
-	    lvar3 = 1;
-	    vec3 lvar4;
-	    lvar4 = vec3(lvar3, arg0, lvar2);
-	    vec3 lvar5;
-	    lvar5 = normalize(lvar4);
-	    ret0 = Ray(lvar1, lvar5);
+	    ret0 = Ray(vec3(0, 0, 0), normalize(vec3(1, arg0, 1)));
 	}
 	)");
 };
@@ -355,7 +349,12 @@ add_test(sr_invocation)
 		return std::tuple { r1, r2a, r2b, r3.origin, r3.direction };
 	};
 
-	assert_glsl_match_file(vs, "glsl/sr_invocation.glsl");
+	optimize(sr1, flags);
+	optimize(sr2, flags);
+	optimize(sr3, flags);
+	optimize(vs, flags);
+
+	assert_glsl_match_file(vs, "optimization/sr_invocation.glsl");
 };
 
 add_test(sr_dependencies)
@@ -385,7 +384,12 @@ add_test(sr_dependencies)
 		auto z = $use(saxpy3)(alpha, x, y);
 	};
 
-	assert_glsl_match_file(cs, "glsl/sr_dependencies.glsl");
+	optimize(saxpy, flags);
+	optimize(saxpy2, flags);
+	optimize(saxpy3, flags);
+	optimize(cs, flags);
+
+	assert_glsl_match_file(cs, "optimization/sr_dependencies.glsl");
 };
 
 add_test(for_loop)
@@ -399,6 +403,8 @@ add_test(for_loop)
 		return sum;
 	};
 
+	optimize(sr, flags);
+
 	assert_glsl_match(sr, R"(
 	void sr(int arg0, int arg1, out float ret0)
 	{
@@ -407,19 +413,11 @@ add_test(for_loop)
 	    int lvar1;
 	    lvar1 = 0;
 	    while (true) {
-	        bool lvar2;
-	        lvar2 = (lvar1 < arg0);
-	        bool lvar3;
-	        lvar3 = (!lvar2);
-	        if (lvar3) {
+	        if ((!(lvar1 < arg0))) {
 	            break;
 	        }
-	        float lvar4;
-	        lvar4 = (lvar0 + lvar1);
-	        lvar0 = lvar4;
-	        int lvar5;
-	        lvar5 = (lvar1 + arg1);
-	        lvar1 = lvar5;
+	        lvar0 = (lvar0 + lvar1);
+	        lvar1 = (lvar1 + arg1);
 	    }
 	    ret0 = lvar0;
 	}
@@ -439,5 +437,7 @@ add_test(branching)
 		};
 	};
 	
-	assert_glsl_match_file(sr, "glsl/sr_branching.glsl");
+	optimize(sr, flags);
+	
+	assert_glsl_match_file(sr, "optimization/sr_branching.glsl");
 };
