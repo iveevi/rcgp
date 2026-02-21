@@ -30,7 +30,9 @@ void main()
         if ((!(lvar1 < r0b0.count))) {
             break;
         }
-        lvar0 = (lvar0 + (((texture(r0b0, lin2).xyz * max(dot(lin1, normalize((r0b0.lights[lvar1].position - lin0))), 0)) * r0b0.lights[lvar1].color) * (r0b0.lights[lvar1].intensity / max(dot((r0b0.lights[lvar1].position - lin0), (r0b0.lights[lvar1].position - lin0)), 0.0001))));
+        fwdxPointLight lvar2 = r0b0.lights[lvar1];
+        vec3 lvar3 = (lvar2.position - lin0);
+        lvar0 = (lvar0 + (((texture(r0b0, lin2).xyz * max(dot(lin1, normalize(lvar3)), 0)) * lvar2.color) * (lvar2.intensity / max(dot(lvar3, lvar3), 0.0001))));
         lvar1 = (lvar1 + 1);
     }
     lout0 = lvar0;

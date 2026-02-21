@@ -16,6 +16,7 @@ layout (std430, push_constant) uniform PC {
 
 void main()
 {
-    gl_Position = ((pc.proj * pc.view) * (pc.model * vec4(lin0, 1)));
-    lout0 = vec3((pc.model * vec4(lin0, 1)));
+    vec4 lvar0 = (pc.model * vec4(lin0, 1));
+    gl_Position = ((pc.proj * pc.view) * lvar0);
+    lout0 = vec3(lvar0);
 }

@@ -7,9 +7,11 @@
 namespace rcgp {
 
 enum class OptimizationPhases : uint8_t {
+	eNone = 0b0,
 	eReadability = 0b1,
+	eDeadCodeElimination = 0b10,
 	eLocalElision = 0b100,
-        eDeadCodeElimination = 0b10,
+	eReuse = 0b1000,
 };
 
 inline auto operator|(OptimizationPhases a, OptimizationPhases b)

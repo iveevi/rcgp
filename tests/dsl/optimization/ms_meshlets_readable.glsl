@@ -68,17 +68,20 @@ void main()
         if ((!(lvar4 < lvar2))) {
             break;
         }
-        gl_MeshVerticesEXT[lvar4].gl_Position = (pc.view_proj * r0b0.value[r0b0.value[(lvar1.vertex_offset + lvar4)]]);
+        uint lvar5 = r0b0.value[(lvar1.vertex_offset + lvar4)];
+        vec4 lvar6 = (pc.view_proj * r0b0.value[lvar5]);
+        gl_MeshVerticesEXT[lvar4].gl_Position = lvar6;
         lout0[lvar4] = r0b0.value[lvar0];
         lvar4 = (lvar4 + 1);
     }
-    uint lvar5;
-    lvar5 = 0;
+    uint lvar7;
+    lvar7 = 0;
     while (true) {
-        if ((!(lvar5 < lvar3))) {
+        if ((!(lvar7 < lvar3))) {
             break;
         }
-        gl_PrimitiveTriangleIndicesEXT[lvar5] = r0b0.value[(lvar1.primitive_offset + lvar5)];
-        lvar5 = (lvar5 + 1);
+        uvec3 lvar8 = r0b0.value[(lvar1.primitive_offset + lvar7)];
+        gl_PrimitiveTriangleIndicesEXT[lvar7] = lvar8;
+        lvar7 = (lvar7 + 1);
     }
 }

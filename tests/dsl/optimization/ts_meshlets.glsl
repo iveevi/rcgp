@@ -35,22 +35,27 @@ layout (std430, set = 0, binding = 0) readonly buffer Buffer0x0 {
 
 void main()
 {
-    if ((((gl_WorkGroupID.y * pc.task_group_width) + gl_WorkGroupID.x) < pc.meshlet_count)) {
-        bool lvar0;
-        lvar0 = true;
-        uint lvar1;
-        lvar1 = 0;
+    uvec3 lvar0 = gl_WorkGroupID;
+    uint lvar1 = ((lvar0.y * pc.task_group_width) + lvar0.x);
+    if ((lvar1 < pc.meshlet_count)) {
+        meshletsxMeshletData lvar2 = r0b0.value[lvar1];
+        vec4 lvar3 = lvar2.bounds;
+        bool lvar4;
+        lvar4 = true;
+        uint lvar5;
+        lvar5 = 0;
         while (true) {
-            if ((!(lvar1 < 6))) {
+            if ((!(lvar5 < 6))) {
                 break;
             }
-            if (((dot(vec3(pc.frustum_planes[lvar1]), vec3(r0b0.value[((gl_WorkGroupID.y * pc.task_group_width) + gl_WorkGroupID.x)].bounds)) + pc.frustum_planes[lvar1].w) < (-1 * r0b0.value[((gl_WorkGroupID.y * pc.task_group_width) + gl_WorkGroupID.x)].bounds.w))) {
-                lvar0 = false;
+            vec4 lvar6 = pc.frustum_planes[lvar5];
+            if (((dot(vec3(lvar6), vec3(lvar3)) + lvar6.w) < (-1 * lvar3.w))) {
+                lvar4 = false;
             }
-            lvar1 = (lvar1 + 1);
+            lvar5 = (lvar5 + 1);
         }
-        if (lvar0) {
-            task_payload.meshlet = ((gl_WorkGroupID.y * pc.task_group_width) + gl_WorkGroupID.x);
+        if (lvar4) {
+            task_payload.meshlet = lvar1;
             EmitMeshTasksEXT(1, 1, 1);
         }
     }

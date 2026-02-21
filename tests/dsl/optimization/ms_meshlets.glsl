@@ -57,24 +57,28 @@ layout (scalar, set = 0, binding = 0) readonly buffer Buffer0x0 {
 
 void main()
 {
-    SetMeshOutputsEXT(r0b0.value[task_payload.meshlet].vertex_count, r0b0.value[task_payload.meshlet].primitive_count);
-    uint lvar0;
-    lvar0 = 0;
+    uint lvar0 = task_payload.meshlet;
+    meshletsxMeshletData lvar1 = r0b0.value[lvar0];
+    uint lvar2 = lvar1.vertex_count;
+    uint lvar3 = lvar1.primitive_count;
+    SetMeshOutputsEXT(lvar2, lvar3);
+    uint lvar4;
+    lvar4 = 0;
     while (true) {
-        if ((!(lvar0 < r0b0.value[task_payload.meshlet].vertex_count))) {
+        if ((!(lvar4 < lvar2))) {
             break;
         }
-        gl_MeshVerticesEXT[lvar0].gl_Position = (pc.view_proj * r0b0.value[r0b0.value[(r0b0.value[task_payload.meshlet].vertex_offset + lvar0)]]);
-        lout0[lvar0] = r0b0.value[task_payload.meshlet];
-        lvar0 = (lvar0 + 1);
+        gl_MeshVerticesEXT[lvar4].gl_Position = (pc.view_proj * r0b0.value[r0b0.value[(lvar1.vertex_offset + lvar4)]]);
+        lout0[lvar4] = r0b0.value[lvar0];
+        lvar4 = (lvar4 + 1);
     }
-    uint lvar1;
-    lvar1 = 0;
+    uint lvar5;
+    lvar5 = 0;
     while (true) {
-        if ((!(lvar1 < r0b0.value[task_payload.meshlet].primitive_count))) {
+        if ((!(lvar5 < lvar3))) {
             break;
         }
-        gl_PrimitiveTriangleIndicesEXT[lvar1] = r0b0.value[(r0b0.value[task_payload.meshlet].primitive_offset + lvar1)];
-        lvar1 = (lvar1 + 1);
+        gl_PrimitiveTriangleIndicesEXT[lvar5] = r0b0.value[(lvar1.primitive_offset + lvar5)];
+        lvar5 = (lvar5 + 1);
     }
 }

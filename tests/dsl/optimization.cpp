@@ -10,12 +10,11 @@
 
 static auto flags =
 	OptimizationPhases::eDeadCodeElimination
-	| OptimizationPhases::eLocalElision;
+	| OptimizationPhases::eLocalElision
+	| OptimizationPhases::eReuse;
 
 static auto readable_flags =
-	OptimizationPhases::eDeadCodeElimination
-	| OptimizationPhases::eLocalElision
-	| OptimizationPhases::eReadability;
+	flags | OptimizationPhases::eReadability;
 
 add_test(vs_empty)
 {
@@ -99,8 +98,9 @@ add_test(vs_stream)
 	
 	void main()
 	{
-	    gl_Position = vec4(lin0, 1);
-	    lout0 = lin0;
+	    vec3 lvar0 = lin0;
+	    gl_Position = vec4(lvar0, 1);
+	    lout0 = lvar0;
 	}
 	)");
 };

@@ -27,12 +27,17 @@ void main()
     int lvar1;
     lvar1 = 0;
     while (true) {
-        if ((!(lvar1 < r0b0.count))) {
+        bool lvar2 = (!(lvar1 < r0b0.count));
+        if (lvar2) {
             break;
         }
-        fwdxPointLight lvar2 = r0b0.lights[lvar1];
-        vec3 lvar3 = (lvar2.position - lin0);
-        lvar0 = (lvar0 + (((texture(r0b0, lin2).xyz * max(dot(lin1, normalize(lvar3)), 0)) * lvar2.color) * (lvar2.intensity / max(dot(lvar3, lvar3), 0.0001))));
+        fwdxPointLight lvar3 = r0b0.lights[lvar1];
+        vec3 lvar4 = (lvar3.position - lin0);
+        float lvar5 = max(dot(lvar4, lvar4), 0.0001);
+        float lvar6 = max(dot(lin1, normalize(lvar4)), 0);
+        vec3 lvar7 = (texture(r0b0, lin2).xyz * lvar6);
+        vec3 lvar8 = ((lvar7 * lvar3.color) * (lvar3.intensity / lvar5));
+        lvar0 = (lvar0 + lvar8);
         lvar1 = (lvar1 + 1);
     }
     lout0 = lvar0;
