@@ -57,14 +57,10 @@ layout (scalar, set = 0, binding = 0) readonly buffer Buffer0x0 {
 
 void main()
 {
-    uint lvar0;
-    lvar0 = task_payload.meshlet;
-    meshletsxMeshletData lvar1;
-    lvar1 = r0b0.value[lvar0];
-    uint lvar2;
-    lvar2 = lvar1.vertex_count;
-    uint lvar3;
-    lvar3 = lvar1.primitive_count;
+    uint lvar0 = task_payload.meshlet;
+    meshletsxMeshletData lvar1 = r0b0.value[lvar0];
+    uint lvar2 = lvar1.vertex_count;
+    uint lvar3 = lvar1.primitive_count;
     SetMeshOutputsEXT(lvar2, lvar3);
     uint lvar4;
     lvar4 = 0;

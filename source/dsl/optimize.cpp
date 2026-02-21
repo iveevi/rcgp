@@ -44,13 +44,13 @@ void add_to_usage_maps(
 {
 	auto &i2o = wbs.i2o;
 	auto &o2i = wbs.o2i;
+	auto &operands = i2o.try_emplace(ref).first->second;
 
 	auto add = [&](const Reference &opd) {
 		if (not opd) return;
-		i2o.at(ref).add(opd);
-		if (not o2i.contains(opd))
-			o2i.emplace(opd, InstructionSet());
-		o2i.at(opd).add(ref);
+		operands.add(opd);
+		auto &users = o2i.try_emplace(opd).first->second;
+		users.add(ref);
 	};
 
 	ref->apply(add);
@@ -74,12 +74,9 @@ void build_usage_map(
 	auto &i2o = wbs.i2o;
 	auto &o2i = wbs.o2i;
 	for (auto &instr : *sbr) {
-		wbs.blocks.emplace(instr, sbr);
-		if (not i2o.contains(instr))
-			i2o.emplace(instr, InstructionSet());
-		if (not o2i.contains(instr))
-			o2i.emplace(instr, InstructionSet());
-
+		wbs.blocks.try_emplace(instr, sbr);
+		i2o.try_emplace(instr);
+		o2i.try_emplace(instr);
 		add_to_usage_maps(instr, wbs);
 	}
 }
@@ -337,11 +334,9 @@ void readability_pass(const SharedBlockReference &sbr)
 		// Promote to local
 		auto &origin = wbs.blocks.at(promote);
 
-		// TODO: locals with initialization
 		auto type = get_or_add_type_ref(origin, promote);
 		auto index = std::find(origin->begin(), origin->end(), promote) - origin->begin();
-		auto local = origin->add(index + 1, Local(type));
-		origin->add(index + 2, Store(local, promote));
+		auto local = origin->add(index + 1, Local { type, promote });
 
 		auto &uses = wbs.o2i.at(promote).ordered;
 		for (auto &user : uses) {

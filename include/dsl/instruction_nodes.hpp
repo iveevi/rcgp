@@ -92,6 +92,7 @@ struct Loop {
 
 struct Local {
 	Reference type;
+	Reference init = nullptr;
 
 	std::string repr() const;
 };

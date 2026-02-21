@@ -80,9 +80,12 @@ struct Instruction : variant <
 				fn(segment.cond);
 			break;
 		}
-		vcase(Local):
-			fn(as <Local> ().type);
+		vcase(Local): {
+			auto &local = as <Local> ();
+			fn(local.type);
+			fn(local.init);
 			break;
+		}
 		vcase(Invocation): {
 			auto &inv = as <Invocation> ();
 			for (auto &arg : inv.args)

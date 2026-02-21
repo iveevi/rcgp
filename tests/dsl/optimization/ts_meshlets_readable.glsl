@@ -35,15 +35,11 @@ layout (std430, set = 0, binding = 0) readonly buffer Buffer0x0 {
 
 void main()
 {
-    uvec3 lvar0;
-    lvar0 = gl_WorkGroupID;
-    uint lvar1;
-    lvar1 = ((lvar0.y * pc.task_group_width) + lvar0.x);
+    uvec3 lvar0 = gl_WorkGroupID;
+    uint lvar1 = ((lvar0.y * pc.task_group_width) + lvar0.x);
     if ((lvar1 < pc.meshlet_count)) {
-        meshletsxMeshletData lvar2;
-        lvar2 = r0b0.value[lvar1];
-        vec4 lvar3;
-        lvar3 = lvar2.bounds;
+        meshletsxMeshletData lvar2 = r0b0.value[lvar1];
+        vec4 lvar3 = lvar2.bounds;
         bool lvar4;
         lvar4 = true;
         uint lvar5;
@@ -52,8 +48,7 @@ void main()
             if ((!(lvar5 < 6))) {
                 break;
             }
-            vec4 lvar6;
-            lvar6 = pc.frustum_planes[lvar5];
+            vec4 lvar6 = pc.frustum_planes[lvar5];
             if (((dot(vec3(lvar6), vec3(lvar3)) + lvar6.w) < (-1 * lvar3.w))) {
                 lvar4 = false;
             }

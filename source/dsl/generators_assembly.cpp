@@ -238,6 +238,14 @@ void emit_instr(AsmEmitter &em, const Reference &ref)
 	}
 	vcase(Local): {
 		auto &local = ref->as <Local> ();
+		if (local.init) {
+			return em.emit_fmt_assign(
+				ref,
+				"Local {} = {}",
+				type_reference(em, local.type),
+				em.ref(local.init)
+			);
+		}
 		return em.emit_fmt_assign(ref, "Local {}", type_reference(em, local.type));
 	}
 	vcase(Store): {

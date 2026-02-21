@@ -266,6 +266,13 @@ void emit_statement(GLSLEmitter &em, const Reference &ref)
 		auto &local = ref->as <Local> ();
 		auto name = em.new_id(ref);
 		auto repr = type_repr(em, local.type);
+		if (local.init) {
+			return em.emit_fmt_line(
+				"{} {}{} = {};",
+				repr.base, name,
+				repr.suffix, expr_repr(em, local.init)
+			);
+		}
 		return em.emit_fmt_line("{} {}{};", repr.base, name, repr.suffix);
 	}
 	vcase(Store): {
