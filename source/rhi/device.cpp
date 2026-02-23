@@ -8,13 +8,13 @@
 
 #include <GLFW/glfw3.h>
 
+#include "meta/command_stream.hpp"
 #include "rhi/command_buffer.hpp"
 #include "rhi/command_pool.hpp"
 #include "rhi/descriptor_pool.hpp"
 #include "rhi/device.hpp"
-#include "rhi/window.hpp"
 #include "rhi/timestamp_pool.hpp"
-
+#include "rhi/window.hpp"
 #include "util/cti.hpp"
 
 namespace rcgp {
@@ -80,6 +80,18 @@ auto Device::new_command_buffers(const CommandPool &cpool, size_t count) const
 
 	return logical.allocateCommandBuffers(info)
 		| std::views::transform([&] (auto x) { return CommandBuffer(x, &loader); })
+		| std::ranges::to <std::vector> ();
+}
+
+auto Device::new_command_streams(const CommandPool &cpool, size_t count) const
+	-> std::vector <CommandStream>
+{
+	auto info = vk::CommandBufferAllocateInfo()
+		.setCommandBufferCount(count)
+		.setCommandPool(cpool);
+
+	return logical.allocateCommandBuffers(info)
+		| std::views::transform([&] (auto x) { return CommandStream(x, &loader); })
 		| std::ranges::to <std::vector> ();
 }
 	

@@ -144,4 +144,8 @@ TYPE_TRAIT(is_vertex_buffer);
 	template <typename T, template <typename> typename L>
 	TYPE_TRAIT_INCLUDES(is_vertex_buffer, VertexMirrorBuffer <T, L>);
 
+TYPE_TRAIT(is_index_buffer);
+	template <typename T, template <typename> typename L>
+	TYPE_TRAIT_INCLUDES(is_index_buffer, IndexMirrorBuffer <T, L>);
+
 } // namespace rcgp

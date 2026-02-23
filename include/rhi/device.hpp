@@ -10,10 +10,11 @@
 namespace rcgp {
 
 // Forward declarations
+struct CommandBuffer;
 struct CommandPool;
+struct CommandStream;
 struct DescriptorPool;
 struct Frame;
-struct CommandBuffer;
 struct TimestampQueryPool;
 struct TimestampQueryResult;
 struct Window;
@@ -56,8 +57,8 @@ struct Device {
 		return logical.createFramebuffer(fb_info);
 	}
 
-	// TODO: return neutral command buffers
 	auto new_command_buffers(const CommandPool &cpool, size_t count) const -> std::vector <CommandBuffer>;
+	auto new_command_streams(const CommandPool &cpool, size_t count) const -> std::vector <CommandStream>;
 	auto new_descriptor_sets(const DescriptorPool &dpool, const vk::ArrayProxy <vk::DescriptorSetLayout> &dsls) const -> std::vector <vk::DescriptorSet>;
 
 	auto new_shader_module(std::span <const uint32_t> spirv) const -> vk::ShaderModule {

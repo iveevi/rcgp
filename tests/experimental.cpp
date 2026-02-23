@@ -3,7 +3,6 @@
 #include <cstdlib>
 #include <iostream>
 #include <print>
-#include <tuple>
 #include <vector>
 
 #include <glm/glm.hpp>
@@ -13,91 +12,6 @@
 #include <rcgp.hpp>
 
 using namespace rcgp;
-
-template <typename ... Buffers>
-requires (is_vertex_buffer_v <Buffers> && ...)
-struct DrawParameters {
-	std::tuple <Buffers...> vertex_buffers;
-
-	DrawParameters(const Buffers &... buffers)
-		: vertex_buffers(buffers...) {}
-};
-
-struct DrawDispatchSize {
-	uint32_t vertices = 0;
-	uint32_t instances = 1;
-};
-
-template <typename Wrapper>
-using UnwrapDesc = BoundDescriptor <Wrapper::contract::handle>;
-
-template <typename Wrapper>
-using UnwrapConst = ResourceTypeFor <Wrapper::contract::handle>;
-
-template <typename GRCs>
-using DescTuple = decltype([] {
-	using DescWrappers = descriptable_resources_t <GRCs>;
-	using DescList = DescWrappers::template map <UnwrapDesc>;
-	using DescTuple = DescList::template invoke <std::tuple>;
-	return DescTuple();
-} ());
-
-template <typename GRCs>
-using ConstTuple = decltype([] {
-	using ConstWrappers = push_constant_resources_t <GRCs>;
-	using ConstList = ConstWrappers::template map <UnwrapConst>;
-	using ConstTuple = ConstList::template invoke <std::tuple>;
-	return ConstTuple();
-} ());
-
-struct CommandStream : CommandBuffer {
-	template <Topology T, auto &... streams, typename GAMAP, typename GRCs>
-	auto draw(
-		const RasterizationPipeline <T, Tlist <contract <streams>...>, GAMAP, GRCs> &pipeline,
-		const DescTuple <GRCs> &descriptors,
-		const ConstTuple <GRCs> &push_constants,
-		const DrawParameters <ResourceTypeFor <streams>...> &parameters,
-		const DrawDispatchSize &dispatch_size
-	) const {
-		// TODO: check with caches
-		super::bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.handle);
-		
-		using DescWrappers = descriptable_resources_t <GRCs>;
-		constexpr_for(Is, DescWrappers::size,
-			(super::bindDescriptorSets(
-				vk::PipelineBindPoint::eGraphics,
-				pipeline.layout,
-				std::get <Is> (descriptors).set,
-				{ std::get <Is> (descriptors).handle },
-				{}
-			), ...)
-		);
-
-		using ConstWrappers = push_constant_resources_t <GRCs>;
-		constexpr_for(Is, ConstWrappers::size,
-			([&] {
-				using Wrapper = ConstWrappers::template get <Is>;
-				constexpr auto &ref = Wrapper::contract::handle;
-				super::pushConstants <ResourceTypeFor <ref>> (
-					pipeline.layout,
-					stage_flags_for_v <ref, GRCs>,
-					push_constant_offset_for <ref> (GRCs()),
-					std::get <Is> (push_constants)
-				);
-			} (), ...)
-		);
-		
-		constexpr_for(Is, sizeof...(streams),
-			(super::bindVertexBuffers(
-				Is,
-				{ std::get <Is> (parameters.vertex_buffers).handle },
-				{ 0 }
-			), ...)
-		);
-
-		super::draw(dispatch_size.vertices, dispatch_size.instances, 0, 0);
-	}
-};
 
 auto make_model(float elapsed_seconds) -> glm::mat4
 {
@@ -227,6 +141,26 @@ const auto cube_normals = std::array <NormalVertex, 36> {
 	NormalVertex(glm::vec3( 0.0f, -1.0f,  0.0f)),
 };
 
+using CubeIndexBuffer = IndexBuffer <Topology::eTriangleList, uint32_t>;
+using CubeIndex = CubeIndexBuffer::element_type;
+
+const auto cube_indices = std::array <CubeIndex, 12> {
+	CubeIndex(glm::uvec3(0, 1, 2)),
+	CubeIndex(glm::uvec3(3, 4, 5)),
+	CubeIndex(glm::uvec3(6, 7, 8)),
+	CubeIndex(glm::uvec3(9, 10, 11)),
+	CubeIndex(glm::uvec3(12, 13, 14)),
+	CubeIndex(glm::uvec3(15, 16, 17)),
+	CubeIndex(glm::uvec3(18, 19, 20)),
+	CubeIndex(glm::uvec3(21, 22, 23)),
+	CubeIndex(glm::uvec3(24, 25, 26)),
+	CubeIndex(glm::uvec3(27, 28, 29)),
+	CubeIndex(glm::uvec3(30, 31, 32)),
+	CubeIndex(glm::uvec3(33, 34, 35)),
+};
+
+constexpr auto cube_index_count = uint32_t(cube_indices.size() * 3);
+
 struct View {
 	float4x4 model;
 	float4x4 mvp;
@@ -338,6 +272,13 @@ int main()
 	);
 	nrm_buf.write_unsafe(std::span <const NormalVertex> (cube_normals));
 
+	auto idx_buf = CubeIndexBuffer::from(
+		device,
+		cube_indices.size(),
+		host_visible_coherent
+	);
+	idx_buf.write_unsafe(std::span <const CubeIndex> (cube_indices));
+
 	auto mat_buf = ResourceTypeFor <material> ::from(
 		device,
 		host_visible_coherent
@@ -352,7 +293,7 @@ int main()
 
 	auto view_pc = ResourceTypeFor <view> {};
 
-	auto cmds = device.new_command_buffers(cpool, window.frames_in_flight);
+	auto streams = device.new_command_streams(cpool, window.frames_in_flight);
 
 	Image depth;
 
@@ -381,7 +322,6 @@ int main()
 			window.close();
 
 		auto frame = window.next_frame();
-		auto stream = CommandStream(cmds[window.frame_index]);
 
 		device.wait_for_frame(frame);
 		auto acquire = device.acquire_image_for_frame(window, frame);
@@ -390,7 +330,8 @@ int main()
 
 		device.reset_frame_fence(frame);
 
-		stream.reset();
+		auto &stream = streams[window.frame_index];
+
 		stream.begin();
 
 		auto &target = window.images[frame.image_index];
@@ -451,11 +392,11 @@ int main()
 		// TODO: for this to be user friendly we need to really
 		// simplify/compress the type signature... especially for
 		// scaffolds!
-		stream.draw(pipeline,
+		stream.draw_indexed(pipeline,
 			{ mat_desc },
 			{ view_pc },
-			{ pos_buf, nrm_buf },
-			{ cube_vertices.size(), }
+			DrawIndexedParameters { idx_buf, pos_buf, nrm_buf },
+			DrawDispatchSize { cube_index_count, }
 		);
 
 		stream.endRendering();
