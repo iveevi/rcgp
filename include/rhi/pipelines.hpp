@@ -13,6 +13,7 @@ struct RasterizationOptions {
 	bool depth_test;
 	vk::CullModeFlags cull_mode;
 	vk::PolygonMode polygon_mode;
+	float line_width = 1.0f;
 	bool alpha_blend = false;
 };
 

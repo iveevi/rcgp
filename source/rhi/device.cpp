@@ -172,11 +172,15 @@ FrameAcquireStatus Device::acquire_image_for_frame(Window &window, Frame &frame,
 
 	if (acq.result == vk::Result::eSuccess) {
 		frame.image_index = acq.value;
+		if (window.frame_index < window.frames.size())
+			window.frames[window.frame_index].image_index = acq.value;
 		return FrameAcquireStatus::Ok;
 	}
 
 	if (acq.result == vk::Result::eSuboptimalKHR) {
 		frame.image_index = acq.value;
+		if (window.frame_index < window.frames.size())
+			window.frames[window.frame_index].image_index = acq.value;
 		window.swapchain_rebuild_requested = true;
 		return FrameAcquireStatus::Suboptimal;
 	}

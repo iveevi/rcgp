@@ -82,7 +82,7 @@ vk::Pipeline compile_rasterization_pipeline(
 		.setCullMode(options.cull_mode)
 		.setFrontFace(vk::FrontFace::eCounterClockwise)
 		.setDepthBiasEnable(false)
-		.setLineWidth(1.0f);
+		.setLineWidth(options.line_width);
 
 	auto multisampling = vk::PipelineMultisampleStateCreateInfo()
 		.setRasterizationSamples(vk::SampleCountFlagBits::e1)
@@ -242,7 +242,7 @@ vk::Pipeline compile_mesh_shading_pipeline(
 		.setCullMode(options.cull_mode)
 		.setFrontFace(vk::FrontFace::eCounterClockwise)
 		.setDepthBiasEnable(false)
-		.setLineWidth(1.0f);
+		.setLineWidth(options.line_width);
 
 	auto multisampling = vk::PipelineMultisampleStateCreateInfo()
 		.setRasterizationSamples(vk::SampleCountFlagBits::e1)

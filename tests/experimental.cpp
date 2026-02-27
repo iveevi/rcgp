@@ -221,7 +221,7 @@ int main()
 		.queues = {
 			{ "primary", vk::QueueFlagBits::eGraphics }
 		},
-		.pNext = &features,
+		.pNext = &features.get <vk::PhysicalDeviceVulkan13Features> (),
 	});
 
 	auto window = Window::from(*session, device, {
