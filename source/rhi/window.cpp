@@ -22,6 +22,7 @@ struct HandlerTable {
 	double frame_cursor_dy = 0.0;
 	double frame_scroll_dx = 0.0;
 	double frame_scroll_dy = 0.0;
+	std::u32string character_stream;
 
 	std::array <bool, key_count> key_down {};
 	std::array <bool, key_count> key_pressed {};
@@ -53,6 +54,7 @@ void begin_input_frame(HandlerTable &ht)
 	ht.frame_cursor_dy = 0.0;
 	ht.frame_scroll_dx = 0.0;
 	ht.frame_scroll_dy = 0.0;
+	ht.character_stream.clear();
 }
 
 void clear_down_state(HandlerTable &ht)
@@ -64,6 +66,7 @@ void clear_down_state(HandlerTable &ht)
 	ht.mouse_down.fill(false);
 	ht.mouse_pressed.fill(false);
 	ht.mouse_released.fill(false);
+	ht.character_stream.clear();
 }
 
 void dispatch_mouse_button(GLFWwindow *w, int button, int action, int mods)
@@ -176,6 +179,14 @@ void dispatch_cursor_pos(GLFWwindow *w, double xpos, double ypos)
 				cb(fx, fy, dx, dy);
 		}
 	}
+}
+
+void dispatch_char(GLFWwindow *w, unsigned int codepoint)
+{
+	auto user = glfwGetWindowUserPointer(w);
+	auto handler_index = reinterpret_cast <std::intptr_t> (user);
+	auto &ht = handler_tables[handler_index];
+	ht.character_stream.push_back(char32_t(codepoint));
 }
 
 void dispatch_framebuffer_size(GLFWwindow *w, int, int)
@@ -294,6 +305,16 @@ std::pair <double, double> Window::scroll_delta() const
 	return { ht.frame_scroll_dx, ht.frame_scroll_dy };
 }
 
+std::u32string_view Window::character_stream() const
+{
+	return handler_tables[handler_index].character_stream;
+}
+
+void Window::set_cursor_mode(CursorMode mode) const
+{
+	glfwSetInputMode(handle, GLFW_CURSOR, std::to_underlying(mode));
+}
+
 void Window::set_input_mode(InputMode mode, bool value) const
 {
 	glfwSetInputMode(handle, std::to_underlying(mode), value ? GLFW_TRUE : GLFW_FALSE);
@@ -366,6 +387,7 @@ Window Window::from(const Session &session, const Device &device, const Options 
 	glfwSetMouseButtonCallback(result.handle, dispatch_mouse_button);
 	glfwSetKeyCallback(result.handle, dispatch_key);
 	glfwSetCursorPosCallback(result.handle, dispatch_cursor_pos);
+	glfwSetCharCallback(result.handle, dispatch_char);
 	glfwSetFramebufferSizeCallback(result.handle, dispatch_framebuffer_size);
 	glfwSetScrollCallback(result.handle, dispatch_scroll);
 	glfwSetWindowFocusCallback(result.handle, dispatch_focus);

@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -28,10 +30,12 @@ enum class Key : int {
 	Enter = 257,
 	Tab = 258,
 	Backspace = 259,
+	Delete = 261,
 	Right = 262,
 	Left = 263,
 	Down = 264,
 	Up = 265,
+	F2 = 291,
 	F12 = 301,
 	ShiftLeft = 340,
 	ControlLeft = 341,
@@ -49,6 +53,12 @@ enum class MouseButton : int {
 
 enum class InputMode : int {
 	RawMouseMotion = 0x00033005,
+};
+
+enum class CursorMode : int {
+	Normal = 0x00034001,
+	Hidden = 0x00034002,
+	Disabled = 0x00034003,
 };
 
 struct Session;
@@ -99,6 +109,8 @@ struct Window {
 	std::pair <double, double> cursor_position() const;
 	std::pair <double, double> cursor_delta() const;
 	std::pair <double, double> scroll_delta() const;
+	std::u32string_view character_stream() const;
+	void set_cursor_mode(CursorMode mode) const;
 	void set_input_mode(InputMode mode, bool value) const;
 
 	vk::Extent2D extent() const;
