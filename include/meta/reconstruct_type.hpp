@@ -51,8 +51,15 @@ template <user_defined T>
 auto reconstructor_for(std::type_identity <T>, $location)
 {
 	Struct st;
-	
-	st.name = std::string($ss_type(T).view());
+
+	constexpr auto named = requires {
+		{ T::_rcgp_name() } -> std::same_as <std::string>;
+	};
+
+	if constexpr (named)
+		st.name = T::_rcgp_name();
+	else
+		st.name = std::string($ss_type(T).view());
 
 	auto ftn = [&] <size_t I> {
 		using F = T::fields::template get <I>;

@@ -1,5 +1,7 @@
 #version 460
 
+#extension GL_EXT_scalar_block_layout : require
+
 layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
 void b(float arg0, float arg1, float arg2, out float ret0)

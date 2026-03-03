@@ -3,7 +3,7 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_EXT_mesh_shader : require
 
-struct meshletsxMeshletData {
+struct meshlets_MeshletData {
     uint vertex_offset;
     uint vertex_count;
     uint primitive_offset;
@@ -11,11 +11,11 @@ struct meshletsxMeshletData {
     vec4 bounds;
 };
 
-struct meshletsxTaskPayloadData {
+struct meshlets_TaskPayloadData {
     uint meshlet;
 };
 
-struct meshletsxViewData {
+struct meshlets_ViewData {
     mat4 view_proj;
     vec4 frustum_planes[6];
     uint meshlet_count;
@@ -29,10 +29,10 @@ layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 layout (max_vertices = 64, max_primitives = 126) out;
 layout (triangles) out;
 
-taskPayloadSharedEXT meshletsxTaskPayloadData task_payload;
+taskPayloadSharedEXT meshlets_TaskPayloadData task_payload;
 
 layout (std430, push_constant) uniform PC {
-    layout (offset = 0) meshletsxViewData pc;
+    layout (offset = 0) meshlets_ViewData pc;
 };
 
 layout (std430, set = 0, binding = 0) readonly buffer Buffer0x0 {
@@ -40,7 +40,7 @@ layout (std430, set = 0, binding = 0) readonly buffer Buffer0x0 {
 } r0b0;
 
 layout (std430, set = 0, binding = 0) readonly buffer Buffer0x0 {
-    meshletsxMeshletData value[];
+    meshlets_MeshletData value[];
 } r0b0;
 
 layout (std430, set = 0, binding = 0) readonly buffer Buffer0x0 {

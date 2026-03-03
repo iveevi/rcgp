@@ -68,3 +68,5 @@ using snipped_tlist = rcgp::Tlist <Ts...>;
 	DEFINE_FIELD_NAMES(__VA_ARGS__);			\
 								\
 	DEFINE_OVERRIDE_REFERENCE(__VA_ARGS__);
+
+#define $override_name static std::string _rcgp_name()

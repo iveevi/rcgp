@@ -1,5 +1,7 @@
 #version 460
 
+#extension GL_EXT_scalar_block_layout : require
+
 struct Ray {
     vec3 origin;
     vec3 direction;

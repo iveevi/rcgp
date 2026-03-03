@@ -14,6 +14,8 @@ add_test(vs_empty)
 	assert_glsl_match(vs, R"(
 	#version 460
 
+#extension GL_EXT_scalar_block_layout : require
+
 	void main()
 	{
 	}
@@ -29,6 +31,8 @@ add_test(vs_clip)
 
 	assert_glsl_match(vs, R"(
 	#version 460
+
+#extension GL_EXT_scalar_block_layout : require
 
 	void main()
 	{
@@ -53,6 +57,8 @@ add_test(vs_louts)
 
 	assert_glsl_match(vs, R"(
 	#version 460
+
+#extension GL_EXT_scalar_block_layout : require
 
 	layout (location = 0) smooth out vec3 lout0;
 	layout (location = 1) flat out uvec2 lout1;
@@ -88,6 +94,8 @@ add_test(vs_stream)
 
 	assert_glsl_match(vs, R"(
 	#version 460
+
+#extension GL_EXT_scalar_block_layout : require
 	
 	layout (location = 0) in vec3 lin0;
 	
@@ -123,6 +131,8 @@ add_test(vs_multiple_io)
 	
 	assert_glsl_match(vs, R"(
 	#version 460
+
+#extension GL_EXT_scalar_block_layout : require
 	
 	layout (location = 0) in vec3 lin0;
 	layout (location = 1) in vec3 lin1;
@@ -440,4 +450,30 @@ add_test(branching)
 	};
 	
 	assert_glsl_match_file(sr, "glsl/sr_branching.glsl");
+};
+
+add_test(struct_type_sorting)
+{
+	auto fs = $shader(fragment)(
+		$contracts((pack, struct_sort_case::pack)),
+		float2 uv
+	) -> float4 {
+		float3 color = pack.payload.value + float3(uv, pack.weight);
+		return float4(color, 1.0f);
+	};
+
+	assert_glsl_match_file(fs, "glsl/struct_type_sorting.glsl");
+};
+
+add_test(struct_namespace_template_sanitization)
+{
+	auto fs = $shader(fragment)(
+		$contracts((encoder, sanitize_case::encoder)),
+		float2 uv
+	) -> float4 {
+		float3 color = encoder.albedo.value + float3(uv, encoder.roughness.value);
+		return float4(color, 1.0f);
+	};
+
+	assert_glsl_match_file(fs, "glsl/struct_namespace_template_sanitization.glsl");
 };

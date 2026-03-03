@@ -1,6 +1,6 @@
 #include <set>
-#include <regex>
 #include <queue>
+#include <cctype>
 
 #include <fmt/format.h>
 
@@ -72,7 +72,33 @@ std::string grsrc_name(const GlobalResource &grsrc)
 
 std::string sanitize_name(const std::string &name)
 {
-	return std::regex_replace(name, std::regex("::"), "x");
+	std::string sanitized;
+	sanitized.reserve(name.size());
+
+	bool prev_underscore = false;
+	auto push_underscore = [&]() {
+		if (sanitized.empty() or prev_underscore)
+			return;
+
+		sanitized.push_back('_');
+		prev_underscore = true;
+	};
+
+	for (char ch : name) {
+		auto uch = static_cast <unsigned char> (ch);
+		if (std::isalnum(uch) or ch == '_') {
+			sanitized.push_back(ch);
+			prev_underscore = false;
+			continue;
+		}
+
+		push_underscore();
+	}
+
+	while (not sanitized.empty() and sanitized.back() == '_')
+		sanitized.pop_back();
+
+	return sanitized;
 }
 
 struct TypeRepr {
@@ -479,14 +505,77 @@ void emit_stage_io(GLSLEmitter &em)
 		em.emit_newline();
 }
 
+void collect_struct_dependencies(std::set <std::string> &deps, const Reference &ref)
+{
+	auto &type = ref->as <Type> ();
+	vswitch (type) {
+	vcase(Struct):
+		deps.insert(type.as <Struct> ().name);
+		break;
+	vcase(Array):
+		collect_struct_dependencies(deps, type.as <Array> ().base);
+		break;
+	default:
+		break;
+	}
+}
+
+auto top_sort_structs(const std::map <std::string, Struct> structs)
+{
+	std::map <std::string, std::set <std::string>> dependents;
+	std::map <std::string, uint32_t> indegrees;
+	for (auto &[name, _] : structs) {
+		dependents[name] = {};
+		indegrees[name] = 0;
+	}
+
+	for (auto &[name, st] : structs) {
+		std::set <std::string> deps;
+		for (auto &field : st)
+			collect_struct_dependencies(deps, field);
+
+		deps.erase(name);
+		for (auto &dep : deps) {
+			if (not structs.contains(dep))
+				continue;
+
+			if (dependents[dep].insert(name).second)
+				indegrees[name]++;
+		}
+	}
+
+	std::set <std::string> ready;
+	for (auto &[name, degree] : indegrees) {
+		if (degree == 0)
+			ready.insert(name);
+	}
+
+	std::vector <Struct> sorted;
+	sorted.reserve(structs.size());
+
+	while (ready.size()) {
+		auto name = *ready.begin();
+		ready.erase(ready.begin());
+		sorted.push_back(structs.at(name));
+
+		for (auto &dependent : dependents.at(name)) {
+			auto &degree = indegrees.at(dependent);
+			degree--;
+			if (degree == 0)
+				ready.insert(dependent);
+		}
+	}
+
+	if (sorted.size() != structs.size())
+		fatal("cyclic struct dependency while emitting GLSL structs");
+
+	return sorted;
+}
+
 void emit_structs(GLSLEmitter &em)
 {
-	auto cmp = [](const Struct &a, const Struct &b) {
-		return a.name < b.name;
-	};
-
 	// TODO: make this an iteration over all method blocks
-	std::set <Struct, decltype(cmp)> structs;
+	std::map <std::string, Struct> structs;
 	for (auto &instr : *em.main) {
 		if (not instr->is <Type> ())
 			continue;
@@ -499,10 +588,12 @@ void emit_structs(GLSLEmitter &em)
 			continue;
 
 		auto &agg = type.as <Struct> ();
-		structs.insert(agg);
+		if (not structs.contains(agg.name))
+			structs.emplace(agg.name, agg);
 	}
 
-	for (auto &st : structs) {
+	auto sorted = top_sort_structs(structs);
+	for (auto &st : sorted) {
 		em.emit_fmt_line("struct {} {{", sanitize_name(st.name));
 		em.indentation++;
 		for (const auto &[i, f] : std::views::enumerate(st)) {
@@ -698,7 +789,7 @@ void get_subroutines(SbrMap &call_to, SbrMap &call_from, const SharedBlockRefere
 	}
 }
 
-auto top_sort(SbrMap &call_to, SbrMap &call_from)
+auto top_sort_sbrs(SbrMap &call_to, SbrMap &call_from)
 {
 	// to: calling to
 	// from: invoked from
@@ -750,7 +841,7 @@ std::string generate_glsl(const SharedBlockReference &sbr)
 			for (auto &[sbr, s] : call_from)
 				s.erase(em.main);
 
-			em.subroutines = top_sort(call_to, call_from);
+			em.subroutines = top_sort_sbrs(call_to, call_from);
 		}
 
 		emit_whole(em);

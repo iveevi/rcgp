@@ -20,6 +20,8 @@ add_test(vs_empty)
 	assert_glsl_match(vs, R"(
 	#version 460
 
+#extension GL_EXT_scalar_block_layout : require
+
 	void main()
 	{
 	}
@@ -37,6 +39,8 @@ add_test(vs_clip)
 
 	assert_glsl_match(vs, R"(
 	#version 460
+
+#extension GL_EXT_scalar_block_layout : require
 
 	void main()
 	{
@@ -59,6 +63,8 @@ add_test(vs_louts)
 
 	assert_glsl_match(vs, R"(
 	#version 460
+
+#extension GL_EXT_scalar_block_layout : require
 
 	layout (location = 0) smooth out vec3 lout0;
 	layout (location = 1) flat out uvec2 lout1;
@@ -86,6 +92,8 @@ add_test(vs_stream)
 
 	assert_glsl_match(vs, R"(
 	#version 460
+
+#extension GL_EXT_scalar_block_layout : require
 	
 	layout (location = 0) in vec3 lin0;
 	
@@ -120,6 +128,8 @@ add_test(vs_multiple_io)
 	
 	assert_glsl_match(vs, R"(
 	#version 460
+
+#extension GL_EXT_scalar_block_layout : require
 	
 	layout (location = 0) in vec3 lin0;
 	layout (location = 1) in vec3 lin1;

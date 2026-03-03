@@ -57,6 +57,50 @@ static ResourceGroup <Material> material;
 
 } // namespace fwd
 
+namespace struct_sort_case {
+
+struct ZLeaf {
+	float3 value;
+	i32 index;
+
+	$reflection(value, index);
+};
+
+struct AParent {
+	ZLeaf payload;
+	f32 weight;
+
+	$reflection(payload, weight);
+};
+
+static PushConstant <AParent> pack;
+
+} // namespace struct_sort_case
+
+namespace sanitize_case {
+
+template <typename T>
+struct value_or_index {
+	T value;
+	i32 index;
+
+	$reflection(value, index);
+};
+
+struct GenericMaterialInterface {
+	struct Encoder {
+		value_or_index <float3> albedo;
+		value_or_index <float3> specular;
+		value_or_index <f32> roughness;
+
+		$reflection(albedo, specular, roughness);
+	};
+};
+
+static PushConstant <GenericMaterialInterface::Encoder> encoder;
+
+} // namespace sanitize_case
+
 namespace meshlets {
 
 struct ViewData {

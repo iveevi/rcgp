@@ -20,6 +20,8 @@ add_test(vs_fs_io_rates)
 
 	assert_glsl_match(fs, R"(
 	#version 460
+
+#extension GL_EXT_scalar_block_layout : require
 	
 	layout (location = 0) smooth in float lin0;
 	layout (location = 1) noperspective in vec2 lin1;
