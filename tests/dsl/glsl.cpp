@@ -478,6 +478,46 @@ add_test(struct_sanitization)
 	assert_glsl_match_file(fs, "glsl/struct_sanitization.glsl");
 };
 
+add_test(array_length_unsized)
+{
+	auto cs = $shader(compute)(
+		$contracts((positions, meshlets::positions)),
+		WorkGroup <1> group
+	) {
+		i32 len = positions.length();
+	};
+
+	assert_glsl_match(cs, R"(
+	#version 460
+
+	#extension GL_EXT_scalar_block_layout : require
+
+	layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+	layout (std430, set = 0, binding = 0) readonly buffer Buffer0x0 {
+	    vec4 value[];
+	} r0b0;
+
+	void main()
+	{
+	    int lvar0;
+	    lvar0 = r0b0.value.length();
+	}
+	)");
+};
+
+add_test(array_length_sized)
+{
+	auto cs = $shader(compute)(
+		$contracts((view, meshlets::view)),
+		WorkGroup <1> group
+	) {
+		i32 len = view.frustum_planes.length();
+	};
+
+	assert_glsl_match_file(cs, "glsl/array_length_sized.glsl");
+};
+
 add_test(group_allocation_map)
 {
 	$decl(get_albedo)($contracts((a, mapping::albedo)), float2 uv)

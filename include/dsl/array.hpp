@@ -13,6 +13,15 @@ struct array : public jems::handle {
 		result.override_reference(access);
 		return result;
 	}
+
+	scalar <int32_t> length() const {
+		if constexpr (N >= 0) {
+			return scalar <int32_t> (N);
+		} else {
+			auto intr = jems::builtin_intrinsic(BuiltinIntrinsicCode::eUnsizedArrayLength, { _ref });
+			return scalar <int32_t> ::reinterpret(intr);
+		}
+	}
 };
 
 } // namespace rcgp

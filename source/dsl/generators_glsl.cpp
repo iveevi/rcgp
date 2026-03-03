@@ -260,6 +260,8 @@ std::string expr_repr(const GLSLEmitter &em, const Reference &ref)
 				expr_repr(em, bintr.args.at(1)),
 				expr_repr(em, bintr.args.at(2))
 			);
+		case BuiltinIntrinsicCode::eUnsizedArrayLength:
+			return std::format("{}.length()", expr_repr(em, bintr.args.at(0)));
 		default:
 			break;
 		}

@@ -160,6 +160,7 @@ enum class BuiltinIntrinsicCode {
 	eTan,               // @glsl:tan
 	eToFloat,
 	eTranspose,         // @glsl:transpose
+	eUnsizedArrayLength,
 };
 
 const char *repr(BuiltinIntrinsicCode value);
