@@ -101,7 +101,7 @@ struct resource_group_builder <T> {
 } // namespace detail
 
 template <user_defined T>
-struct ResourceGroup {
+struct ResourceGroup : T {
 	using struct_type = T;
 	using handle_type = detail::resource_group_t <T>;
 };
