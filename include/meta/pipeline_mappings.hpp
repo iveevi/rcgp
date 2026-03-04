@@ -3,7 +3,7 @@
 #include <map>
 
 #include "pipelines.hpp"
-#include "process_wrappers.hpp"
+#include "process_push_constants.hpp"
 
 namespace rcgp {
 

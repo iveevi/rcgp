@@ -119,7 +119,7 @@ struct RasterizationCombinator {
 			decltype(streams),
 			decltype(grcs),
 			decltype(gvrs)
-		> (device.logical, pipeline, layout, dsls, gamap);
+		> (pipeline, layout, dsls, gamap);
 	}
 };
 
@@ -146,7 +146,7 @@ struct ComputeCombinator {
 		return ComputePipeline <
 			decltype(grcs),
 			decltype(gvrs)
-		> (device.logical, pipeline, layout, dsls, gamap);
+		> (pipeline, layout, dsls, gamap);
 	}
 };
 
@@ -184,7 +184,7 @@ struct MeshShadingCombinator {
 		return MeshShadingPipeline <
 			decltype(grcs),
 			decltype(gvrs)
-		> (device.logical, pipeline, layout, dsls, gamap);
+		> (pipeline, layout, dsls, gamap);
 	}
 };
 

@@ -28,6 +28,9 @@ enum class FrameAcquireStatus {
 };
 
 template <auto &ref>
+struct UnboundDescriptor;
+
+template <auto &ref>
 struct DescriptorWrite;
 
 vk::DebugUtilsObjectNameInfoEXT name_info(const vk::CommandBuffer &);
@@ -74,6 +77,9 @@ struct Device {
 	auto new_command_buffers(const CommandPool &cpool, size_t count) const -> std::vector <CommandBuffer>;
 	auto new_command_streams(const CommandPool &cpool, size_t count) const -> std::vector <CommandStream>;
 	auto new_descriptor_sets(const DescriptorPool &dpool, const vk::ArrayProxy <vk::DescriptorSetLayout> &dsls) const -> std::vector <vk::DescriptorSet>;
+
+	template <auto &ref>
+	auto new_descriptor(const DescriptorPool &dpool) const -> UnboundDescriptor <ref>;
 
 	auto new_shader_module(std::span <const uint32_t> spirv) const -> vk::ShaderModule {
 		auto info = vk::ShaderModuleCreateInfo()

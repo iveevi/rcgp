@@ -1,6 +1,7 @@
 #pragma once
 
-#include "process_wrappers.hpp"
+#include "process_push_constants.hpp"
+#include "process_descriptors.hpp"
 #include "group_allocation.hpp"
 
 namespace rcgp {

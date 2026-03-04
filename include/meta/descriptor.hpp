@@ -3,10 +3,12 @@
 #include <variant>
 
 #include "../rhi/device.hpp"
+#include "../rhi/descriptor_pool.hpp"
 #include "../util/cti.hpp"
+#include "process_descriptors.hpp"
 #include "resources.hpp"
-#include "witnesses.hpp"
 #include "static_string.hpp"
+#include "witnesses.hpp"
 
 namespace rcgp {
 
@@ -130,6 +132,20 @@ DescriptorWrite(UnboundDescriptor <ref>, const ResourceTypeFor <ref> &)
 template <auto &ref>
 DescriptorWrite(BoundDescriptor <ref>, const ResourceTypeFor <ref> &)
 	-> DescriptorWrite <ref>;
+
+template <auto &ref>
+auto Device::new_descriptor(const DescriptorPool &dpool) const
+	-> UnboundDescriptor <ref>
+{
+	auto key = _dsl_cache::Key(logical, &ref);
+	auto dsl = _dsl_cache::map.at(key);
+	auto dset = logical.allocateDescriptorSets(
+		vk::DescriptorSetAllocateInfo()
+			.setDescriptorPool(dpool)
+			.setSetLayouts(dsl)
+	).front();
+	return { dset };
+}
 
 template <auto &...refs>
 [[nodiscard]] auto Device::update_descriptors(DescriptorWrite <refs> &&... dwpairs)
