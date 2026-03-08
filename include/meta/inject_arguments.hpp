@@ -155,8 +155,12 @@ void inject_one_argument(T &value, InjectionCounters &counters)
 		auto arg = Argument(type, counters.argidx++);
 		$tsb.add_argument(arg);
 		value.override_reference(jems::argument(arg.type, arg.argi));
+	} else if constexpr (S == ShaderStage::eClosestHit) {
+		$tsb.hit_attribute_type = type;
+		value.override_reference(jems::system_value(SystemValue::eHitAttribute));
 	} else {
 		// Not supported
+		// TODO: static string for stages...
 		static_error("argument type "_ss + $ss_type(T)
 			+ " is not supported in Stage X"_ss);
 	}

@@ -27,6 +27,15 @@ using WArrayBuffer = ArrayBuffer <T, L, GlobalResourceAccess::eWrite>;
 template <typename T, template <typename> typename L = layouts::std430>
 using RWArrayBuffer = ArrayBuffer <T, L, GlobalResourceAccess::eReadWrite>;
 
+// Images
+using RImage1D = StorageImage <float, 1, GlobalResourceAccess::eRead>;
+using RImage2D = StorageImage <float, 2, GlobalResourceAccess::eRead>;
+using RImage3D = StorageImage <float, 3, GlobalResourceAccess::eRead>;
+
+using WImage1D = StorageImage <float, 1, GlobalResourceAccess::eWrite>;
+using WImage2D = StorageImage <float, 2, GlobalResourceAccess::eWrite>;
+using WImage3D = StorageImage <float, 3, GlobalResourceAccess::eWrite>;
+
 // Samplers
 using Sampler1D = Sampler <float, 1>;
 using Sampler2D = Sampler <float, 2>;

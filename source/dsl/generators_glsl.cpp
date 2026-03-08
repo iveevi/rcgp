@@ -157,10 +157,12 @@ std::string lval_repr(const GLSLEmitter &em, const Reference &ref)
 		case GlobalResourceKind::ePushConstant:
 			return "pc";
 		case GlobalResourceKind::eSampler:
+		case GlobalResourceKind::eStorageImage:
 		case GlobalResourceKind::eAccelerationStructure:
-		case GlobalResourceKind::eRayDispatcherPayload:
-		case GlobalResourceKind::eRayReceiverPayload:
 			return base;
+		case GlobalResourceKind::eRayReceiverPayload:
+		case GlobalResourceKind::eRayDispatcherPayload:
+			return std::format("payload{}", grsrc.index.value_or(0));
 		default:
 			break;
 		}
@@ -389,6 +391,7 @@ bool has_side_effects(const BuiltinIntrinsicCode &code)
 		BuiltinIntrinsicCode::eContinue,
 		BuiltinIntrinsicCode::eDiscard,
 		BuiltinIntrinsicCode::eEmitMeshTasksEXT,
+		BuiltinIntrinsicCode::eImageStore,
 		BuiltinIntrinsicCode::eSetMeshOutputsEXT,
 		BuiltinIntrinsicCode::eTraceRays,
 	};
@@ -473,8 +476,13 @@ auto collect_extensions(const GLSLEmitter &em)
 	extensions.emplace_back("GL_EXT_scalar_block_layout");
 	
 	auto stage = em.main->stage;
-	if (stage == ShaderStage::eMesh or stage == ShaderStage::eTask)
+	if (stage == ShaderStage::eMesh
+		or stage == ShaderStage::eTask)
 		extensions.emplace_back("GL_EXT_mesh_shader");
+	if (stage == ShaderStage::eRayGeneration
+		or stage == ShaderStage::eClosestHit
+		or stage == ShaderStage::eMiss)
+		extensions.emplace_back("GL_EXT_ray_tracing");
 
 	return extensions;
 }
@@ -657,8 +665,26 @@ void emit_resource(GLSLEmitter &em, const GlobalResource &grsrc)
 	auto index = grsrc.index.value_or(0);
 	auto name = grsrc_name(grsrc);
 
+	// Storage images
+	if (grsrc.kind == GlobalResourceKind::eStorageImage) {
+		// TODO: method
+		std::string access = " ";
+		if (grsrc.access == GlobalResourceAccess::eRead)
+			access = "readonly ";
+		else if (grsrc.access == GlobalResourceAccess::eWrite)
+			access = "writeonly ";
+
+		em.emit_fmt_line(
+			"layout (set = {}, binding = {}) "
+			"uniform {}image2D {};",
+			group, index, access, name
+		);
+		return em.emit_newline();
+	}
+
 	// Combined image samplers
 	if (grsrc.kind == GlobalResourceKind::eSampler) {
+		// TODO: get dimension and prefix
 		em.emit_fmt_line(
 			"layout (set = {}, binding = {}) "
 			"uniform sampler2D {};",
@@ -671,7 +697,7 @@ void emit_resource(GLSLEmitter &em, const GlobalResource &grsrc)
 	if (grsrc.kind == GlobalResourceKind::eAccelerationStructure) {
 		em.emit_fmt_line(
 			"layout (set = {}, binding = {}) "
-			"accelerationStructureEXT {};",
+			"uniform accelerationStructureEXT {};",
 			group, index, name
 		);
 		return em.emit_newline();
@@ -682,15 +708,15 @@ void emit_resource(GLSLEmitter &em, const GlobalResource &grsrc)
 	if (grsrc.kind == GlobalResourceKind::eRayDispatcherPayload) {
 		em.emit_fmt_line(
 			"layout (location = {}) "
-			"rayPayloadEXT {} {}{};",
-			index, repr.base, name, repr.suffix
+			"rayPayloadEXT {} payload{}{};",
+			index, repr.base, index, repr.suffix
 		);
 		return em.emit_newline();
 	} else if (grsrc.kind == GlobalResourceKind::eRayReceiverPayload) {
 		em.emit_fmt_line(
 			"layout (location = {}) "
-			"rayPayloadInEXT {} {}{};",
-			index, repr.base, name, repr.suffix
+			"rayPayloadInEXT {} payload{}{};",
+			index, repr.base, index, repr.suffix
 		);
 		return em.emit_newline();
 	}
@@ -773,6 +799,15 @@ void emit_whole(GLSLEmitter &em)
 		auto &payload = em.main->task_payload_type.value();
 		auto repr = type_repr(em, payload);
 		em.emit_fmt_line("taskPayloadSharedEXT {} task_payload{};",
+			repr.base, repr.suffix);
+		em.emit_newline();
+	}
+	
+	// Hit attribute
+	if (em.main->hit_attribute_type) {
+		auto &payload = em.main->hit_attribute_type.value();
+		auto repr = type_repr(em, payload);
+		em.emit_fmt_line("hitAttributeEXT {} hit_attribute{};",
 			repr.base, repr.suffix);
 		em.emit_newline();
 	}

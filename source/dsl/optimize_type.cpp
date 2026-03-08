@@ -373,12 +373,17 @@ Reference get_or_add_type_ref(const SharedBlockReference &sbr, const Reference &
 		case SystemValue::eGlobalInvocationID:
 		case SystemValue::eLocalInvocationID:
 		case SystemValue::eWorkGroupID:
+		case SystemValue::eLaunchID:
+		case SystemValue::eLaunchSize:
 			return get_or_add_type(sbr, Primitive::eUVec3);
 		case SystemValue::eInstanceIndex:
 		case SystemValue::eVertexIndex:
+		case SystemValue::ePrimitiveID:
 			return get_or_add_type(sbr, Primitive::eUInt32);
 		case SystemValue::eTaskPayload:
 			return get_or_add_type_ref(sbr, sbr->task_payload_type.value());
+		case SystemValue::eHitAttribute:
+			return get_or_add_type_ref(sbr, sbr->hit_attribute_type.value());
 		default:
 			break;
 		}

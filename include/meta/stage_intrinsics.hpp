@@ -326,6 +326,13 @@ struct Dispatcher {
 			return *this;
 		}
 
+		operator T() const {
+			T value;
+			auto payload = resource_intrinsic(Dispatcher <ref> (), 0);
+			value.override_reference(payload);
+			return value;
+		}
+
 		// TODO: operator=
 		void trace(
 			RaytracingAccelerationStructure as,
@@ -378,6 +385,7 @@ inline auto receiver = Receiver <ref> ();
 
 using LaunchID = read_only_intrinsic <SystemValue::eLaunchID, ShaderStage::eRayGeneration, uvec3>;
 using LaunchSize = read_only_intrinsic <SystemValue::eLaunchSize, ShaderStage::eRayGeneration, uvec3>;
+using PrimitiveID = read_only_intrinsic <SystemValue::ePrimitiveID, ShaderStage::eClosestHit, u32>;
 
 template <>
 TYPE_TRAIT_INCLUDES(is_global_resource, RaytracingAccelerationStructure);

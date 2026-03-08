@@ -62,6 +62,19 @@ jems::handle resource_intrinsic(const StorageBuffer <T, L, A> &, uint32_t bindin
 	);
 }
 
+template <typename T, size_t D, GlobalResourceAccess A>
+jems::handle resource_intrinsic(const StorageImage <T, D, A> &, uint32_t binding)
+{
+	return jems::global_resource(
+		jems::type(primitive_of <T, D> ()),
+		GlobalResourceKind::eStorageImage,
+		GlobalResourceLayout::eNone,
+		A,
+		std::nullopt,
+		binding
+	);
+}
+
 template <typename T, size_t D>
 jems::handle resource_intrinsic(const Sampler <T, D> &, uint32_t binding)
 {

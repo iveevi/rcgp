@@ -17,6 +17,9 @@ EShLanguage esh_stage(ShaderStage stage)
 	case ShaderStage::eCompute: return EShLangCompute;
 	case ShaderStage::eTask: return EShLangTask;
 	case ShaderStage::eMesh: return EShLangMesh;
+	case ShaderStage::eRayGeneration: return EShLangRayGen;
+	case ShaderStage::eClosestHit: return EShLangClosestHit;
+	case ShaderStage::eMiss: return EShLangMiss;
 	default:
 		return EShLangCompute;
 	}

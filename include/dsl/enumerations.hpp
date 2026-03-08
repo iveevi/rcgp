@@ -113,10 +113,12 @@ enum class SystemValue {
 	eMeshVertices,              // @glsl:gl_MeshVerticesEXT
 	ePrimitiveTriangleIndices,  // @glsl:gl_PrimitiveTriangleIndicesEXT
 	eTaskPayload,               // @glsl:task_payload
+	eHitAttribute,              // @glsl:hit_attribute
 	eVertexIndex,               // @glsl:gl_VertexIndex
 	eWorkGroupID,               // @glsl:gl_WorkGroupID
 	eLaunchID,                  // @glsl:gl_LaunchIDEXT
 	eLaunchSize,                // @glsl:gl_LaunchSizeEXT
+	ePrimitiveID,               // @glsl:gl_PrimitiveID
 };
 
 const char *repr(SystemValue value);
@@ -158,6 +160,7 @@ enum class BuiltinIntrinsicCode {
 	eNormalize,          // @glsl:normalize
 	ePow,                // @glsl:pow
 	eSample,             // @glsl:texture
+	eImageStore,         // @glsl:imageStore
 	eSelect,
 	eSetMeshOutputsEXT,  // @glsl:SetMeshOutputsEXT
 	eSin,                // @glsl:sin
@@ -167,7 +170,7 @@ enum class BuiltinIntrinsicCode {
 	eToFloat,
 	eTranspose,          // @glsl:transpose
 	eUnsizedArrayLength,
-	eTraceRays,          // @glsl:traceRaysEXT
+	eTraceRays,          // @glsl:traceRayEXT
 };
 
 const char *repr(BuiltinIntrinsicCode value);

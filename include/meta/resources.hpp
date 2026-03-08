@@ -45,6 +45,18 @@ template <
 	using handle_type = T;
 };
 
+template <native_scalar T, size_t D, GlobalResourceAccess A = GlobalResourceAccess::eRead>
+struct StorageImage : resource_handle {
+	struct handle_type : jems::handle {
+		void write(vector <int32_t, D> idx, vector <T, 4> value, $location) {
+			jems::builtin_intrinsic(
+				BuiltinIntrinsicCode::eImageStore,
+				{ *this, idx, value }, loc
+			);
+		}
+	};
+};
+
 template <native_scalar T, size_t D>
 struct Sampler : resource_handle {
 	struct handle_type : jems::handle {
@@ -71,6 +83,9 @@ TYPE_TRAIT(is_global_resource);
 
 	template <typename T, template <typename> typename L, GlobalResourceAccess A>
 	TYPE_TRAIT_INCLUDES(is_global_resource, StorageBuffer  <T, L, A>);
+	
+	template <typename T, size_t D, GlobalResourceAccess A>
+	TYPE_TRAIT_INCLUDES(is_global_resource, StorageImage <T, D, A>);
 
 	template <typename T, size_t D>
 	TYPE_TRAIT_INCLUDES(is_global_resource, Sampler <T, D>);
