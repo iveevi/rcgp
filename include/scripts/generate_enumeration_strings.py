@@ -5,6 +5,7 @@ root = Path(__file__).resolve().parents[2]
 includes = root / "include" / "dsl"
 output = root / "source" / "generated"
 
+output.mkdir(exist_ok=True)
 
 def get_enums(text: str):
     enum_pattern = re.compile(r"enum\s+class\s+(\w+)\s*\{(.*?)\};", re.S)
