@@ -100,4 +100,15 @@ auto pipeline_mappings(const MeshShadingPipeline <GAMAP, GRCs> &pipeline)
 	return result;
 }
 
+template <typename GAMAP, typename GRCs>
+auto pipeline_mappings(const RayTracingPipeline <GAMAP, GRCs> &pipeline)
+{
+	PipelineMappings result;
+	result.layout = pipeline.layout;
+	result.bind_point = vk::PipelineBindPoint::eRayTracingKHR;
+	write_pb_infos(result, GRCs());
+	result.gamap = pipeline.gamap;
+	return result;
+}
+
 } // namespace rcgp

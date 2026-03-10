@@ -6,6 +6,7 @@
 #include <type_traits>
 
 #include "../rhi/command_buffer.hpp"
+#include "../rhi/image.hpp"
 #include "../rhi/timestamp_pool.hpp"
 #include "../util/runtime_type_registry.hpp"
 #include "barrier.hpp"
@@ -313,6 +314,28 @@ inline auto copy_image(const Image *const src, const Image *const dst)
 	return Commands <> { binder };
 }
 
+inline auto blit_image(
+    const Image *src,
+    vk::ImageLayout src_layout,
+    const Image *dst,
+    vk::ImageLayout dst_layout,
+    const vk::ImageBlit2 &region,
+    vk::Filter filter = vk::Filter::eNearest
+)
+{
+	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
+		cmd.blitImage2(vk::BlitImageInfo2()
+			.setSrcImage(src->handle)
+			.setSrcImageLayout(src_layout)
+			.setDstImage(dst->handle)
+			.setDstImageLayout(dst_layout)
+			.setRegions(region)
+			.setFilter(filter));
+	};
+
+	return Commands <> { binder };
+}
+
 inline auto manual_commands(auto F)
 {
 	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
@@ -361,6 +384,21 @@ inline auto dispatch(uint32_t x, uint32_t y = 1, uint32_t z = 1)
 {
 	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
 		cmd.dispatch(x, y, z);
+	};
+
+	return Commands <DependencySentinel> { binder };
+}
+
+inline auto trace_rays(
+    const vk::StridedDeviceAddressRegionKHR &raygen,
+    const vk::StridedDeviceAddressRegionKHR &miss,
+    const vk::StridedDeviceAddressRegionKHR &hit,
+    const vk::StridedDeviceAddressRegionKHR &callable,
+    uint32_t width, uint32_t height, uint32_t depth = 1
+)
+{
+	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
+		cmd.traceRaysKHR(raygen, miss, hit, callable, width, height, depth, *cmd.loader);
 	};
 
 	return Commands <DependencySentinel> { binder };

@@ -93,4 +93,11 @@ consteval auto command_effects(const MeshShadingPipeline <GAMAP, GRCs> &pipeline
 	return grcs;
 }
 
+template <typename GAMAP, typename GRCs>
+consteval auto command_effects(const RayTracingPipeline <GAMAP, GRCs> &pipeline)
+{
+	auto grcs = command_effects_for_grcs(GRCs());
+	return grcs;
+}
+
 } // namespace rcgp
