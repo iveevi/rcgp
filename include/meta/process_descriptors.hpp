@@ -17,6 +17,8 @@ constexpr auto resource_descriptor_type = []
 		return vk::DescriptorType::eStorageBuffer;
 	else if constexpr (is_storage_image_v <R>)
 		return vk::DescriptorType::eStorageImage;
+	else if constexpr (is_uniform_buffer_v <R>)
+		return vk::DescriptorType::eUniformBuffer;
 	else if constexpr (std::is_same_v <R, RaytracingAccelerationStructure>)
 		return vk::DescriptorType::eAccelerationStructureKHR;
 	// else

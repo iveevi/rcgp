@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rhi/buffer.hpp"
+#include "rhi/presentation_synchronizer.hpp"
 #include "rhi/command_buffer.hpp"
 #include "rhi/command_pool.hpp"
 #include "rhi/descriptor_pool.hpp"

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <optional>
 #include <span>
 #include <string>
 #include <vector>
@@ -16,7 +17,7 @@ struct CommandBuffer;
 struct CommandPool;
 struct CommandStream;
 struct DescriptorPool;
-struct Frame;
+struct PresentationSynchronizer;
 struct TimestampQueryPool;
 struct TimestampQueryResult;
 struct Window;
@@ -28,12 +29,6 @@ struct UnboundDescriptor;
 
 template <auto &ref>
 struct DescriptorWrite;
-
-enum class FrameAcquireStatus {
-	Ok,
-	Suboptimal,
-	OutOfDate,
-};
 
 vk::DebugUtilsObjectNameInfoEXT name_info(const vk::CommandBuffer &);
 
@@ -103,9 +98,11 @@ struct Device {
 	template <auto &...refs>
 	[[nodiscard]] auto update_descriptors(DescriptorWrite <refs> &&... dwpairs);
 
-	void wait_for_frame(const Frame &frame, uint64_t timeout = UINT64_MAX) const;
-	void reset_frame_fence(const Frame &frame) const;
-	FrameAcquireStatus acquire_image_for_frame(Window &window, Frame &frame, uint64_t timeout = UINT64_MAX) const;
+	std::optional <uint32_t> acquire_next_frame(
+		Window &window,
+		PresentationSynchronizer &sync,
+		uint64_t timeout = UINT64_MAX
+	) const;
 	bool rebuild_swapchain(Window &window) const;
 
 	// Timestamp pool

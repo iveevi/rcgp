@@ -79,7 +79,7 @@ template <typename Mapped, size_t Align, typename View, bool AlignTopLevel>
 requires (std::is_fundamental_v <Mapped>)
 struct scaffold_lookup <scaffold_hint <Mapped, Align>, View, AlignTopLevel> {
 	using type = std::conditional_t <
-		Align == 0,
+		Align == 0 or (sizeof(Mapped) % Align) == 0,
 		Mapped,
 		scaffold_fundamental <Align, Mapped, AlignTopLevel>
 	>;
@@ -89,7 +89,7 @@ struct scaffold_lookup <scaffold_hint <Mapped, Align>, View, AlignTopLevel> {
 template <typename Mapped, size_t Align, typename View, bool AlignTopLevel>
 struct scaffold_lookup <scaffold_hint <Mapped, Align>, View, AlignTopLevel> {
 	using type = std::conditional_t <
-		Align == 0,
+		Align == 0 or (sizeof(Mapped) % Align) == 0,
 		Mapped,
 		scaffold_structural <Align, Mapped, AlignTopLevel>
 	>;

@@ -15,6 +15,7 @@
 #include "rhi/command_pool.hpp"
 #include "rhi/descriptor_pool.hpp"
 #include "rhi/device.hpp"
+#include "rhi/presentation_synchronizer.hpp"
 #include "rhi/timestamp_pool.hpp"
 #include "rhi/window.hpp"
 #include "util/cti.hpp"
@@ -163,51 +164,40 @@ auto Device::new_render_pass(
 	return logical.createRenderPass(rp_info);
 }
 	
-void Device::wait_for_frame(const Frame &frame, uint64_t timeout) const
+std::optional <uint32_t> Device::acquire_next_frame(
+	Window &window,
+	PresentationSynchronizer &sync,
+	uint64_t timeout
+) const
 {
-	auto wait = logical.waitForFences(frame.fence, true, timeout);
+	sync.current_slot = (sync.current_slot + 1) % sync.fences.size();
+
+	auto wait = logical.waitForFences(sync.fences[sync.current_slot], true, timeout);
 	if (wait != vk::Result::eSuccess && wait != vk::Result::eTimeout) {
 		std::println(std::cerr, "waitForFences failed ({})", vk::to_string(wait));
 		std::abort();
 	}
-}
 
-void Device::reset_frame_fence(const Frame &frame) const
-{
-	logical.resetFences(frame.fence);
-}
-
-FrameAcquireStatus Device::acquire_image_for_frame(Window &window, Frame &frame, uint64_t timeout) const
-{
 	auto acq = logical.acquireNextImageKHR(
-		frame.swapchain,
+		window.swapchain,
 		timeout,
-		frame.presented,
+		sync.acquire_semaphores[sync.current_slot],
 		nullptr
 	);
 
-	if (acq.result == vk::Result::eSuccess) {
-		frame.image_index = acq.value;
-		if (window.frame_index < window.frames.size())
-			window.frames[window.frame_index].image_index = acq.value;
-		return FrameAcquireStatus::Ok;
+	if (acq.result == vk::Result::eErrorOutOfDateKHR or acq.result == vk::Result::eSuboptimalKHR) {
+		window.is_swapchain_out_of_date = true;
+		return std::nullopt;
 	}
 
-	if (acq.result == vk::Result::eSuboptimalKHR) {
-		frame.image_index = acq.value;
-		if (window.frame_index < window.frames.size())
-			window.frames[window.frame_index].image_index = acq.value;
-		window.swapchain_rebuild_requested = true;
-		return FrameAcquireStatus::Suboptimal;
+	if (acq.result != vk::Result::eSuccess) {
+		std::println(std::cerr, "acquireNextImageKHR failed ({})", vk::to_string(acq.result));
+		std::abort();
 	}
 
-	if (acq.result == vk::Result::eErrorOutOfDateKHR) {
-		window.swapchain_rebuild_requested = true;
-		return FrameAcquireStatus::OutOfDate;
-	}
-
-	std::println(std::cerr, "acquireNextImageKHR failed ({})", vk::to_string(acq.result));
-	std::abort();
+	logical.resetFences(sync.fences[sync.current_slot]);
+	sync.current_image = acq.value;
+	return acq.value;
 }
 
 bool Device::rebuild_swapchain(Window &window) const
@@ -266,34 +256,6 @@ bool Device::rebuild_swapchain(Window &window) const
 		new_images.push_back(image);
 	}
 
-	auto new_frames_in_flight = new_images.size();
-	auto fence_info = vk::FenceCreateInfo()
-		.setFlags(vk::FenceCreateFlagBits::eSignaled);
-	auto semaphore_info = vk::SemaphoreCreateInfo();
-
-	auto new_image_rendered = std::vector <vk::Semaphore> (new_images.size());
-	for (auto &semaphore : new_image_rendered)
-		semaphore = logical.createSemaphore(semaphore_info);
-
-	auto new_frames = std::vector <Frame> (new_frames_in_flight);
-	for (auto &frame : new_frames) {
-		frame.swapchain = new_swapchain;
-		frame.fence = logical.createFence(fence_info);
-		frame.presented = logical.createSemaphore(semaphore_info);
-		frame.extent = new_extent;
-	}
-
-	for (auto &frame : window.frames) {
-		if (frame.fence)
-			logical.destroyFence(frame.fence);
-		if (frame.presented)
-			logical.destroySemaphore(frame.presented);
-	}
-	for (auto &semaphore : window.image_rendered) {
-		if (semaphore)
-			logical.destroySemaphore(semaphore);
-	}
-
 	for (auto &image : window.images)
 		image.destroy();
 
@@ -302,12 +264,8 @@ bool Device::rebuild_swapchain(Window &window) const
 
 	window.swapchain = new_swapchain;
 	window.images = std::move(new_images);
-	window.image_rendered = std::move(new_image_rendered);
-	window.frames = std::move(new_frames);
-	window.frames_in_flight = new_frames_in_flight;
-	window.frame_index = window.frames_in_flight > 0 ? (window.frames_in_flight - 1) : 0;
 	window.swapchain_extent = new_extent;
-	window.swapchain_rebuild_requested = false;
+	window.is_swapchain_out_of_date = false;
 	return true;
 }
 

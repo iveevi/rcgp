@@ -293,7 +293,8 @@ int main()
 
 	auto view_pc = ResourceTypeFor <view> {};
 
-	auto streams = device.new_command_streams(cpool, window.frames_in_flight);
+	auto sync = PresentationSynchronizer::from(device, window.images.size());
+	auto streams = device.new_command_streams(cpool, window.images.size());
 
 	Image depth;
 
@@ -321,20 +322,15 @@ int main()
 		if (window.is_pressed(Key::Q))
 			window.close();
 
-		auto frame = window.next_frame();
-
-		device.wait_for_frame(frame);
-		auto acquire = device.acquire_image_for_frame(window, frame);
-		if (acquire == FrameAcquireStatus::OutOfDate)
+		auto img = device.acquire_next_frame(window, sync);
+		if (not img)
 			continue;
 
-		device.reset_frame_fence(frame);
-
-		auto &stream = streams[window.frame_index];
+		auto &stream = streams[*img];
 
 		stream.begin();
 
-		auto &target = window.images[frame.image_index];
+		auto &target = window.images[*img];
 		stream.transition(target, vk::ImageLayout::eColorAttachmentOptimal);
 		stream.transition(depth, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
@@ -356,7 +352,7 @@ int main()
 
 		auto render_area = vk::Rect2D()
 			.setOffset(vk::Offset2D(0, 0))
-			.setExtent(frame.extent);
+			.setExtent(window.extent());
 
 		stream.beginRendering(
 			vk::RenderingInfo()
@@ -369,14 +365,14 @@ int main()
 		auto viewport = vk::Viewport()
 			.setX(0.0f)
 			.setY(0.0f)
-			.setWidth(float(frame.extent.width))
-			.setHeight(float(frame.extent.height))
+			.setWidth(float(window.extent().width))
+			.setHeight(float(window.extent().height))
 			.setMinDepth(0.0f)
 			.setMaxDepth(1.0f);
 
 		auto scissor = vk::Rect2D()
 			.setOffset(vk::Offset2D(0, 0))
-			.setExtent(frame.extent);
+			.setExtent(window.extent());
 
 		stream.setViewport(0, std::array { viewport });
 		stream.setScissor(0, std::array { scissor });
@@ -387,7 +383,7 @@ int main()
 
 		auto model = make_model(elapsed);
 		view_pc.model = model;
-		view_pc.mvp = make_mvp(model, frame.extent);
+		view_pc.mvp = make_mvp(model, window.extent());
 	
 		// TODO: for this to be user friendly we need to really
 		// simplify/compress the type signature... especially for
@@ -405,16 +401,16 @@ int main()
 
 		queue.submit(
 			{ stream },
-			{ frame.presented },
-			{ window.image_rendered[frame.image_index] },
+			sync.acquire_semaphore(),
+			sync.render_semaphore(),
 			vk::PipelineStageFlagBits::eColorAttachmentOutput,
-			frame.fence
+			sync.fence()
 		);
 
 		auto present = queue.present(
 			window,
-			frame.image_index,
-			{ window.image_rendered[frame.image_index] }
+			*img,
+			sync.render_semaphore()
 		);
 
 		if (present != vk::Result::eSuccess

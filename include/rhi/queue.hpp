@@ -19,7 +19,7 @@ struct Queue : vk::Queue {
 	) const;
 
 	// TODO: overload for list of pairs of swapchains and image indices
-	vk::Result present(
+	bool present(
 		Window &window,
 		uint32_t index,
 		const vk::ArrayProxy <vk::Semaphore> &semaphores

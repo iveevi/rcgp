@@ -331,22 +331,14 @@ float Window::aspect_ratio() const
 	return e.height > 0 ? (float(e.width) / float(e.height)) : 1.0f;
 }
 
-bool Window::needs_swapchain_rebuild()
+bool Window::is_out_of_date()
 {
 	if (handler_tables[handler_index].framebuffer_resized) {
-		swapchain_rebuild_requested = true;
+		is_swapchain_out_of_date = true;
 		handler_tables[handler_index].framebuffer_resized = false;
 	}
 
-	return swapchain_rebuild_requested;
-}
-
-Frame Window::next_frame()
-{
-	frame_index = (frame_index + 1) % frames_in_flight;
-	auto &frame = frames[frame_index];
-	frame.extent = swapchain_extent;
-	return frame;
+	return is_swapchain_out_of_date;
 }
 
 void Window::on_mouse_button(MouseButtonHandler handler)
@@ -399,9 +391,7 @@ Window Window::from(const Session &session, const Device &device, const Options 
 	result.format = vk::Format::eB8G8R8A8Unorm;
 	result.present_mode = options.present_mode;
 	result.swapchain = nullptr;
-	result.frames_in_flight = 0;
-	result.frame_index = 0;
-	result.swapchain_rebuild_requested = true;
+	result.is_swapchain_out_of_date = true;
 
 	handler_tables[result.handler_index].framebuffer_resized = true;
 	while (not device.rebuild_swapchain(result))

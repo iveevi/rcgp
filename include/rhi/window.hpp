@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
-#include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -15,6 +14,9 @@
 struct GLFWwindow;
 
 namespace rcgp {
+
+struct Device;
+struct Queue;
 
 // Keep GLFW-compatible values without exposing GLFW in the public header.
 enum class Key : int {
@@ -64,20 +66,15 @@ enum class CursorMode : int {
 struct Session;
 struct Device;
 
-struct Frame {
-	vk::SwapchainKHR swapchain;
-	vk::Fence fence;
-	vk::Semaphore presented;
-	vk::Extent2D extent;
-	uint32_t image_index;
-};
-
 using MouseButtonHandler = std::function <void (int button, int action, int mods)>;
 using CursorMoveHandler = std::function <void (double xpos, double ypos, double dx, double dy)>;
 using DragHandler = std::function <void (double xpos, double ypos, double dx, double dy)>;
 using ScrollHandler = std::function <void (double xoffset, double yoffset)>;
 
-struct Window {
+class Window {
+	bool is_swapchain_out_of_date = false;
+	std::intptr_t handler_index = 0;
+public:
 	GLFWwindow *handle = nullptr;
 	vk::SurfaceKHR surface = nullptr;
 
@@ -86,18 +83,10 @@ struct Window {
 	vk::Extent2D swapchain_extent {};
 	vk::SwapchainKHR swapchain = nullptr;
 	std::vector <Image> images;
-	std::vector <vk::Semaphore> image_rendered;
-
-	std::vector <Frame> frames;
-	size_t frames_in_flight = 0;
-	size_t frame_index = 0;
-	bool swapchain_rebuild_requested = false;
-	
-	std::intptr_t handler_index = 0;
 
 	void poll() const;
 	void close() const;
-	
+
 	bool alive() const;
 	bool is_down(Key key) const;
 	bool is_pressed(Key key) const;
@@ -114,10 +103,8 @@ struct Window {
 	void set_input_mode(InputMode mode, bool value) const;
 
 	vk::Extent2D extent() const;
-	bool needs_swapchain_rebuild();
+	bool is_out_of_date();
 	float aspect_ratio() const;
-
-	Frame next_frame();
 
 	void on_mouse_button(MouseButtonHandler handler);
 	void on_cursor_move(CursorMoveHandler handler);
@@ -132,6 +119,9 @@ struct Window {
 	};
 
 	static Window from(const Session &session, const Device &device, const Options &options);
+
+	friend class Device;
+	friend class Queue;
 };
 
 } // namespace rcgp

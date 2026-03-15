@@ -23,7 +23,7 @@ void Queue::submit(
 	vk::Queue::submit(info, fence);
 }
 
-vk::Result Queue::present(
+bool Queue::present(
 	Window &window,
 	uint32_t index,
 	const vk::ArrayProxy <vk::Semaphore> &semaphores
@@ -34,11 +34,17 @@ vk::Result Queue::present(
 		.setImageIndices(index)
 		.setWaitSemaphores(semaphores);
 
-	auto result = presentKHR(info);
-	if (result == vk::Result::eErrorOutOfDateKHR
-		|| result == vk::Result::eSuboptimalKHR)
-		window.swapchain_rebuild_requested = true;
-	return result;
+	auto result = vkQueuePresentKHR(
+		static_cast <VkQueue> (*this),
+		reinterpret_cast <const VkPresentInfoKHR *> (&info)
+	);
+
+	if (result == VK_ERROR_OUT_OF_DATE_KHR or result == VK_SUBOPTIMAL_KHR) {
+		window.is_swapchain_out_of_date = true;
+		return false;
+	}
+
+	return true;
 }
 
 } // namespace rcgp
