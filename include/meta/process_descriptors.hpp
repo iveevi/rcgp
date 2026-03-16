@@ -8,22 +8,29 @@
 
 namespace rcgp {
 
+struct descriptor_packet {
+	vk::DescriptorType type;
+	size_t count = 1;
+};
+
 template <typename R>
-constexpr auto resource_descriptor_type = []
+constexpr descriptor_packet resource_packet()
 {
 	if constexpr (is_sampler_v <R>)
-		return vk::DescriptorType::eCombinedImageSampler;
+		return { vk::DescriptorType::eCombinedImageSampler };
 	else if constexpr (is_storage_buffer_v <R>)
-		return vk::DescriptorType::eStorageBuffer;
+		return { vk::DescriptorType::eStorageBuffer };
 	else if constexpr (is_storage_image_v <R>)
-		return vk::DescriptorType::eStorageImage;
+		return { vk::DescriptorType::eStorageImage };
 	else if constexpr (is_uniform_buffer_v <R>)
-		return vk::DescriptorType::eUniformBuffer;
+		return { vk::DescriptorType::eUniformBuffer };
 	else if constexpr (std::is_same_v <R, RaytracingAccelerationStructure>)
-		return vk::DescriptorType::eAccelerationStructureKHR;
+		return { vk::DescriptorType::eAccelerationStructureKHR };
+	else if constexpr (is_resource_array_v <R>)
+		return { resource_packet <typename R::base> ().type, R::elements };
 	// else
 	// 	return vk::DescriptorType::eUniformBuffer;
-} ();
+};
 
 template <auto &ref, ShaderStage ... Ss>
 auto dslbs_for_resource_group(const stage_wrapper <ref, Ss...> &)
@@ -36,10 +43,11 @@ auto dslbs_for_resource_group(const stage_wrapper <ref, Ss...> &)
 	auto fill_one = [&] <size_t I> () {
 		using Resource = T::fields::template get <I>;
 
+		auto pack = resource_packet <Resource> ();
 		return vk::DescriptorSetLayoutBinding()
 			.setBinding(I)
-			.setDescriptorCount(1)
-			.setDescriptorType(resource_descriptor_type <Resource>)
+			.setDescriptorCount(pack.count)
+			.setDescriptorType(pack.type)
 			.setStageFlags(stage_flags);
 	};
 
@@ -53,14 +61,16 @@ auto dslbs_for_resource_group(const stage_wrapper <ref, Ss...> &)
 template <auto &ref, ShaderStage ... Ss>
 auto dslbs_for_singlet_group(const stage_wrapper <ref, Ss...> &)
 {
+	constexpr auto stage_flags = (stage_to_flag(Ss) | ...);
+	
 	using R = reference_base_of <ref>;
 
-	constexpr auto stage_flags = (stage_to_flag(Ss) | ...);
+	auto pack = resource_packet <R> ();
 	return std::array {
 		vk::DescriptorSetLayoutBinding()
 			.setBinding(0)
-			.setDescriptorCount(1)
-			.setDescriptorType(resource_descriptor_type <R>)
+			.setDescriptorCount(pack.count)
+			.setDescriptorType(pack.type)
 			.setStageFlags(stage_flags)
 	};
 }

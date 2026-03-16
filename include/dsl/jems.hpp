@@ -31,6 +31,7 @@ public:
 	operator const Reference &() const;
 };
 
+// TODO: just make these all functions...
 struct operation : handle {
 	operation(
 		OperationCode code,

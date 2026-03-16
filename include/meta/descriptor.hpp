@@ -36,48 +36,88 @@ constexpr size_t number_of_bindings = [] constexpr {
 } ();
 
 // Temporary storage for descriptor infos
-union DescriptorInfoUnion {
-	vk::DescriptorImageInfo image;
-	vk::DescriptorBufferInfo buffer;
-	vk::WriteDescriptorSetAccelerationStructureKHR tlas;
+struct descriptor_info_union : variant <
+	vk::DescriptorImageInfo,
+	vk::DescriptorBufferInfo,
+	std::vector <vk::DescriptorImageInfo>,
+	vk::WriteDescriptorSetAccelerationStructureKHR
+> {
+	using variant_self::variant;
+
+	auto &set_image(const vk::DescriptorImageInfo &image) {
+		*this = image;
+		return as <vk::DescriptorImageInfo> ();
+	}
+
+	auto &set_image_list(const std::vector <vk::DescriptorImageInfo> &images) {
+		*this = images;
+		return as <std::vector <vk::DescriptorImageInfo>> ();
+	}
+	
+	auto &set_buffer(const vk::DescriptorBufferInfo &buffer) {
+		*this = buffer;
+		return as <vk::DescriptorBufferInfo> ();
+	}
+	
+	auto &set_tlas(const vk::WriteDescriptorSetAccelerationStructureKHR &tlas) {
+		*this = tlas;
+		return as <vk::WriteDescriptorSetAccelerationStructureKHR> ();
+	}
 };
 
+template <typename T>
+auto get_descriptor_info(const auto &resource)
+{
+	if constexpr (std::is_same_v <T, RaytracingAccelerationStructure>) {
+		return vk::WriteDescriptorSetAccelerationStructureKHR()
+			.setAccelerationStructures(resource);
+	} else if constexpr (is_resource_array_v <T>) {
+		using R = T::base;
+		return constexpr_for(Is, T::elements,
+			return std::vector {
+				get_descriptor_info <R> (resource[Is])...
+			}
+		);
+	} else {
+		return resource.descriptor_info();
+	}
+}
+
 template <typename T, size_t I>
-void set_descriptor_write_and_union(
+void set_descriptor_write(
 	const auto &resource,
 	const vk::DescriptorSet &set,
 	vk::WriteDescriptorSet &write,
-	DescriptorInfoUnion &info
+	descriptor_info_union &info
 )
 {
 	using enum vk::DescriptorType;
 
 	write // ...
 		.setDstSet(set)
-		.setDescriptorType(resource_descriptor_type <T>)
+		.setDescriptorType(resource_packet <T> ().type)
 		.setDstBinding(I);
 
-	auto dinfo = [&] {
-		if constexpr (std::is_same_v <T, RaytracingAccelerationStructure>) {
-			return vk::WriteDescriptorSetAccelerationStructureKHR()
-				.setAccelerationStructures(resource);
-		} else {
-			return resource.descriptor_info();
-		}
-	} ();
+	auto dinfo = get_descriptor_info <T> (resource);
+	if constexpr (is_sampler_v <T> or is_storage_image_v <T>) {
+		write.setImageInfo(info.set_image(dinfo));
+	} else if constexpr (is_storage_buffer_v <T> or is_uniform_buffer_v <T>) {
+		write.setBufferInfo(info.set_buffer(dinfo));
+	} else if constexpr (std::is_same_v <T, RaytracingAccelerationStructure>) {
+		write // ...
+			.setDescriptorCount(1)
+			.setPNext(&(info.set_tlas(dinfo)));
+	} else if constexpr (is_resource_array_v <T>) {
+		using R = T::base;
 
-	if constexpr (is_sampler_v <T>)
-		write.setImageInfo(info.image = dinfo);
-	else if constexpr (is_storage_image_v <T>)
-		write.setImageInfo(info.image = dinfo);
-	else if constexpr (is_storage_buffer_v <T>)
-		write.setBufferInfo(info.buffer = dinfo);
-	else if constexpr (is_uniform_buffer_v <T>)
-		write.setBufferInfo(info.buffer = dinfo);
-	else if constexpr (std::is_same_v <T, RaytracingAccelerationStructure>)
-		write.setDescriptorCount(1).setPNext(&(info.tlas = dinfo));
-	else
+		if constexpr (is_sampler_v <R> or is_storage_image_v <R>) {
+			write.setImageInfo(info.set_image_list(dinfo));
+		} else {
+			static_error("unsupported resource array element "_ss + $ss_type(R));
+		}
+	} else {
 		static_error("unsupported resource type "_ss + $ss_type(T));
+	}
 }
 
 // Descriptor write handler with temporary storage
@@ -93,7 +133,7 @@ struct DescriptorWrite {
 	const ResourceTypeFor <ref> &resource;
 
 	static constexpr size_t bindings = number_of_bindings <Reference>;
-	std::array <DescriptorInfoUnion, bindings> info_unions;
+	std::array <descriptor_info_union, bindings> info_unions;
 
 	[[nodiscard]] auto descriptor_handle() const -> vk::DescriptorSet {
 		return std::visit([](const auto &desc) -> vk::DescriptorSet {
@@ -108,7 +148,7 @@ struct DescriptorWrite {
 		auto bind_one = [&] <size_t I> () {
 			using Resource = T::fields::template get <I>;
 
-			set_descriptor_write_and_union <Resource, I> (
+			set_descriptor_write <Resource, I> (
 				resource.template get <I> (),
 				descriptor_handle(),
 				writes[I],
@@ -123,7 +163,7 @@ struct DescriptorWrite {
 	
 	void bind(const std::span <vk::WriteDescriptorSet, bindings> &writes)
 	requires (not is_resource_group_v <Reference>) {
-		set_descriptor_write_and_union <Reference, 0> (
+		set_descriptor_write <Reference, 0> (
 			resource,
 			descriptor_handle(),
 			writes[0],

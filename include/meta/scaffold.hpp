@@ -69,9 +69,9 @@ struct alignas(AlignTopLevel ? Align : 0) scaffold_structural : T {
 // Scaffold lookup procedure
 template <typename Hint, typename View, bool AlignTopLevel = false>
 struct scaffold_lookup {
-	static_error("no scaffold_lookup registered for hint { "_ss
-		+ $ss_type(Hint) + " } and view { "_ss
-		+ $ss_type(View) + " }"_ss);
+	static_assert(false, "no scaffold_lookup registered for hint '"_ss
+		+ $ss_type(Hint) + "' and view '"_ss
+		+ $ss_type(View) + "'... probably missing a scaffold_hint?"_ss);
 };
 
 // Primitive/built-in types
@@ -109,10 +109,8 @@ struct scaffold_lookup <
 	AlignTopLevel
 >
 {
-	static_assert(N1 == N2, "bad");
+	static_assert(N1 == N2, "sizes are different");
 	using element = scaffold_lookup <Element, ElementView, true> ::type;
-        // NOTE: AlignTopLevel is ignored here because we already have each
-        // element aligned, and thus the array should be aligned the same
         using type = std::array <element, N1>;
 };
 

@@ -25,8 +25,17 @@ struct static_string {
 			elements[i] = c;
 	}
 
+	// TODO: this isnt needed anymore :) (test gcc/clang just to make sure)
 	constexpr std::string_view view() const {
 		return { elements, N };
+	}
+
+	constexpr const char *const data() const {
+		return elements;
+	}
+
+	constexpr size_t size() const {
+		return N;
 	}
 };
 

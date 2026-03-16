@@ -69,6 +69,15 @@ struct resource_translation <RaytracingAccelerationStructure> {
 	using host_type = std::nullptr_t;
 };
 
+// TODO: need to handle unsized arrays at some point
+template <typename R, int64_t D>
+requires is_global_resource_v <R>
+struct resource_translation <array <R, D>> {
+	using base_handle_type = resource_translation <R> ::handle_type;
+	using handle_type = std::array <scaffold_hint <base_handle_type, 0>, D>;
+	using host_type = std::nullptr_t;
+};
+
 template <user_defined T>
 struct resource_translation <ResourceGroup <T>> {
 	using translated = T::fields::template map <resource_translation_handle_t>;

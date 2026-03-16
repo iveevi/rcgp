@@ -3,6 +3,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include "../dsl/jems.hpp"
+#include "../dsl/array.hpp"
 #include "../util/error.hpp"
 #include "../util/cti.hpp"
 #include "layouts.hpp"
@@ -90,6 +91,20 @@ TYPE_TRAIT(is_global_resource);
 	template <typename T, size_t D>
 	TYPE_TRAIT_INCLUDES(is_global_resource, Sampler <T, D>);
 
+	template <typename R, int64_t D>
+	requires is_global_resource_v <R>
+	TYPE_TRAIT_INCLUDES(is_global_resource, array <R, D>);
+
+// TODO: this should not include resource groups...
+template <typename R, int64_t D>
+requires is_global_resource_v <R>
+struct array <R, D> : resource_handle {
+	using base = R;
+	static constexpr int64_t elements = D;
+
+	struct handle_type : jems::handle {};
+};
+
 namespace detail {
 
 template <typename T>
@@ -98,7 +113,6 @@ struct resource_group_builder {};
 template <typename T>
 using resource_group_t = resource_group_builder <T> ::type;
 
-// TODO: global_resource concept?
 template <typename T>
 requires is_global_resource_v <T>
 struct resource_group_builder <T> {
@@ -151,5 +165,10 @@ TYPE_TRAIT(is_sampler);
 TYPE_TRAIT(is_storage_image);
 	template <typename T, size_t D, GlobalResourceAccess A>
 	TYPE_TRAIT_INCLUDES(is_storage_image, StorageImage <T, D, A>);
+
+TYPE_TRAIT(is_resource_array);
+	template <typename R, int64_t D>
+	requires is_global_resource_v <R>
+	TYPE_TRAIT_INCLUDES(is_resource_array, array <R, D>);
 
 } // namespace rcgp

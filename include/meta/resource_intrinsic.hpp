@@ -88,4 +88,20 @@ jems::handle resource_intrinsic(const Sampler <T, D> &, uint32_t binding)
 	);
 }
 
+// TODO: array slot for global resources
+template <typename R, int64_t D>
+requires is_global_resource_v <R>
+jems::handle resource_intrinsic(const array <R, D> &, uint32_t binding)
+{
+	// TODO: aggregate (Desc) initialization
+	return jems::global_resource(
+		nullptr,
+		GlobalResourceKind::eSampler,
+		GlobalResourceLayout::eNone,
+		GlobalResourceAccess::eRead,
+		std::nullopt,
+		binding
+	);
+}
+
 } // namespace rcgp

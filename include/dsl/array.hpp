@@ -5,7 +5,7 @@
 namespace rcgp {
 
 template <typename T, int64_t N = -1>
-struct array : public jems::handle {
+struct array : jems::handle {
 	template <projectively_int_scalar U>
 	T operator[](const U &idx) const {
 		T result;
