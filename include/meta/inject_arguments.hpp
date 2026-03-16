@@ -24,7 +24,7 @@ template <ShaderStage S, typename T>
 void inject_one_argument(T &value, InjectionCounters &counters)
 {
 	// TODO: static strings for ShaderStage
-	static_error("argument injector not implemented for "_ss + $ss_type(T));
+	static_assert(false, "argument injector not implemented for "_ss + $ss_type(T));
 }
 
 template <ShaderStage S, uint32_t X, uint32_t Y, uint32_t Z>
@@ -53,17 +53,15 @@ void inject_one_argument(TaskGroup <X, Y, Z> &, InjectionCounters &)
 template <ShaderStage S1, SystemValue G, ShaderStage S2, typename T>
 void inject_one_argument(read_only_intrinsic <G, S2, T> &value, InjectionCounters &counters)
 {
-	if constexpr (S1 != S2) {
-		// TODO: static string for global intrinsics...
-		static_error("unsupported intrinsic"_ss);
-	}
+	// TODO: static string for global intrinsics...
+	static_assert(S1 == S2, "unsupported intrinsic"_ss);
 }
 
 template <ShaderStage S1, SystemValue G, ShaderStage S2, typename T>
 void inject_one_argument(write_only_intrinsic <G, S2, T> &value, InjectionCounters &counters)
 {
-	if constexpr (S1 != S2)
-		static_error("unsupported intrinsic"_ss);
+	// TODO: static string for global intrinsics...
+	static_assert(S1 == S2, "unsupported intrinsic"_ss);
 }
 
 template <ShaderStage S, auto &... refs>
@@ -104,7 +102,7 @@ void inject_resource_reference(contract <ref> &value)
 		value.override_reference(grsrc);
 	} else {
 		// Unknown cases
-		static_error("resource contract injector not implemented for "_ss + $ss_type(R));
+		static_assert(false, "resource contract injector not implemented for "_ss + $ss_type(R));
 	}
 }
 
@@ -161,7 +159,7 @@ void inject_one_argument(T &value, InjectionCounters &counters)
 	} else {
 		// Not supported
 		// TODO: static string for stages...
-		static_error("argument type "_ss + $ss_type(T)
+		static_assert(false, "argument type "_ss + $ss_type(T)
 			+ " is not supported in Stage X"_ss);
 	}
 }

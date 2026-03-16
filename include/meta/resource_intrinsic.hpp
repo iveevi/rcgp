@@ -3,8 +3,6 @@
 #include <type_traits>
 
 #include "../dsl/jems.hpp"
-#include "../dsl/instructions.hpp"
-#include "../util/cti.hpp"
 #include "layouts.hpp"
 #include "reconstruct_type.hpp"
 #include "resources.hpp"
@@ -21,7 +19,7 @@ consteval GlobalResourceLayout layout_of()
 	else if constexpr (std::is_same_v <L <sample>, layouts::scalar <sample>>)
 		return GlobalResourceLayout::eScalar;
 	else
-		static_error("unsupported layout for global resource"_ss);
+		static_assert(false, "unsupported layout for global resource"_ss);
 }
 
 template <typename T, template <typename> typename L>

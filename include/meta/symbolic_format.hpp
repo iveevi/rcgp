@@ -1,14 +1,13 @@
 #pragma once
 
-#include "static_string.hpp"
 #include "../dsl/aliases.hpp"
-#include "../util/cti.hpp"
+#include "static_string.hpp"
 
 namespace rcgp {
 
 template <typename T>
 struct symbolic_format {
-	static_error("bad"_ss);
+	static_assert(false, "bad"_ss);
 };
 
 template <>

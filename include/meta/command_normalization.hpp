@@ -10,9 +10,6 @@
 
 namespace rcgp::detail {
 
-// TODO: need to do a clean pass over this still, bunch of horse shit right now
-// TODO: prefix static_error with a shared newline "rcgp:" thingy
-
 // Dependency/resolution state for a key
 struct tag_dep {};
 struct tag_res {};
@@ -107,8 +104,6 @@ consteval auto tag_operator(tag_bar <SrcA, DstA>, tag_bar <SrcB, DstB>)
 	} else if constexpr (std::is_same_v <DstB, SrcA>) {
 		return tag_bar <SrcB, DstA> ();
 	} else {
-		// TODO: restore and test
-		// static_error("command recording barrier phase mismatch"_ss);
 		return no_bar();
 	}
 }
@@ -196,7 +191,7 @@ consteval auto normalize_step(Map, Indicators, Effect)
 {
 	if constexpr (is_dependency_sentinel_effect_v <Effect>) {
 		if constexpr (map_has_dep(Map()))
-			static_error("command recording has unresolved dependencies"_ss);
+			static_assert(false, "command recording has unresolved dependencies"_ss);
 		return std::pair <Map, Indicators> ();
 	} else if constexpr (is_enforcer_index_effect_v <Effect>) {
 		return std::pair <enforce_index_deps_t <Map, Indicators>, Tlist <>> ();
@@ -236,7 +231,7 @@ consteval auto normalize_step(Map, Indicators, Effect)
 			Indicators
 		> ();
 	} else {
-		static_error("unsupported command effect"_ss);
+		static_assert(false, "unsupported command effect"_ss);
 		return std::pair <Map, Indicators> ();
 	}
 }

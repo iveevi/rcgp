@@ -113,10 +113,10 @@ void set_descriptor_write(
 		if constexpr (is_sampler_v <R> or is_storage_image_v <R>) {
 			write.setImageInfo(info.set_image_list(dinfo));
 		} else {
-			static_error("unsupported resource array element "_ss + $ss_type(R));
+			static_assert(false, "unsupported resource array element "_ss + $ss_type(R));
 		}
 	} else {
-		static_error("unsupported resource type "_ss + $ss_type(T));
+		static_assert(false, "unsupported resource type "_ss + $ss_type(T));
 	}
 }
 

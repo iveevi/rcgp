@@ -1,9 +1,6 @@
 #pragma once
 
-#include <type_traits>
-
 #include "../util/tlist.hpp"
-#include "concepts.hpp"
 #include "macro_hell.hpp"
 #include "scaffold.hpp"
 #include "this_injection.hpp"
@@ -31,7 +28,8 @@ using snipped_tlist = rcgp::Tlist <Ts...>;
 		if constexpr (false) {}							\
 		MAP(GEN_AGGREGATE_FIELD_REFERENCE, /* NA */, __VA_ARGS__)		\
 		else									\
-			static_error("invalid field access of "_ss + $ss_type(This));	\
+			static_assert(false, "invalid field access of "_ss		\
+				+ $ss_type(This));					\
 	}
 
 // Generating the override reference method

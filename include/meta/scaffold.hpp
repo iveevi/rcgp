@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../util/cti.hpp"
 #include "../util/tlist.hpp"
 #include "concepts.hpp"
 #include "static_string.hpp"
@@ -164,7 +163,8 @@ struct scaffold_lookup <
 		if constexpr (false) {}						\
 		MAP(GEN_SCAFFOLD_FIELD_GET, /* NA */, __VA_ARGS__)		\
 		else {								\
-			static_error("bad scaffold get "_ss + $ss_type(This));	\
+			static_assert(false, "bad scaffold get "_ss		\
+				+ $ss_type(This));				\
 		}								\
 	}									\
 	template <size_t D>							\
@@ -173,7 +173,8 @@ struct scaffold_lookup <
 		if constexpr (false) {}						\
 		MAP(GEN_SCAFFOLD_FIELD_GET, /* NA */, __VA_ARGS__)		\
 		else {								\
-			static_error("bad scaffold get "_ss + $ss_type(This));	\
+			static_assert(false, "bad scaffold get "_ss		\
+				+ $ss_type(This));				\
 		}								\
 	}
 
@@ -184,7 +185,8 @@ struct scaffold_lookup <
 		if constexpr (false) {}						\
 		MAP(GEN_SCAFFOLD_FIELD_OFFSET, /* NA */, __VA_ARGS__)		\
 		else {								\
-			static_error("out of bounds scaffold offset of "_ss	\
+			static_assert(false,					\
+				"out of bounds scaffold offset of "_ss		\
 				+ $ss_type(This));				\
 			return 0;						\
 		}								\

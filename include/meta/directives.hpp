@@ -159,7 +159,7 @@ auto bind_index_buffer(const IndexMirrorBuffer <Symbolic, layouts::scalar> &ibuf
 			static_assert(T == Topology::eTriangleFan, "unexpected index topology");
 			cmd.bindIndexBuffer(ibuffer.handle, 0, vk::IndexType::eUint32);
 		} else {
-			static_error("unsupported index buffer type"_ss);
+			static_assert(false, "unsupported index buffer type"_ss);
 		}
 	};
 

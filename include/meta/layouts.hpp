@@ -58,7 +58,7 @@ struct scalar_policy {
 
 template <typename Policy, typename T>
 struct layout_rules {
-	static_error("layout_rules not implemented for type "_ss + $ss_type(T));
+	static_assert(false, "layout_rules not implemented for type "_ss + $ss_type(T));
 };
 
 template <typename Policy, typename List>
