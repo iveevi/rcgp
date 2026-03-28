@@ -355,7 +355,10 @@ Reference get_or_add_type_ref(const SharedBlockReference &sbr, const Reference &
 	}
 	vcase(GlobalResource): {
 		auto &grsrc = ref->as <GlobalResource> ();
-		return get_or_add_type_ref(sbr, grsrc.type);
+		auto base = get_or_add_type_ref(sbr, grsrc.type);
+		if (grsrc.count)
+			return get_or_add_type(sbr, Array { base, *grsrc.count });
+		return base;
 	}
 	vcase(ArrayAccess): {
 		auto &aacc = ref->as <ArrayAccess> ();
