@@ -174,7 +174,8 @@ enum class BuiltinIntrinsicCode {
 	eToFloat,
 	eTranspose,          // @glsl:transpose
 	eUnsizedArrayLength,
-	eTraceRays,          // @glsl:traceRayEXT
+	eTraceRaysEXT,       // @glsl:traceRayEXT
+	eNonUniformEXT,	     // @glsl:nonuniformEXT
 };
 
 const char *repr(BuiltinIntrinsicCode value);

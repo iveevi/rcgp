@@ -40,6 +40,7 @@ struct descriptor_info_union : variant <
 	vk::DescriptorImageInfo,
 	vk::DescriptorBufferInfo,
 	std::vector <vk::DescriptorImageInfo>,
+	std::vector <vk::DescriptorBufferInfo>,
 	vk::WriteDescriptorSetAccelerationStructureKHR
 > {
 	using variant_self::variant;
@@ -57,6 +58,11 @@ struct descriptor_info_union : variant <
 	auto &set_buffer(const vk::DescriptorBufferInfo &buffer) {
 		*this = buffer;
 		return as <vk::DescriptorBufferInfo> ();
+	}
+
+	auto &set_buffer_list(const std::vector <vk::DescriptorBufferInfo> &buffers) {
+		*this = buffers;
+		return as <std::vector <vk::DescriptorBufferInfo>> ();
 	}
 	
 	auto &set_tlas(const vk::WriteDescriptorSetAccelerationStructureKHR &tlas) {
@@ -123,6 +129,8 @@ void set_descriptor_write(
 
 		if constexpr (is_sampler_v <R> or is_storage_image_v <R>)
 			write.setImageInfo(info.set_image_list(dinfo));
+		else if constexpr (is_storage_buffer_v <R> or is_uniform_buffer_v <R>)
+			write.setBufferInfo(info.set_buffer_list(dinfo));
 		else
 			static_assert(false, "unsupported resource array element "_ss + $ss_type(R));
 	} else {

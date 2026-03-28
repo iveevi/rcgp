@@ -344,7 +344,7 @@ struct Dispatcher {
 			$location
 		) {
 			jems::builtin_intrinsic(
-				BuiltinIntrinsicCode::eTraceRays,
+				BuiltinIntrinsicCode::eTraceRaysEXT,
 				{
 					as, i32(std::to_underlying(R::flags)), mask,
 					// TODO: these 3 and hte last payload

@@ -102,13 +102,23 @@ struct array <R, D> : resource_handle {
 	static constexpr int64_t elements = D;
 
 	struct handle_type : jems::handle {
-		auto operator[](const int32_t &index, $location) const {
+		auto operator[](const uint32_t &index, $location) const {
 			auto result = typename R::handle_type();
 			auto access = jems::array_access(*this, scalar <int32_t> (index), loc);
 			result.override_reference(access);
 			return result;
 		}
+
+		// TODO: automatic non-uniform conversion
+		auto operator[](const scalar <uint32_t> &index, $location) const {
+			auto result = typename R::handle_type();
+			auto access = jems::array_access(*this, index, loc);
+			result.override_reference(access);
+			return result;
+		}
 	};
+
+	static const inline R element;
 };
 
 namespace detail {

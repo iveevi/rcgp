@@ -150,6 +150,7 @@ std::string lval_repr(const GLSLEmitter &em, const Reference &ref)
 		return repr_glsl(sysval);
 	}
 	vcase(GlobalResource): {
+		// TODO: separate method
 		auto &grsrc = ref->as <GlobalResource> ();
 		
 		auto base = grsrc_name(grsrc);
@@ -182,20 +183,32 @@ std::string lval_repr(const GLSLEmitter &em, const Reference &ref)
 		return std::format("{}.{}", expr_repr(em, swz.value), repr(swz.code));
 	}
 	vcase(ArrayAccess): {
-		auto &aacc = ref->as <ArrayAccess> ();
-		if (aacc.value->is <SystemValue> ()) {
-			auto &sysval = aacc.value->as <SystemValue> ();
-			if (sysval == SystemValue::eMeshVertices) {
+		// TODO: separate method
+		auto &access = ref->as <ArrayAccess> ();
+		if (access.value->is <SystemValue> ()) {
+			auto &sv = access.value->as <SystemValue> ();
+			if (sv == SystemValue::eMeshVertices) {
 				return std::format(
 					"gl_MeshVerticesEXT[{}].gl_Position",
-					expr_repr(em, aacc.index)
+					expr_repr(em, access.index)
 				);
 			}
 		}
 
-		return std::format("{}[{}]",
-			lval_repr(em, aacc.value),
-			expr_repr(em, aacc.index));
+		auto vstr = lval_repr(em, access.value);
+		auto istr = expr_repr(em, access.index);
+		if (access.value->is <GlobalResource> ()) {
+			auto &global = access.value->as <GlobalResource> ();
+			if (global.kind == GlobalResourceKind::eStorageBuffer) {
+				if (vstr.ends_with(".value")) {
+					return std::format("{}[{}].value",
+						vstr.substr(0, vstr.size() - 6),
+						istr);
+				}
+			}
+		}
+
+		return std::format("{}[{}]", vstr, istr);
 	}
 	default:
 		break;
@@ -394,7 +407,7 @@ bool has_side_effects(const BuiltinIntrinsicCode &code)
 		BuiltinIntrinsicCode::eEmitMeshTasksEXT,
 		BuiltinIntrinsicCode::eImageStore,
 		BuiltinIntrinsicCode::eSetMeshOutputsEXT,
-		BuiltinIntrinsicCode::eTraceRays,
+		BuiltinIntrinsicCode::eTraceRaysEXT,
 	};
 
 	return side_effects.contains(code);
@@ -472,20 +485,30 @@ void emit_main(GLSLEmitter &em)
 
 auto collect_extensions(const GLSLEmitter &em)
 {
-	std::vector <std::string> extensions;
+	std::set <std::string> extensions;
 	
-	extensions.emplace_back("GL_EXT_scalar_block_layout");
+	extensions.insert("GL_EXT_scalar_block_layout");
 	
 	auto stage = em.main->stage;
 	if (stage == ShaderStage::eMesh
 		or stage == ShaderStage::eTask)
-		extensions.emplace_back("GL_EXT_mesh_shader");
+		extensions.insert("GL_EXT_mesh_shader");
 	if (stage == ShaderStage::eRayGeneration
 		or stage == ShaderStage::eClosestHit
 		or stage == ShaderStage::eMiss)
-		extensions.emplace_back("GL_EXT_ray_tracing");
+		extensions.insert("GL_EXT_ray_tracing");
 
-	return extensions;
+	// TODO: need to walk through all instructions...
+	for (auto &instr : *em.main) {
+		if (not instr->is <BuiltinIntrinsic> ())
+			continue;
+
+		auto &bintr = instr->as <BuiltinIntrinsic> ();
+		if (bintr.code == BuiltinIntrinsicCode::eNonUniformEXT)
+			extensions.insert("GL_EXT_nonuniform_qualifier");
+	}
+
+	return std::vector(extensions.begin(), extensions.end());
 }
 
 void emit_stage_io(GLSLEmitter &em)

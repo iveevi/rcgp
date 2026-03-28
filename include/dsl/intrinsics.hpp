@@ -196,6 +196,11 @@ inline f32 smoothstep(const f32 &x, const f32 &a, const f32 &b)
 	return f32::reinterpret(builtin(eSmoothstep, x, a, b));
 }
 
+inline u32 nonuniform(const u32 &v)
+{
+	return u32::reinterpret(builtin(eNonUniformEXT, v));
+}
+
 } // namespace rcgp
 
 #undef builtin
