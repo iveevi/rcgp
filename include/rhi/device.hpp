@@ -1,9 +1,11 @@
 #pragma once
 
+#include <concepts>
 #include <map>
 #include <optional>
 #include <span>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "session.hpp"
@@ -23,6 +25,8 @@ struct TimestampQueryResult;
 struct Window;
 struct AccelerationStructure;
 struct Buffer;
+struct XlasInstance;
+struct ShaderBindingTable;
 
 template <auto &ref>
 struct UnboundDescriptor;
@@ -107,6 +111,30 @@ struct Device {
 		uint64_t timeout = UINT64_MAX
 	) const;
 	bool rebuild_swapchain(Window &window) const;
+
+	// Acceleration structures
+	auto build_blas(
+		const CommandBuffer &cmd,
+		const Buffer &vertices, const Buffer &indices,
+		size_t vertex_count, size_t primitive_count
+	) const -> std::tuple <AccelerationStructure, Buffer>;
+
+	auto build_tlas(
+		const CommandBuffer &cmd,
+		const std::vector <XlasInstance> &instances
+	) const -> std::tuple <AccelerationStructure, Buffer>;
+
+	// Shader binding table
+	auto build_sbt(
+		vk::Pipeline pipeline,
+		uint32_t miss_count,
+		uint32_t hit_count
+	) const -> ShaderBindingTable;
+
+	// One-shot command submission
+	template <typename F>
+	requires std::is_invocable_v <F, const CommandBuffer &>
+	auto one_shot(const Queue &queue, const CommandPool &cpool, F &&ftn) const;
 
 	// Timestamp pool
 	TimestampQueryPool new_timestamp_pool(vk::QueryResultFlags flags, size_t count) const;

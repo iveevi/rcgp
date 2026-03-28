@@ -199,7 +199,7 @@ std::string lval_repr(const GLSLEmitter &em, const Reference &ref)
 		auto istr = expr_repr(em, access.index);
 		if (access.value->is <GlobalResource> ()) {
 			auto &global = access.value->as <GlobalResource> ();
-			if (global.kind == GlobalResourceKind::eStorageBuffer) {
+			if (global.kind == GlobalResourceKind::eStorageBuffer && global.count) {
 				if (vstr.ends_with(".value")) {
 					return std::format("{}[{}].value",
 						vstr.substr(0, vstr.size() - 6),

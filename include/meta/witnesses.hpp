@@ -25,4 +25,6 @@ using ResourceType = resource_translation <T> ::handle_type;
 template <auto &ref>
 using ResourceTypeFor = ResourceType <reference_base_of <ref>>;
 
+#define $resource(ref) ::rcgp::ResourceTypeFor <ref>
+
 } // namespace rcgp
