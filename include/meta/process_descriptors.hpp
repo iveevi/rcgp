@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../rhi/device.hpp"
+#include "contract_configuration.hpp"
 #include "resources.hpp"
 #include "resources_collect.hpp"
 #include "shader_stage_conversion.hpp"
@@ -24,33 +25,6 @@ constexpr vk::DescriptorType resource_descriptor_type_v = []
 	else if constexpr (is_resource_array_v <R>)
 		return resource_descriptor_type_v <typename R::base>;
 } ();
-
-// TODO: per-contract override configuration
-struct contract_desc {
-	vk::DescriptorType type;
-	vk::DescriptorBindingFlags flags = vk::DescriptorBindingFlags(0);
-	uint32_t count = 1;
-
-	static inline std::map <void *, contract_desc> overrides;
-};
-
-template <auto &ref>
-struct contract_config {
-	using R = reference_base_of <ref>;
-
-	static void reserve(uint32_t size) {
-		static_assert(is_dynamic_v <R>, "reserve is only available for variable sized resources");
-		contract_desc::overrides[&ref].count = size;
-	}
-
-	static void update_after_bind(bool enable) {
-		auto &flags = contract_desc::overrides[&ref].flags;
-		if (enable)
-			flags |= vk::DescriptorBindingFlagBits::eUpdateAfterBind;
-		else
-			flags &= ~vk::DescriptorBindingFlagBits::eUpdateAfterBind;
-	}
-};
 
 template <typename R>
 contract_desc resource_packet(const contract_desc &override)

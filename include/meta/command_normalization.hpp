@@ -26,6 +26,9 @@ struct no_bar {};
 template <auto &ref>
 struct key_ref {};
 
+template <auto &ref>
+struct key_target {};
+
 template <Topology T>
 struct key_index {};
 
@@ -45,6 +48,9 @@ TYPE_TRAIT(is_dependency_index_effect);
 TYPE_TRAIT(is_indicator_index_effect);
 TYPE_TRAIT(is_enforcer_index_effect);
 TYPE_TRAIT(is_dependency_sentinel_effect);
+
+TYPE_TRAIT(is_target_write_effect);
+TYPE_TRAIT(is_target_read_effect);
 
 template <auto &ref>
 TYPE_TRAIT_INCLUDES(is_dependency_effect, Dependency <ref>);
@@ -69,6 +75,12 @@ TYPE_TRAIT_INCLUDES(is_enforcer_index_effect, DependencyEnforcerForIndexBuffer);
 
 template <>
 TYPE_TRAIT_INCLUDES(is_dependency_sentinel_effect, DependencySentinel);
+
+template <auto &ref>
+TYPE_TRAIT_INCLUDES(is_target_write_effect, TargetWrite <ref>);
+
+template <auto &ref>
+TYPE_TRAIT_INCLUDES(is_target_read_effect, TargetRead <ref>);
 
 template <typename Head, typename ... Tail>
 consteval auto tlist_prepend(Tlist <Tail...>, Head) -> Tlist <Head, Tail...>;
@@ -230,6 +242,16 @@ consteval auto normalize_step(Map, Indicators, Effect)
 			map_apply_t <key_index <Effect::topology>, tag_dep, no_bar, Map>,
 			Indicators
 		> ();
+	} else if constexpr (is_target_write_effect_v <Effect>) {
+		return std::pair <
+			map_apply_t <key_target <Effect::handle>, tag_res, no_bar, Map>,
+			Indicators
+		> ();
+	} else if constexpr (is_target_read_effect_v <Effect>) {
+		return std::pair <
+			map_apply_t <key_target <Effect::handle>, tag_dep, no_bar, Map>,
+			Indicators
+		> ();
 	} else {
 		static_assert(false, "unsupported command effect"_ss);
 		return std::pair <Map, Indicators> ();
@@ -285,6 +307,20 @@ struct entry_effects <effect_entry <key_ref <ref>, DepRes, Bar>> {
 	>;
 	using bar = typename bar_effects <ref, Bar> ::type;
 	using type = tlist_concat_t <dep, bar>;
+};
+
+template <auto &ref, typename DepRes, typename Bar>
+struct entry_effects <effect_entry <key_target <ref>, DepRes, Bar>> {
+	static_assert(std::is_same_v <Bar, no_bar>, "render target cannot carry barrier effects");
+	using type = std::conditional_t <
+		std::is_same_v <DepRes, tag_dep>,
+		Tlist <TargetRead <ref>>,
+		std::conditional_t <
+			std::is_same_v <DepRes, tag_res>,
+			Tlist <TargetWrite <ref>>,
+			Tlist <>
+		>
+	>;
 };
 
 template <Topology T, typename DepRes, typename Bar>

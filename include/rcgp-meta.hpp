@@ -8,6 +8,7 @@
 #include "meta/function_construction.hpp"
 #include "meta/mirror_sampler.hpp"
 #include "meta/reflection.hpp"
+#include "meta/render_pass.hpp"
 #include "meta/resource_aliases.hpp"
 #include "meta/resource_intrinsic.hpp"
 #include "meta/resource_translations.hpp"

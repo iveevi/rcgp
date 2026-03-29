@@ -57,6 +57,17 @@ struct BarrierEffect {
 	using dst_phase = DstPhase;
 };
 
+// Render target effects
+template <auto &ref>
+struct TargetWrite {
+	static constexpr auto &handle = ref;
+};
+
+template <auto &ref>
+struct TargetRead {
+	static constexpr auto &handle = ref;
+};
+
 // Dependency sequences for pipelines
 template <auto &... refs>
 consteval auto command_effects_for_streams(Tlist <contract <refs>...>)

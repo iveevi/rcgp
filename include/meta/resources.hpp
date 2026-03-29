@@ -153,6 +153,24 @@ struct ResourceGroup : T {
 template <typename T>
 TYPE_TRAIT_INCLUDES(is_global_resource, ResourceGroup <T>);
 
+// Render targets
+struct ColorTarget : resource_handle { struct handle_type {}; };
+struct DepthTarget : resource_handle { struct handle_type {}; };
+
+TYPE_TRAIT(is_color_target);
+	template <>
+	TYPE_TRAIT_INCLUDES(is_color_target, ColorTarget);
+
+TYPE_TRAIT(is_depth_target);
+	template <>
+	TYPE_TRAIT_INCLUDES(is_depth_target, DepthTarget);
+
+TYPE_TRAIT(is_render_target);
+	template <>
+	TYPE_TRAIT_INCLUDES(is_render_target, ColorTarget);
+	template <>
+	TYPE_TRAIT_INCLUDES(is_render_target, DepthTarget);
+
 // Type traits for these resources
 TYPE_TRAIT(is_attribute_stream);
 	template <typename T, template <typename> typename L, vk::VertexInputRate R>
