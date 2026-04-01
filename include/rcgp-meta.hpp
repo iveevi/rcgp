@@ -1,5 +1,10 @@
 #pragma once
 
+#include "meta/intrinsics_common.hpp"
+#include "meta/intrinsics_vertex.hpp"
+#include "meta/intrinsics_compute.hpp"
+#include "meta/intrinsics_mesh.hpp"
+#include "meta/intrinsics_raytracing.hpp"
 #include "meta/combinators.hpp"
 #include "meta/commands.hpp"
 #include "meta/command_stream.hpp"

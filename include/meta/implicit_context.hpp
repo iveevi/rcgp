@@ -3,7 +3,7 @@
 #include "../util/cti.hpp"
 #include "../util/tlist.hpp"
 #include "contract.hpp"
-#include "stage_intrinsics.hpp"
+#include "intrinsics_raytracing.hpp"
 
 namespace rcgp {
 

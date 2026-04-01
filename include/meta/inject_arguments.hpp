@@ -5,7 +5,9 @@
 #include "implicit_context.hpp"
 #include "reconstruct_type.hpp"
 #include "resources.hpp"
-#include "stage_intrinsics.hpp"
+#include "intrinsics_common.hpp"
+#include "intrinsics_compute.hpp"
+#include "intrinsics_mesh.hpp"
 #include "static_string.hpp"
 
 namespace rcgp {

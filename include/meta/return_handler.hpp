@@ -4,8 +4,7 @@
 
 #include "../dsl/instructions.hpp"
 #include "coerce_to_handle.hpp"
-#include "shader_stage.hpp"
-#include "stage_intrinsics.hpp"
+#include "intrinsics_mesh.hpp"
 
 namespace rcgp {
 

@@ -5,7 +5,7 @@
 #include "resources.hpp"
 #include "resources_collect.hpp"
 #include "shader_stage_conversion.hpp"
-#include "stage_intrinsics.hpp"
+#include "intrinsics_raytracing.hpp"
 
 namespace rcgp {
 

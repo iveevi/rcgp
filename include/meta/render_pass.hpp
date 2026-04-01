@@ -64,46 +64,6 @@ template <typename Writes, typename Reads, auto &ref, typename ... Rest>
 struct split_targets <Writes, Reads, Reader <ref>, Rest...>
 	: split_targets <Writes, tlist_concat_t <Reads, Tlist <contract <ref>>>, Rest...> {};
 
-// Barrier descriptors for render target transitions
-namespace target_barriers {
-
-static constexpr auto color_to_read = BarrierDesc {
-	.src_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-	.src_access = vk::AccessFlagBits2::eColorAttachmentWrite,
-	.dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
-	.dst_access = vk::AccessFlagBits2::eShaderSampledRead,
-};
-
-static constexpr auto depth_to_read = BarrierDesc {
-	.src_stage = vk::PipelineStageFlagBits2::eLateFragmentTests,
-	.src_access = vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
-	.dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
-	.dst_access = vk::AccessFlagBits2::eShaderSampledRead,
-};
-
-static constexpr auto color_to_write = BarrierDesc {
-	.src_stage = vk::PipelineStageFlagBits2::eFragmentShader,
-	.src_access = vk::AccessFlagBits2::eShaderSampledRead,
-	.dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-	.dst_access = vk::AccessFlagBits2::eColorAttachmentWrite,
-};
-
-static constexpr auto depth_to_write = BarrierDesc {
-	.src_stage = vk::PipelineStageFlagBits2::eFragmentShader,
-	.src_access = vk::AccessFlagBits2::eShaderSampledRead,
-	.dst_stage = vk::PipelineStageFlagBits2::eEarlyFragmentTests,
-	.dst_access = vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
-};
-
-static constexpr auto to_present = BarrierDesc {
-	.src_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-	.src_access = vk::AccessFlagBits2::eColorAttachmentWrite,
-	.dst_stage = vk::PipelineStageFlagBits2::eBottomOfPipe,
-	.dst_access = {},
-};
-
-} // namespace target_barriers
-
 // Pass frame: runtime binding of images to render targets
 template <typename Writes, typename Reads>
 struct PassFrame {
@@ -156,11 +116,37 @@ struct PassFrame {
 		auto state = *this;
 
 		auto binder = [state](const CommandBuffer &cmd, SerializationContext &) {
+			static constexpr auto color_to_read = BarrierDesc {
+				.src_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+				.src_access = vk::AccessFlagBits2::eColorAttachmentWrite,
+				.dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
+				.dst_access = vk::AccessFlagBits2::eShaderSampledRead,
+			};
+
+			static constexpr auto depth_to_read = BarrierDesc {
+				.src_stage = vk::PipelineStageFlagBits2::eLateFragmentTests,
+				.src_access = vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+				.dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
+				.dst_access = vk::AccessFlagBits2::eShaderSampledRead,
+			};
+
+			static constexpr auto color_to_write = BarrierDesc {
+				.src_stage = vk::PipelineStageFlagBits2::eFragmentShader,
+				.src_access = vk::AccessFlagBits2::eShaderSampledRead,
+				.dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+				.dst_access = vk::AccessFlagBits2::eColorAttachmentWrite,
+			};
+
+			static constexpr auto depth_to_write = BarrierDesc {
+				.src_stage = vk::PipelineStageFlagBits2::eFragmentShader,
+				.src_access = vk::AccessFlagBits2::eShaderSampledRead,
+				.dst_stage = vk::PipelineStageFlagBits2::eEarlyFragmentTests,
+				.dst_access = vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+			};
+
 			// Transition read inputs to shader-read-optimal
 			for (auto &inp : state.inputs) {
-				auto &barrier = inp.is_depth
-					? target_barriers::depth_to_read
-					: target_barriers::color_to_read;
+				auto &barrier = inp.is_depth ? depth_to_read : color_to_read;
 				cmd.transition(*inp.image,
 					vk::ImageLayout::eShaderReadOnlyOptimal,
 					barrier);
@@ -174,7 +160,7 @@ struct PassFrame {
 				if (tgt.is_depth) {
 					cmd.transition(*tgt.image,
 						vk::ImageLayout::eDepthStencilAttachmentOptimal,
-						target_barriers::depth_to_write);
+						depth_to_write);
 					depth_att = vk::RenderingAttachmentInfo()
 						.setImageView(tgt.image->view)
 						.setImageLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
@@ -184,7 +170,7 @@ struct PassFrame {
 				} else {
 					cmd.transition(*tgt.image,
 						vk::ImageLayout::eColorAttachmentOptimal,
-						target_barriers::color_to_write);
+						color_to_write);
 					color_atts.push_back(
 						vk::RenderingAttachmentInfo()
 							.setImageView(tgt.image->view)
@@ -227,53 +213,44 @@ struct PassFrame {
 // Render pass: typed module mapping between render targets
 template <typename Writes, typename Reads>
 struct RenderPass {
-	mutable std::vector <vk::Format> _color_formats;
-	mutable vk::Format _depth_format = vk::Format::eUndefined;
+	std::vector <vk::Format> color_formats;
+	vk::Format depth_format = vk::Format::eUndefined;
 
 	auto frame(const vk::Rect2D &render_area) const {
 		return PassFrame <Writes, Reads> { render_area };
 	}
 
-	RenderState render_state() const {
-		populate_formats(Writes());
-		return vk::PipelineRenderingCreateInfo()
-			.setColorAttachmentFormats(_color_formats)
-			.setDepthAttachmentFormat(_depth_format);
-	}
+	RenderState render_state() {
+		color_formats.clear();
+		depth_format = vk::Format::eUndefined;
 
-	template <auto &... refs>
-	void populate_formats(Tlist <contract <refs>...>) const {
-		_color_formats.clear();
-		_depth_format = vk::Format::eUndefined;
-
-		auto process = [this] <auto &ref> () {
+		auto process = [&] <auto &ref> () {
 			using R = reference_base_of <ref>;
 			auto fmt = contract_desc::overrides[&ref].format;
 			if constexpr (is_depth_target_v <R>)
-				_depth_format = fmt;
+				depth_format = fmt;
 			else
-				_color_formats.push_back(fmt);
+				color_formats.push_back(fmt);
 		};
 
-		(process.template operator() <refs> (), ...);
+		[] <auto &... refs> (Tlist <contract <refs>...>, auto &process) {
+			(process.template operator() <refs> (), ...);
+		} (Writes(), process);
+
+		return vk::PipelineRenderingCreateInfo()
+			.setColorAttachmentFormats(color_formats)
+			.setDepthAttachmentFormat(depth_format);
 	}
 };
 
 template <typename ... Ts>
-auto make_render_pass(Ts...) {
+auto new_render_pass(Ts...)
+{
 	using result = split_targets <Tlist <>, Tlist <>, Ts...>;
 	return RenderPass <typename result::writes, typename result::reads> ();
 }
 
-#define $render_pass(...) rcgp::make_render_pass(__VA_ARGS__)
+#define $render_pass(...) rcgp::new_render_pass(__VA_ARGS__)
 
-inline auto transition_to_present(Image *image)
-{
-	auto binder = [=](const CommandBuffer &cmd, SerializationContext &) {
-		cmd.transition(*image, vk::ImageLayout::ePresentSrcKHR, target_barriers::to_present);
-	};
-
-	return Commands <> { binder };
-}
 
 } // namespace rcgp
