@@ -19,6 +19,8 @@ const Type &get_type(const SharedBlockReference &sbr, const Reference &ref)
 	vcase(GlobalResource): {
 		auto &grsrc = ref->as <GlobalResource> ();
 		assertion(grsrc.kind == GlobalResourceKind::ePushConstant
+			or grsrc.kind == GlobalResourceKind::eRayDispatcherPayload
+			or grsrc.kind == GlobalResourceKind::eRayReceiverPayload
 			or grsrc.kind == GlobalResourceKind::eStorageBuffer
 			or grsrc.kind == GlobalResourceKind::eUniformBuffer);
 		return get_type(sbr, grsrc.type);

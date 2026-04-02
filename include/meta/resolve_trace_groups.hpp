@@ -72,7 +72,7 @@ void resolve_trace_groups(
 	(assign_from_chit(chit_blocks), ...);
 
 	// 3. Resolve eTraceRaysEXT intrinsics in all blocks that have trace_groups
-	auto resolve_block = [&](const SharedBlockReference &block) {
+	auto resolve_block = [&](this auto &self, const SharedBlockReference &block) -> void {
 		for (auto &[addr, trace_calls] : block->trace_groups) {
 			auto miss_it = miss_map.find(addr);
 			assertion(miss_it != miss_map.end());
@@ -94,6 +94,19 @@ void resolve_trace_groups(
 				bintr.args[10] = std::make_shared <Instruction> (
 					Constant(int32_t(payload_it->second))
 				);
+			}
+		}
+
+		// Recurse into nested blocks (branches, loops)
+		for (auto &ref : *block) {
+			if (ref->is <Branch> ()) {
+				auto &branch = ref->as <Branch> ();
+				for (auto &seg : branch.segments)
+					self(seg.body);
+				if (branch.fallback)
+					self(*branch.fallback);
+			} else if (ref->is <Loop> ()) {
+				self(ref->as <Loop> ().body);
 			}
 		}
 	};

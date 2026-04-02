@@ -1,6 +1,7 @@
 #pragma once
 
 #include "intrinsics_common.hpp"
+#include "coerce_to_handle.hpp"
 #include "contract.hpp"
 #include "reconstruct_type.hpp"
 #include "reflection.hpp"
@@ -54,8 +55,15 @@ struct Dispatcher {
 	static constexpr void *address = (void *)&ref;
 
 	struct handle_type : jems::handle {
-		handle_type &operator=(const T &value) {
+		handle_type &operator=(const T &value)
+		requires builtin <T> {
 			jems::store(*this, value);
+			return *this;
+		}
+
+		handle_type &operator=(const T &value)
+		requires user_defined <T> {
+			jems::store(*this, coerce_to_handle(value));
 			return *this;
 		}
 
@@ -97,8 +105,15 @@ struct Receiver {
 	static constexpr void *address = (void *)&ref;
 
 	struct handle_type : jems::handle {
-		handle_type &operator=(const T &value) {
+		handle_type &operator=(const T &value)
+		requires builtin <T> {
 			jems::store(*this, value);
+			return *this;
+		}
+
+		handle_type &operator=(const T &value)
+		requires user_defined <T> {
+			jems::store(*this, coerce_to_handle(value));
 			return *this;
 		}
 	};

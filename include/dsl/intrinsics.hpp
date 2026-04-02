@@ -67,14 +67,68 @@ auto pow(const T &a, const U &b)
 	);
 }
 
-inline f32 to_float(const u32 &v)
+// Value conversion casts (e.g. float(uint_val))
+template <typename To>
+struct cast_impl;
+
+template <>
+struct cast_impl <f32> {
+	static f32 from(const u32 &v) { return f32::reinterpret(builtin(eCastFloat, v)); }
+	static f32 from(const i32 &v) { return f32::reinterpret(builtin(eCastFloat, v)); }
+};
+
+template <>
+struct cast_impl <i32> {
+	static i32 from(const f32 &v) { return i32::reinterpret(builtin(eCastInt, v)); }
+	static i32 from(const u32 &v) { return i32::reinterpret(builtin(eCastInt, v)); }
+};
+
+template <>
+struct cast_impl <u32> {
+	static u32 from(const f32 &v) { return u32::reinterpret(builtin(eCastUint, v)); }
+	static u32 from(const i32 &v) { return u32::reinterpret(builtin(eCastUint, v)); }
+};
+
+template <typename To, typename From>
+To cast(const From &v)
 {
-	return f32::reinterpret(builtin(eToFloat, v));
+	return cast_impl <To> ::from(v);
 }
 
-inline f32 to_float(const i32 &v)
+// Bitwise reinterpret casts
+template <typename To>
+struct bitcast_impl;
+
+template <>
+struct bitcast_impl <f32> {
+	static f32 from(const u32 &v) { return f32::reinterpret(builtin(eUintBitsToFloat, v)); }
+	static f32 from(const i32 &v) { return f32::reinterpret(builtin(eIntBitsToFloat, v)); }
+};
+
+template <>
+struct bitcast_impl <i32> {
+	static i32 from(const f32 &v) { return i32::reinterpret(builtin(eFloatBitsToInt, v)); }
+};
+
+template <>
+struct bitcast_impl <u32> {
+	static u32 from(const f32 &v) { return u32::reinterpret(builtin(eFloatBitsToUint, v)); }
+};
+
+template <typename To, typename From>
+To bitcast(const From &v)
 {
-	return f32::reinterpret(builtin(eToFloat, v));
+	return bitcast_impl <To> ::from(v);
+}
+
+inline boolean isnan(const f32 &v)
+{
+	return boolean::reinterpret(builtin(eIsNan, v));
+}
+
+inline boolean isinf(const f32 &v)
+{
+	return boolean::reinterpret(builtin(eIsInf, v));
 }
 
 template <native_float_scalar T>

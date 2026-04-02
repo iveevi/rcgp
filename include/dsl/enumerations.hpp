@@ -171,7 +171,15 @@ enum class BuiltinIntrinsicCode {
 	eSmoothstep,         // @glsl:smoothstep
 	eSqrt,               // @glsl:sqrt
 	eTan,                // @glsl:tan
-	eToFloat,
+	eCastFloat,          // @glsl:float
+	eCastInt,            // @glsl:int
+	eCastUint,           // @glsl:uint
+	eIntBitsToFloat,     // @glsl:intBitsToFloat
+	eUintBitsToFloat,    // @glsl:uintBitsToFloat
+	eFloatBitsToInt,     // @glsl:floatBitsToInt
+	eFloatBitsToUint,    // @glsl:floatBitsToUint
+	eIsNan,              // @glsl:isnan
+	eIsInf,              // @glsl:isinf
 	eTranspose,          // @glsl:transpose
 	eUnsizedArrayLength,
 	eTraceRaysEXT,       // @glsl:traceRayEXT
