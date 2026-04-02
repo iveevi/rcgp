@@ -28,6 +28,11 @@ enum RayFlags {
 	eCullNoOpaque = 128U,
 };
 
+constexpr RayFlags operator|(RayFlags a, RayFlags b)
+{
+	return RayFlags(std::to_underlying(a) | std::to_underlying(b));
+}
+
 template <traced T, RayFlags F = eNone>
 struct TraceGroup {
 	static constexpr auto flags = F;
