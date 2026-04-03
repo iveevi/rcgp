@@ -188,7 +188,7 @@ vk::Pipeline compile_compute_pipeline(
 
 vk::Pipeline compile_mesh_shading_pipeline(
 	const Device &device,
-	const vk::RenderPass &render_pass,
+	const RenderState &render_state,
 	const vk::ShaderModule &task_shader_module,
 	const vk::ShaderModule &mesh_shader_module,
 	const vk::ShaderModule &fragment_shader_module,
@@ -297,11 +297,15 @@ vk::Pipeline compile_mesh_shading_pipeline(
 		.setPDepthStencilState(&depth_stencil)
 		.setPViewportState(&viewport_state)
 		.setStages(shader_stages)
-		.setRenderPass(render_pass)
 		.setSubpass(0);
 
 	if (dynamic_viewport_scissor)
 		pipeline_info.setPDynamicState(&dynamic_state);
+
+	if (render_state.is <vk::RenderPass> ())
+		pipeline_info.setRenderPass(render_state.as <vk::RenderPass> ());
+	else
+		pipeline_info.setPNext(&render_state.as <vk::PipelineRenderingCreateInfo> ());
 
 	auto [result, pipeline] = device.logical.createGraphicsPipeline(nullptr, pipeline_info, nullptr);
 	if (result != vk::Result::eSuccess) {

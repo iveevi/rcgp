@@ -189,8 +189,7 @@ struct MeshShadingCombinator {
 	const Device &device;
 	const ShaderCompiler &compiler;
 	CompilerOptions compiler_options;
-	// TODO: or dynamic rendering...
-	const vk::RenderPass &render_pass;
+	const RenderState &render_state;
 	RasterizationOptions options;
 
 	template <typename TaskShader, typename MeshShader, typename FragmentShader>
@@ -210,7 +209,7 @@ struct MeshShadingCombinator {
 
 		auto pipeline = compile_mesh_shading_pipeline(
 			device,
-			render_pass,
+			render_state,
 			tmod, mmod, fmod,
 			"main", "main", "main",
 			layout,

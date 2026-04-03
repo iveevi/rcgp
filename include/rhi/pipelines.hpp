@@ -35,7 +35,7 @@ vk::Pipeline compile_rasterization_pipeline(
 
 vk::Pipeline compile_mesh_shading_pipeline(
 	const Device &device,
-	const vk::RenderPass &render_pass,
+	const RenderState &render_state,
 	const vk::ShaderModule &task_shader_module,
 	const vk::ShaderModule &mesh_shader_module,
 	const vk::ShaderModule &fragment_shader_module,
