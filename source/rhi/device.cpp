@@ -178,26 +178,29 @@ std::optional <uint32_t> Device::acquire_next_frame(
 		std::abort();
 	}
 
-	auto acq = logical.acquireNextImageKHR(
+	uint32_t image_index = 0;
+	auto acq_result = static_cast <vk::Result> (vkAcquireNextImageKHR(
+		logical,
 		window.swapchain,
 		timeout,
 		sync.acquire_semaphores[sync.current_slot],
-		nullptr
-	);
+		nullptr,
+		&image_index
+	));
 
-	if (acq.result == vk::Result::eErrorOutOfDateKHR or acq.result == vk::Result::eSuboptimalKHR) {
+	if (acq_result == vk::Result::eErrorOutOfDateKHR or acq_result == vk::Result::eSuboptimalKHR) {
 		window.is_swapchain_out_of_date = true;
 		return std::nullopt;
 	}
 
-	if (acq.result != vk::Result::eSuccess) {
-		std::println(std::cerr, "acquireNextImageKHR failed ({})", vk::to_string(acq.result));
+	if (acq_result != vk::Result::eSuccess) {
+		std::println(std::cerr, "acquireNextImageKHR failed ({})", vk::to_string(acq_result));
 		std::abort();
 	}
 
 	logical.resetFences(sync.fences[sync.current_slot]);
-	sync.current_image = acq.value;
-	return acq.value;
+	sync.current_image = image_index;
+	return image_index;
 }
 
 bool Device::rebuild_swapchain(Window &window) const
