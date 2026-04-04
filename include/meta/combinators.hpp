@@ -342,14 +342,4 @@ struct RayTracingCombinator {
 	}
 };
 
-// Macros for the resulting types
-#define $rasterization_pipeline_t(T, vs, fs) \
-	decltype(std::declval <RasterizationCombinator <Topology::T>> ()(vs, fs))
-
-#define $compute_pipeline_t(T, cs) \
-	decltype(std::declval <ComputeCombinator> ()(cs))
-
-#define $mesh_shader_pipeline_t(T, ts, ms, fs) \
-	decltype(std::declval <MeshShadingCombinator> ()(ts, ms, fs))
-
 } // namespace rcgp

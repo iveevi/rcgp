@@ -24,6 +24,19 @@ template <ShaderStage S, typename R, typename ... Args>
 auto infer_shader_signature(std::function <R (Args...)>)
 	-> shader_signature <S, R, Args...>;
 
+// Return type inference for any callable
+template <typename R, typename ... Args>
+auto infer_return_type(R(*)(Args...)) -> R;
+
+template <typename R, typename C, typename ... Args>
+auto infer_return_type(R(C::*)(Args...)) -> R;
+
+template <typename R, typename C, typename ... Args>
+auto infer_return_type(R(C::*)(Args...) const) -> R;
+
+template <typename T>
+auto infer_return_type(T) -> decltype(infer_return_type(&T::operator()));
+
 template <ShaderStage S>
 // TODO: must be invocable
 auto trace(auto ftn)
@@ -96,5 +109,7 @@ using enable_if = std::conditional_t <B, T, jems::null>;
 #define $subroutine_t(S, R, ...) decltype($subroutine(_tmp)(__VA_ARGS__) { return R(); })
 
 #define $contracts(...) jems::null MAP(CONTRACT_GENERATOR, /* N/A */, __VA_ARGS__)
+
+#define $return_t(ftn) decltype(rcgp::infer_return_type(ftn))
 
 } // namespace rcgp
