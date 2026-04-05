@@ -18,6 +18,8 @@ using DataType = decltype([] {
 template <auto &ref>
 using DataTypeFor = DataType <reference_base_of <ref>>;
 
+#define $data_t(ref) ::rcgp::DataTypeFor <ref>
+
 // Resource mirror and witness
 template <typename T>
 using ResourceType = resource_translation <T> ::handle_type;
@@ -25,6 +27,6 @@ using ResourceType = resource_translation <T> ::handle_type;
 template <auto &ref>
 using ResourceTypeFor = ResourceType <reference_base_of <ref>>;
 
-#define $resource(ref) ::rcgp::ResourceTypeFor <ref>
+#define $resource_t(ref) ::rcgp::ResourceTypeFor <ref>
 
 } // namespace rcgp
