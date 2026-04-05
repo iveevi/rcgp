@@ -140,6 +140,7 @@ using PrimitiveID = read_only_intrinsic <SystemValue::ePrimitiveID, ShaderStage:
 using WorldRayDirection = read_only_intrinsic <SystemValue::eWorldRayDirection, ShaderStage::eClosestHit, vec3>;
 using WorldRayOrigin = read_only_intrinsic <SystemValue::eWorldRayOrigin, ShaderStage::eClosestHit, vec3>;
 using InstanceCustomIndex = read_only_intrinsic <SystemValue::eInstanceCustomIndex, ShaderStage::eClosestHit, u32>;
+using ObjectToWorldMatrix = read_only_intrinsic <SystemValue::eObjectToWorldMatrix, ShaderStage::eClosestHit, mat4x3>;
 
 template <>
 TYPE_TRAIT_INCLUDES(is_global_resource, RaytracingAccelerationStructure);

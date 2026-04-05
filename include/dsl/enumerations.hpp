@@ -124,6 +124,7 @@ enum class SystemValue {
 	eWorldRayDirection,         // @glsl:gl_WorldRayDirectionEXT
 	eHitT,                      // @glsl:gl_HitTEXT
 	eInstanceCustomIndex,       // @glsl:gl_InstanceCustomIndexEXT
+	eObjectToWorldMatrix,       // @glsl:gl_ObjectToWorldEXT
 };
 
 const char *repr(SystemValue value);

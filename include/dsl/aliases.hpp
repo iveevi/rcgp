@@ -26,6 +26,7 @@ using uvec4 = vector <uint32_t, 4>;
 
 using mat3 = matrix <float, 3, 3>;
 using mat4 = matrix <float, 4, 4>;
+using mat4x3 = matrix <float, 4, 3>;
 
 // HLSL style aliases
 using float2 = vector <float, 2>;
@@ -42,5 +43,6 @@ using uint4 = vector <uint32_t, 4>;
 
 using float3x3 = matrix <float, 3, 3>;
 using float4x4 = matrix <float, 4, 4>;
+using float4x3 = matrix <float, 4, 3>;
 
 } // namespace rcgp
