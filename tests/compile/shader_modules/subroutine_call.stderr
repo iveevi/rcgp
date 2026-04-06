@@ -1,0 +1,7 @@
+subroutine_call.cpp:31:10: error: no matching function for call to object of type 'shader_stage<rcgp::ShaderStage::eSubroutine, rcgp::vector<float, 4>, rcgp::jems::null, rcgp::contract<texture>, rcgp::vector<float, 2>>'
+   31 |                 return sr(uv);
+      |                        ^~
+shader_stage.hpp:113:7: note: candidate function not viable: requires 3 arguments, but 1 was provided
+  113 |         auto operator()(const Args &... args)
+      |              ^          ~~~~~~~~~~~~~~~~~~~~
+1 error generated.

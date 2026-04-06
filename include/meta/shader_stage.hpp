@@ -10,26 +10,10 @@
 
 namespace rcgp {
 
-// Entrypoint stages
-template <ShaderStage S, typename R, typename ... Args>
-struct shader_stage : SharedBlockReference {
-	shader_stage(const SharedBlockReference &sbr)
-		: SharedBlockReference(sbr)
-	{
-		static auto _ [[maybe_unused]] = (register_gvrs(gvrs), 0);
-	}
+template <typename... Ts>
+constexpr bool has_resource_args_v = (... || (is_implicit_context_v <Ts> || is_contract_v <Ts> || std::is_same_v <Ts, jems::null>));
 
-	using icontext = icontext_from_args_t <Args...>;
-
-	static constexpr auto stage = S;
-	static constexpr auto gvrs = collect_gvrs <S> (icontext());
-
-	static shader_stage alloc() {
-		return std::make_shared <Block> ();
-	}
-};
-
-// Subroutine stages
+// Subroutine invocation support
 template <typename R>
 struct invocation_setup {};
 
@@ -66,7 +50,7 @@ template <typename R, typename ... Args>
 struct invocable : SharedBlockReference {
 	invocable(const SharedBlockReference &sbr)
 		: SharedBlockReference(sbr) {}
-	
+
 	auto operator()(const Args &... args) {
 		std::vector <Reference> locals;
 		auto cargs = std::vector <Reference> { coerce_to_handle(args)... };
@@ -108,6 +92,31 @@ auto filtered_invocable() -> decltype(filter_real_parameters(
 template <typename ... Args>
 using filtered_invocable_t = decltype(filtered_invocable <Args...> ());
 
+// Entrypoint stages
+template <ShaderStage S, typename R, typename ... Args>
+struct shader_stage : SharedBlockReference {
+	shader_stage(const SharedBlockReference &sbr)
+		: SharedBlockReference(sbr)
+	{
+		static auto _ [[maybe_unused]] = (register_gvrs(gvrs), 0);
+	}
+
+	using icontext = icontext_from_args_t <Args...>;
+
+	static constexpr auto stage = S;
+	static constexpr auto gvrs = collect_gvrs <S> (icontext());
+
+	static shader_stage alloc() {
+		return std::make_shared <Block> ();
+	}
+
+	auto operator()(const Args &... args)
+	requires (S == ShaderStage::eSubroutine && !has_resource_args_v <Args...>)
+	{
+		return filtered_invocable_t <R, Args...> (*this)(args...);
+	}
+};
+
 template <auto &... refs, typename R, typename ... Args>
 auto context_unlock(implicit_context <refs...>, const shader_stage <ShaderStage::eSubroutine, R, Args...> &stage)
 {
@@ -115,8 +124,8 @@ auto context_unlock(implicit_context <refs...>, const shader_stage <ShaderStage:
 	return filtered_invocable_t <R, Args...> (stage);
 }
 
-// TODO: The exception should be subroutines which dont take any
-// resource references/have no context should just be direct though
+// NOTE: Subroutines without resource contracts can be called directly
+// via operator(). $use is still required for contract-bearing subroutines.
 #define $use(subroutine) context_unlock(_ctx, subroutine)
 
 // Traits for each kind of module

@@ -30,6 +30,7 @@ compile_fail:
 	python tests/compile/check_compile_fail.py {{compiler}} {{cxxflags}} tests/compile/shader_modules/return_types.cpp
 	python tests/compile/check_compile_fail.py {{compiler}} {{cxxflags}} tests/compile/shader_modules/task_payload.cpp
 	python tests/compile/check_compile_fail.py {{compiler}} {{cxxflags}} tests/compile/shader_modules/traced_params.cpp
+	python tests/compile/check_compile_fail.py {{compiler}} {{cxxflags}} tests/compile/shader_modules/subroutine_call.cpp
 	python tests/compile/check_compile_fail.py {{compiler}} {{cxxflags}} tests/compile/shader_modules/workgroup.cpp
 
 # Tests for JIT tracing of the DSL

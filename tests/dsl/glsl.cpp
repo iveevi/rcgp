@@ -441,6 +441,63 @@ add_test(sr_dependencies)
 	assert_glsl_match_file(cs, "glsl/sr_dependencies.glsl");
 };
 
+add_test(sr_direct_invocation)
+{
+	auto sr1 = $subroutine(sr1)(f32 x) {
+		return float3(x);
+	};
+
+	auto sr2 = $subroutine(sr2)(f32 x, u32 y) {
+		return std::tuple { float3(x), uint2(y, 13) };
+	};
+
+	auto sr3 = $subroutine(sr3)(f32 z) {
+		return Ray {
+			float3(0),
+			normalize(float3(1, z, 1)),
+		};
+	};
+
+	auto vs = $shader(vertex, &)() {
+		auto r1 = sr1(1);
+		auto [r2a, r2b] = sr2(1.0f, 2);
+		auto r3 = sr3(2.0f);
+		return std::tuple { r1, r2a, r2b, r3.origin, r3.direction };
+	};
+
+	assert_glsl_match_file(vs, "glsl/sr_invocation.glsl");
+};
+
+add_test(sr_direct_dependencies)
+{
+	auto saxpy = $subroutine(b)(f32 alpha, f32 x, f32 y) {
+		return alpha * x + y;
+	};
+
+	auto saxpy2 = $subroutine(c, &)(float2 alpha, float2 x, float2 y) {
+		return float2(
+			saxpy(alpha.x, x.x, y.y),
+			saxpy(alpha.y, x.y, y.y)
+		);
+	};
+
+	auto saxpy3 = $subroutine(a, &)(float4 alpha, float4 x, float4 y) {
+		return float4(
+			saxpy2(alpha.xy, x.xy, y.yy),
+			saxpy2(alpha.zw, x.zw, y.zw)
+		);
+	};
+
+	auto cs = $shader(compute, &)(WorkGroup <1> group) {
+		float4 x = float4(1);
+		float4 y = float4(2);
+		float4 alpha = float4(3);
+		auto z = saxpy3(alpha, x, y);
+	};
+
+	assert_glsl_match_file(cs, "glsl/sr_dependencies.glsl");
+};
+
 add_test(for_loop)
 {
 	auto sr = $subroutine(sr)(i32 limit, i32 step) {
