@@ -13,11 +13,9 @@ struct BufferAddress {
 
 // TODO: move to dynamic.hpp
 template <typename T, template <typename> typename L>
-using dynamic_element_of_mirror = decltype([] {
-	layouts::apply_t <T, L> data;
-	auto [dyn, offset] = dynamic_part <T> (data);
-	return typename std::decay_t <decltype(dyn)> ::value_type();
-} ());
+using dynamic_element_of_mirror = typename std::decay_t <
+	decltype(std::get <0> (dynamic_part <T> (std::declval <layouts::apply_t <T, L> &> ())))
+> ::value_type;
 
 template <typename T, template <typename> typename L, vk::BufferUsageFlagBits F>
 struct MirrorBuffer : Buffer {};

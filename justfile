@@ -15,15 +15,12 @@ experimental: build_rcgp
 	cmake --build build -j -t experimental
 	./build/experimental
 
-# Compilation tests (static assertions, type checks)
+# Compilation tests (static assertions, type checks, expected errors)
 compile:
 	{{compiler}} {{cxxflags}} -c tests/compile/std430.cpp -o /tmp/std430.o
 	{{compiler}} {{cxxflags}} -c tests/compile/scalar.cpp -o /tmp/scalar.o
 	{{compiler}} {{cxxflags}} -c tests/compile/resources.cpp -o /tmp/resources.o
 	{{compiler}} {{cxxflags}} -c tests/compile/canonical.cpp -o /tmp/canonical.o
-
-# Shader module tests (must fail to compile with expected errors)
-compile_fail:
 	python tests/compile/check_compile_fail.py {{compiler}} {{cxxflags}} tests/compile/shader_modules/attribute_stream.cpp
 	python tests/compile/check_compile_fail.py {{compiler}} {{cxxflags}} tests/compile/shader_modules/intrinsics.cpp
 	python tests/compile/check_compile_fail.py {{compiler}} {{cxxflags}} tests/compile/shader_modules/meshlet_payload.cpp
@@ -36,10 +33,14 @@ compile_fail:
 	python tests/compile/check_compile_fail.py {{compiler}} {{cxxflags}} tests/compile/shader_modules/compute_combinator.cpp
 	python tests/compile/check_compile_fail.py {{compiler}} {{cxxflags}} tests/compile/shader_modules/mesh_shading_combinator.cpp
 	python tests/compile/check_compile_fail.py {{compiler}} {{cxxflags}} tests/compile/shader_modules/raytracing_combinator.cpp
+	python tests/compile/check_compile_fail.py {{compiler}} {{cxxflags}} tests/compile/command_modules/rasterization.cpp
+	python tests/compile/check_compile_fail.py {{compiler}} {{cxxflags}} tests/compile/command_modules/compute.cpp
+	python tests/compile/check_compile_fail.py {{compiler}} {{cxxflags}} tests/compile/command_modules/mesh_shading.cpp
+	python tests/compile/check_compile_fail.py {{compiler}} {{cxxflags}} tests/compile/command_modules/raytracing.cpp
 
 # Tests for JIT tracing of the DSL
 dsl *args: build_test
 	./build/test {{args}}
 
 # Run all tests
-test: compile compile_fail dsl
+test: compile dsl
