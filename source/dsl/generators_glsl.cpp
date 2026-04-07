@@ -947,7 +947,18 @@ void emit_whole(GLSLEmitter &em)
 	emit_main(em);
 }
 
-using SbrMap = std::map <SharedBlockReference, std::set <SharedBlockReference>>;
+auto sbr_less = [](const SharedBlockReference &a, const SharedBlockReference &b)
+{
+	return a->name < b->name;
+};
+
+auto sbr_greater = [](const SharedBlockReference &a, const SharedBlockReference &b)
+{
+	return b->name < a->name;
+};
+
+using SbrSet = std::set <SharedBlockReference, decltype(sbr_less)>;
+using SbrMap = std::map <SharedBlockReference, SbrSet, decltype(sbr_less)>;
 
 void get_subroutines(SbrMap &call_to, SbrMap &call_from, const SharedBlockReference &sbr, const SharedBlockReference &whole)
 {
@@ -970,14 +981,14 @@ auto top_sort_sbrs(SbrMap &call_to, SbrMap &call_from)
 	std::vector <SharedBlockReference> sorted;
 	sorted.reserve(call_to.size());
 
-	std::queue <SharedBlockReference> queue;
+	std::priority_queue <SharedBlockReference, std::vector <SharedBlockReference>, decltype(sbr_greater)> queue(sbr_greater);
 	for (auto &[sbr, s] : call_to) {
 		if (s.empty())
 			queue.push(sbr);
 	}
 
 	while (queue.size()) {
-		auto &sbr = queue.front();
+		auto sbr = queue.top();
 		queue.pop();
 
 		sorted.push_back(sbr);
