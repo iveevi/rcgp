@@ -7,6 +7,7 @@
 #include <GLFW/glfw3.h>
 
 #include "meta/command_stream.hpp"
+#include "meta/commands.hpp"
 #include "rhi/buffer.hpp"
 #include "rhi/xlas.hpp"
 #include "rhi/command_buffer.hpp"
@@ -116,6 +117,17 @@ auto Device::new_command_streams(const CommandPool &cpool, size_t count) const
 	return logical.allocateCommandBuffers(info)
 		| std::views::transform([&] (auto x) { return CommandStream(x, &loader); })
 		| std::ranges::to <std::vector> ();
+}
+
+auto Device::new_command_modules(const CommandPool &cpool, size_t count) const
+	-> std::vector <Commands <true>>
+{
+	auto buffers = new_command_buffers(cpool, count);
+	auto modules = std::vector <Commands <true>> {};
+	modules.reserve(buffers.size());
+	for (auto &b : buffers)
+		modules.emplace_back(b);
+	return modules;
 }
 	
 auto Device::new_descriptor_sets(const DescriptorPool &dpool, const vk::ArrayProxy <vk::DescriptorSetLayout> &dsls) const

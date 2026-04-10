@@ -8,7 +8,7 @@
 #include "command_effects.hpp"
 #include "static_string.hpp"
 
-namespace rcgp::detail {
+namespace rcgp {
 
 // Dependency/resolution state for a key
 struct tag_dep {};
@@ -375,4 +375,4 @@ struct normalize_effects <Tlist <Effects...>> {
 template <typename List>
 using normalize_effects_t = typename normalize_effects <List> ::type;
 
-} // namespace rcgp::detail
+} // namespace rcgp

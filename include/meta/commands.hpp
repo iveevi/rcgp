@@ -2,6 +2,9 @@
 
 #include <cstddef>
 #include <functional>
+#include <memory>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "../rhi/command_buffer.hpp"
@@ -15,8 +18,23 @@ struct SerializationContext {
 
 using command_operator = std::function <void (const CommandBuffer &, SerializationContext &)>;
 
+template <bool Live, typename ... Effects>
+struct Commands;
+
+template <bool Live, typename List>
+struct commands_from;
+
+template <bool Live, typename ... Effects>
+struct commands_from <Live, Tlist <Effects...>> {
+	using type = Commands <Live, Effects...>;
+};
+
+template <bool Live, typename List>
+using commands_from_t = typename commands_from <Live, std::remove_cv_t <List>>::type;
+
+// Deferred specialization: a queue of pending command operators.
 template <typename ... Effects>
-struct Commands : std::vector <command_operator> {
+struct Commands <false, Effects...> : std::vector <command_operator> {
 	using std::vector <command_operator> ::vector;
 
 	void serialize(const CommandBuffer &cmd, SerializationContext &sctx) const {
@@ -35,41 +53,111 @@ struct Commands : std::vector <command_operator> {
 		});
 		return result;
 	}
-
-	// TODO: must be in a satisfied state...
-	auto &operator()(CommandBuffer &cmd) const {
-		SerializationContext aux;
-
-		cmd.reset();
-		cmd.begin(vk::CommandBufferBeginInfo());
-
-		serialize(cmd, aux);
-
-		cmd.end();
-
-		return cmd;
-	}
-
-	template <typename ... Es>
-	friend auto operator|(const Commands &a, const Commands <Es...> &b) {
-		using combined = Tlist <Effects..., Es...>;
-		using normalized = detail::normalize_effects_t <combined>;
-		using cmds = typename normalized::template invoke <Commands>;
-		cmds result;
-		result.append_range(a);
-		result.append_range(b);
-		return result;
-	}
-
-	friend auto operator|(const std::nullptr_t &, const Commands &x) {
-		return x;
-	}
-
-	// TODO: allow |= if the result is the same
 };
 
+// Live specialization: refers to a CommandBuffer handle and records eagerly.
+//
+// The recording state lives in a shared flag (shared_ptr) so that all chains spawned
+// from the same module — copies returned by `operator|` — observe the same recording
+// state. The original module and its chain temporaries agree on whether
+// `vkBeginCommandBuffer` has been issued, so `finalize()` correctly emits
+// `vkEndCommandBuffer` regardless of which copy it's called on.
+template <typename ... Effects>
+struct Commands <true, Effects...> {
+	CommandBuffer handle;
+	std::shared_ptr <bool> recording = std::make_shared <bool> (false);
+
+	Commands() = default;
+	explicit Commands(const CommandBuffer &cmd) : handle(cmd) {}
+
+	void ensure_recording() {
+		if (not *recording) {
+			handle.reset();
+			handle.begin(vk::CommandBufferBeginInfo());
+			*recording = true;
+		}
+	}
+
+	// End recording (if needed) and return the underlying buffer for submission.
+	// Clears the shared recording flag so the next directive will reset+begin again.
+	vk::CommandBuffer finalize() {
+		if (*recording) {
+			handle.end();
+			*recording = false;
+		}
+		return handle;
+	}
+
+	// Eagerly emit a labeled scope on the bound buffer.
+	auto &label(std::string name) {
+		ensure_recording();
+		handle.begin_label(name);
+		return *this;
+	}
+
+	auto &end_label() {
+		handle.end_label();
+		return *this;
+	}
+};
+
+template <typename ... Effects>
+using LiveCommands = Commands <true, Effects...>;
+
+template <typename ... Effects>
+using DeferredCommands = Commands <false, Effects...>;
+
+// Deferred + deferred → deferred (current concat behavior, with effect normalization).
+template <typename ... A, typename ... B>
+auto operator|(const Commands <false, A...> &a, const Commands <false, B...> &b)
+{
+	using normalized = normalize_effects_t <Tlist <A..., B...>>;
+	using result_t = commands_from_t <false, normalized>;
+	result_t result;
+	result.append_range(a);
+	result.append_range(b);
+	return result;
+}
+
+// nullptr | deferred — kept for back-compat with chains that start with `nullptr |`.
+template <typename ... E>
+auto operator|(const std::nullptr_t &, const Commands <false, E...> &x)
+{
+	return x;
+}
+
+// Live + deferred → live: flush deferred ops onto the bound buffer immediately and
+// propagate the live module forward (with the normalized effect list).
+template <typename ... A, typename ... B>
+auto operator|(Commands <true, A...> live, const Commands <false, B...> &deferred)
+{
+	using normalized = normalize_effects_t <Tlist <A..., B...>>;
+	using result_t = commands_from_t <true, normalized>;
+
+	live.ensure_recording();
+	SerializationContext sctx {};
+	for (auto &op : deferred)
+		op(live.handle, sctx);
+
+	result_t result;
+	result.handle = live.handle;
+	result.recording = live.recording;
+	return result;
+}
+
+// Live + live is intentionally NOT declared. Concatenating two bound modules has no
+// well-defined meaning ("which buffer wins?") so we forbid it at the type level.
+
 TYPE_TRAIT(is_commands);
+	template <bool Live, typename ... Effects>
+	TYPE_TRAIT_INCLUDES(is_commands, Commands <Live, Effects...>);
+
+TYPE_TRAIT(is_live_commands);
 	template <typename ... Effects>
-	TYPE_TRAIT_INCLUDES(is_commands, Commands <Effects...>);
+	TYPE_TRAIT_INCLUDES(is_live_commands, Commands <true, Effects...>);
+
+TYPE_TRAIT(is_deferred_commands);
+	template <typename ... Effects>
+	TYPE_TRAIT_INCLUDES(is_deferred_commands, Commands <false, Effects...>);
 
 } // namespace rcgp

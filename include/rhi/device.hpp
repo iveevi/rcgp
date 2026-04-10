@@ -15,6 +15,9 @@
 namespace rcgp {
 
 // Forward declarations
+template <bool Live, typename ... Effects>
+struct Commands;
+
 struct CommandBuffer;
 struct CommandPool;
 struct CommandStream;
@@ -91,6 +94,7 @@ struct Device {
 
 	auto new_command_buffers(const CommandPool &cpool, size_t count) const -> std::vector <CommandBuffer>;
 	auto new_command_streams(const CommandPool &cpool, size_t count) const -> std::vector <CommandStream>;
+	auto new_command_modules(const CommandPool &cpool, size_t count) const -> std::vector <Commands <true>>;
 	auto new_descriptor_sets(const DescriptorPool &dpool, const vk::ArrayProxy <vk::DescriptorSetLayout> &dsls) const -> std::vector <vk::DescriptorSet>;
 
 	template <auto &ref>

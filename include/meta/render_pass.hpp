@@ -197,12 +197,12 @@ struct PassFrame {
 		using write_effects = typename target_effects_from <TargetWrite, Writes> ::type;
 		using read_effects = typename target_effects_from <TargetRead, Reads> ::type;
 		using all_effects = tlist_concat_t <read_effects, write_effects>;
-		using Cmds = typename all_effects::template invoke <Commands>;
+		using Cmds = commands_from_t <false, all_effects>;
 		return Cmds { binder };
 	}
 
 	auto end() const {
-		return Commands <> {
+		return Commands <false> {
 			[](const CommandBuffer &cmd, SerializationContext &) {
 				cmd.endRendering();
 			}

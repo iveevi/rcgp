@@ -37,7 +37,7 @@ auto begin_render_pass(
 		cmd.beginRenderPass(rp_begin, vk::SubpassContents::eInline);
 	};
 
-	return Commands <> { binder };
+	return Commands <false> { binder };
 }
 
 inline auto begin_rendering(
@@ -58,7 +58,7 @@ inline auto begin_rendering(
 		cmd.beginRendering(rendering);
 	};
 
-	return Commands <> { binder };
+	return Commands <false> { binder };
 }
 
 template <typename Pipeline>
@@ -82,7 +82,7 @@ auto bind_pipeline(const Pipeline &pipeline)
 	constexpr auto dependencies = command_effects(pipeline);
 
 	using list = decltype(dependencies);
-	using cmds = list::template invoke <Commands>;
+	using cmds = commands_from_t <false, list>;
 
 	return cmds { binder };
 }
@@ -100,7 +100,7 @@ auto bind_descriptors(const BoundDescriptor <refs> &... descriptors)
 		), ...);
 	};
 
-	return Commands <Resolvant <refs>...> { binder };
+	return Commands <false, Resolvant <refs>...> { binder };
 }
 
 template <auto &... refs>
@@ -120,7 +120,7 @@ auto bind_push_constants(const ResourceTypeFor <refs> &... constants)
 		), ...);
 	};
 
-	return Commands <Resolvant <refs>...> { binder };
+	return Commands <false, Resolvant <refs>...> { binder };
 }
 
 template <auto &... refs>
@@ -142,7 +142,7 @@ auto bind_vertex_buffers(const ResourceTypeFor <refs> &... buffers)
 		(cmd.bindVertexBuffers(vb_offsets.at(&refs), { handles }, { 0 }), ...);
 	};
 
-	return Commands <Resolvant <refs>...> { binder };
+	return Commands <false, Resolvant <refs>...> { binder };
 }
 
 template <Topology T, typename Symbolic>
@@ -163,7 +163,7 @@ auto bind_index_buffer(const IndexMirrorBuffer <Symbolic, layouts::scalar> &ibuf
 		}
 	};
 
-	return Commands <ResolvantForIndexBuffer <T>> { binder };
+	return Commands <false, ResolvantForIndexBuffer <T>> { binder };
 }
 
 inline auto draw_indexed(uint32_t count)
@@ -173,6 +173,7 @@ inline auto draw_indexed(uint32_t count)
 	};
 
 	return Commands <
+		false,
 		DependencyEnforcerForIndexBuffer,
 		DependencySentinel
 	> { binder };
@@ -184,7 +185,7 @@ inline auto draw(uint32_t count, uint32_t instances = 1)
 		cmd.draw(count, instances, 0, 0);
 	};
 
-	return Commands <DependencySentinel> { binder };
+	return Commands <false, DependencySentinel> { binder };
 }
 
 inline auto draw_mesh_tasks(uint32_t x, uint32_t y = 1, uint32_t z = 1)
@@ -193,7 +194,7 @@ inline auto draw_mesh_tasks(uint32_t x, uint32_t y = 1, uint32_t z = 1)
 		cmd.draw_mesh_tasks(x, y, z);
 	};
 
-	return Commands <DependencySentinel> { binder };
+	return Commands <false, DependencySentinel> { binder };
 }
 
 inline auto end_render_pass()
@@ -202,7 +203,7 @@ inline auto end_render_pass()
 		cmd.endRenderPass();
 	};
 
-	return Commands <> { binder };
+	return Commands <false> { binder };
 }
 
 inline auto end_rendering()
@@ -211,7 +212,7 @@ inline auto end_rendering()
 		cmd.endRendering();
 	};
 
-	return Commands <> { binder };
+	return Commands <false> { binder };
 }
 
 inline auto set_viewport(
@@ -223,7 +224,7 @@ inline auto set_viewport(
 		cmd.setViewport(first_viewport, std::array { viewport });
 	};
 
-	return Commands <> { binder };
+	return Commands <false> { binder };
 }
 
 inline auto set_scissor(
@@ -235,7 +236,7 @@ inline auto set_scissor(
 		cmd.setScissor(first_scissor, std::array { scissor });
 	};
 
-	return Commands <> { binder };
+	return Commands <false> { binder };
 }
 
 inline auto set_viewport_scissor(
@@ -262,7 +263,7 @@ inline auto set_viewport_scissor(
 		cmd.setScissor(0, std::array { scissor });
 	};
 
-	return Commands <> { binder };
+	return Commands <false> { binder };
 }
 
 inline auto reset_query_pool(const TimestampQueryPool &tqpool, uint32_t first, uint32_t count)
@@ -271,7 +272,7 @@ inline auto reset_query_pool(const TimestampQueryPool &tqpool, uint32_t first, u
 		cmd.resetQueryPool(tqpool.handle, first, count);
 	};
 
-	return Commands <> { binder };
+	return Commands <false> { binder };
 }
 
 inline auto write_timestamp(
@@ -284,7 +285,7 @@ inline auto write_timestamp(
 		cmd.writeTimestamp(stage, tqpool.handle, index);
 	};
 
-	return Commands <> { binder };
+	return Commands <false> { binder };
 }
 
 inline auto transition(Image *image, vk::ImageLayout new_layout)
@@ -293,7 +294,7 @@ inline auto transition(Image *image, vk::ImageLayout new_layout)
 		cmd.transition(*image, new_layout);
 	};
 
-	return Commands <> { binder };
+	return Commands <false> { binder };
 }
 
 inline auto transition(Image *image, vk::ImageLayout new_layout, const BarrierDesc &desc)
@@ -302,7 +303,7 @@ inline auto transition(Image *image, vk::ImageLayout new_layout, const BarrierDe
 		cmd.transition(*image, new_layout, desc);
 	};
 
-	return Commands <> { binder };
+	return Commands <false> { binder };
 }
 
 inline auto copy_image(const Image *const src, const Image *const dst)
@@ -311,7 +312,7 @@ inline auto copy_image(const Image *const src, const Image *const dst)
 		cmd.copy_image(*src, *dst);
 	};
 
-	return Commands <> { binder };
+	return Commands <false> { binder };
 }
 
 inline auto blit_image(
@@ -333,7 +334,7 @@ inline auto blit_image(
 			.setFilter(filter));
 	};
 
-	return Commands <> { binder };
+	return Commands <false> { binder };
 }
 
 inline auto manual_commands(auto F)
@@ -342,7 +343,7 @@ inline auto manual_commands(auto F)
 		F(cmd);
 	};
 
-	return Commands <> { binder };
+	return Commands <false> { binder };
 }
 
 template <auto &... refs, typename ... SrcPhases, typename ... DstPhases>
@@ -358,17 +359,17 @@ inline auto barriers(const Barrier <refs, SrcPhases, DstPhases> &... barriers)
 		cmd.pipelineBarrier2(vk::DependencyInfo().setBufferMemoryBarriers(buffer_barriers));
 	};
 
-	return Commands <BarrierEffect <refs, SrcPhases, DstPhases>...> { binder };
+	return Commands <false, BarrierEffect <refs, SrcPhases, DstPhases>...> { binder };
 }
 
-template <typename ... Es, auto &ref, typename SrcPhase, typename DstPhase>
-auto operator|(const Commands <Es...> &cmds, const Barrier <ref, SrcPhase, DstPhase> &b)
+template <bool Live, typename ... Es, auto &ref, typename SrcPhase, typename DstPhase>
+auto operator|(const Commands <Live, Es...> &cmds, const Barrier <ref, SrcPhase, DstPhase> &b)
 {
 	return cmds | barriers(b);
 }
 
-template <auto &ref, typename SrcPhase, typename DstPhase, typename ... Es>
-auto operator|(const Barrier <ref, SrcPhase, DstPhase> &b, const Commands <Es...> &cmds)
+template <auto &ref, typename SrcPhase, typename DstPhase, bool Live, typename ... Es>
+auto operator|(const Barrier <ref, SrcPhase, DstPhase> &b, const Commands <Live, Es...> &cmds)
 {
 	return barriers(b) | cmds;
 }
@@ -386,7 +387,7 @@ inline auto dispatch(uint32_t x, uint32_t y = 1, uint32_t z = 1)
 		cmd.dispatch(x, y, z);
 	};
 
-	return Commands <DependencySentinel> { binder };
+	return Commands <false, DependencySentinel> { binder };
 }
 
 inline auto trace_rays(
@@ -401,7 +402,7 @@ inline auto trace_rays(
 		cmd.traceRaysKHR(raygen, miss, hit, callable, width, height, depth, *cmd.loader);
 	};
 
-	return Commands <DependencySentinel> { binder };
+	return Commands <false, DependencySentinel> { binder };
 }
 
 template <typename T, typename F>
