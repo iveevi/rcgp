@@ -82,7 +82,7 @@ public:
 	vk::PresentModeKHR present_mode = vk::PresentModeKHR::eFifo;
 	vk::Extent2D swapchain_extent {};
 	vk::SwapchainKHR swapchain = nullptr;
-	std::vector <Image> images;
+	std::vector <ColorTargetImage> images;
 
 	void poll() const;
 	void close() const;

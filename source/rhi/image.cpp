@@ -101,4 +101,50 @@ Image Image::from(
 	return result;
 }
 
+ColorTargetImage ColorTargetImage::from(
+	const Device &device,
+	const vk::Extent2D &extent,
+	vk::Format format,
+	vk::ImageUsageFlags extra_usage
+)
+{
+	auto desc = Image::Description {
+		.extent = vk::Extent3D(extent.width, extent.height, 1),
+		.format = format,
+		.usage = vk::ImageUsageFlagBits::eColorAttachment
+		       | vk::ImageUsageFlagBits::eSampled
+		       | extra_usage,
+		.properties = vk::MemoryPropertyFlagBits::eDeviceLocal,
+		.tiling = vk::ImageTiling::eOptimal,
+		.aspect = vk::ImageAspectFlagBits::eColor,
+	};
+
+	ColorTargetImage result;
+	static_cast <Image &> (result) = Image::from(device, desc);
+	return result;
+}
+
+DepthTargetImage DepthTargetImage::from(
+	const Device &device,
+	const vk::Extent2D &extent,
+	vk::Format format,
+	vk::ImageUsageFlags extra_usage
+)
+{
+	auto desc = Image::Description {
+		.extent = vk::Extent3D(extent.width, extent.height, 1),
+		.format = format,
+		.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment
+		       | vk::ImageUsageFlagBits::eSampled
+		       | extra_usage,
+		.properties = vk::MemoryPropertyFlagBits::eDeviceLocal,
+		.tiling = vk::ImageTiling::eOptimal,
+		.aspect = vk::ImageAspectFlagBits::eDepth,
+	};
+
+	DepthTargetImage result;
+	static_cast <Image &> (result) = Image::from(device, desc);
+	return result;
+}
+
 } // namespace rcgp

@@ -38,4 +38,22 @@ struct Image {
 	static Image from(const Device &device, const Description &info);
 };
 
+struct ColorTargetImage : Image {
+	static ColorTargetImage from(
+		const Device &device,
+		const vk::Extent2D &extent,
+		vk::Format format,
+		vk::ImageUsageFlags extra_usage = {}
+	);
+};
+
+struct DepthTargetImage : Image {
+	static DepthTargetImage from(
+		const Device &device,
+		const vk::Extent2D &extent,
+		vk::Format format,
+		vk::ImageUsageFlags extra_usage = {}
+	);
+};
+
 } // namespace rcgp

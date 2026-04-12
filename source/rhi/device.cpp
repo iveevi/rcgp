@@ -237,10 +237,10 @@ bool Device::rebuild_swapchain(Window &window) const
 	auto new_swapchain = logical.createSwapchainKHR(new_swapchain_info);
 	auto swapchain_images = logical.getSwapchainImagesKHR(new_swapchain);
 
-	auto new_images = std::vector <Image> ();
+	auto new_images = std::vector <ColorTargetImage> ();
 	new_images.reserve(swapchain_images.size());
 	for (auto &handle : swapchain_images) {
-		Image image;
+		ColorTargetImage image;
 		image.device = logical;
 		image.handle = handle;
 		image.layout = vk::ImageLayout::eUndefined;
