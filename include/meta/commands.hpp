@@ -4,8 +4,6 @@
 #include <functional>
 #include <memory>
 #include <type_traits>
-#include <unordered_map>
-#include <utility>
 #include <vector>
 
 #include "../rhi/command_buffer.hpp"
@@ -40,7 +38,6 @@ struct commands_from <Live, Tlist <Effects...>> {
 template <bool Live, typename List>
 using commands_from_t = typename commands_from <Live, std::remove_cv_t <List>>::type;
 
-// Deferred specialization: a queue of pending command operators.
 template <typename ... Effects>
 struct Commands <false, Effects...> : std::vector <command_operator> {
 	using std::vector <command_operator> ::vector;
@@ -63,13 +60,7 @@ struct Commands <false, Effects...> : std::vector <command_operator> {
 	}
 };
 
-// Live specialization: refers to a CommandBuffer handle and records eagerly.
-//
-// The recording state lives in a shared flag (shared_ptr) so that all chains spawned
-// from the same module — copies returned by `operator|` — observe the same recording
-// state. The original module and its chain temporaries agree on whether
-// `vkBeginCommandBuffer` has been issued, so `finalize()` correctly emits
-// `vkEndCommandBuffer` regardless of which copy it's called on.
+// shared recording flag so chain copies from operator| agree on begin/end state
 template <typename ... Effects>
 struct Commands <true, Effects...> {
 	CommandBuffer handle;
@@ -88,8 +79,6 @@ struct Commands <true, Effects...> {
 		}
 	}
 
-	// End recording (if needed) and return the underlying buffer for submission.
-	// Clears the shared recording flag so the next directive will reset+begin again.
 	vk::CommandBuffer finalize() {
 		if (*recording) {
 			handle.end();
@@ -98,7 +87,6 @@ struct Commands <true, Effects...> {
 		return handle;
 	}
 
-	// Eagerly emit a labeled scope on the bound buffer.
 	auto &label(std::string name) {
 		ensure_recording();
 		handle.begin_label(name);
@@ -117,32 +105,33 @@ using LiveCommands = Commands <true, Effects...>;
 template <typename ... Effects>
 using DeferredCommands = Commands <false, Effects...>;
 
-// Deferred + deferred → deferred (current concat behavior, with effect normalization).
+// Live + live is ambiguous so it shall not be defined
 template <typename ... A, typename ... B>
 auto operator|(const Commands <false, A...> &a, const Commands <false, B...> &b)
 {
-	using normalized = normalize_effects_t <Tlist <A..., B...>>;
-	using result_t = commands_from_t <false, normalized>;
+	constexpr auto norm = normalize_effects(Tlist <A..., B...> {});
+	if constexpr (not std::is_same_v <std::decay_t <decltype(norm.second)>, int>)
+		static_assert(false, norm.second);
+	using result_t = commands_from_t <false, decltype(norm.first)>;
 	result_t result;
 	result.append_range(a);
 	result.append_range(b);
 	return result;
 }
 
-// nullptr | deferred — kept for back-compat with chains that start with `nullptr |`.
 template <typename ... E>
 auto operator|(const std::nullptr_t &, const Commands <false, E...> &x)
 {
 	return x;
 }
 
-// Live + deferred → live: flush deferred ops onto the bound buffer immediately and
-// propagate the live module forward (with the normalized effect list).
 template <typename ... A, typename ... B>
 auto operator|(Commands <true, A...> live, const Commands <false, B...> &deferred)
 {
-	using normalized = normalize_effects_t <Tlist <A..., B...>>;
-	using result_t = commands_from_t <true, normalized>;
+	constexpr auto norm = normalize_effects(Tlist <A..., B...> {});
+	if constexpr (not std::is_same_v <std::decay_t <decltype(norm.second)>, int>)
+		static_assert(false, norm.second);
+	using result_t = commands_from_t <true, decltype(norm.first)>;
 
 	live.ensure_recording();
 	for (auto &op : deferred)
@@ -155,8 +144,6 @@ auto operator|(Commands <true, A...> live, const Commands <false, B...> &deferre
 	return result;
 }
 
-// Live + live is intentionally NOT declared. Concatenating two bound modules has no
-// well-defined meaning ("which buffer wins?") so we forbid it at the type level.
 TYPE_TRAIT(is_commands);
 	template <bool Live, typename ... Effects>
 	TYPE_TRAIT_INCLUDES(is_commands, Commands <Live, Effects...>);

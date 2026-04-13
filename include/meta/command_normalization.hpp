@@ -1,413 +1,312 @@
 #pragma once
 
+#include <array>
+#include <cstddef>
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 
 #include "../util/cti.hpp"
 #include "../util/tlist.hpp"
+#include "barrier.hpp"
 #include "command_effects.hpp"
 #include "static_string.hpp"
 
 namespace rcgp {
 
-// Dependency/resolution state for a key
-struct tag_dep {};
-struct tag_res {};
-struct tag_none {};
-
-template <typename Src, typename Dst>
-struct tag_bar {
-	using src = Src;
-	using dst = Dst;
+enum class KeyKind : std::uint8_t {
+	eNone,
+	eRef,
+	eTarget,
+	eSampledDecl,
+	eIndex,
 };
 
-struct no_bar {};
+struct norm_key {
+	KeyKind kind = KeyKind::eNone;
+	void *addr = nullptr;
+	Topology topology = Topology::eTriangleList;
 
-template <auto &ref>
-struct key_ref {};
-
-template <auto &ref>
-struct key_target {};
-
-template <auto &ref>
-struct key_sampled_decl {};
-
-template <Topology T>
-struct key_index {};
-
-// Summary entry for a single key (resource or index buffer)
-template <typename Key, typename DepRes, typename Bar>
-struct effect_entry {
-	using key = Key;
-	using dep = DepRes;
-	using bar = Bar;
+	constexpr bool operator==(const norm_key &) const = default;
 };
 
-TYPE_TRAIT(is_dependency_effect);
-TYPE_TRAIT(is_resolvant_effect);
-TYPE_TRAIT(is_barrier_effect);
-TYPE_TRAIT(is_resolvant_index_effect);
-TYPE_TRAIT(is_dependency_index_effect);
-TYPE_TRAIT(is_indicator_index_effect);
-TYPE_TRAIT(is_enforcer_index_effect);
-TYPE_TRAIT(is_dependency_sentinel_effect);
+enum class NormOp : std::uint8_t {
+	eNone,
+	eDep,
+	eRes,
+	ePendingDep,
+};
 
-TYPE_TRAIT(is_target_write_effect);
-TYPE_TRAIT(is_target_read_effect);
-TYPE_TRAIT(is_declares_sampled_effect);
-TYPE_TRAIT(is_samples_target_effect);
+struct norm_phase {
+	PipelineStage stage = PipelineStage::eNone;
+	ResourceAccess access = ResourceAccess::eNone;
 
-template <auto &ref>
-TYPE_TRAIT_INCLUDES(is_dependency_effect, Dependency <ref>);
+	constexpr bool operator==(const norm_phase &) const = default;
+	constexpr bool valid() const { return stage != PipelineStage::eNone; }
+};
 
-template <auto &ref>
-TYPE_TRAIT_INCLUDES(is_resolvant_effect, Resolvant <ref>);
+struct norm_bar {
+	norm_phase src {};
+	norm_phase dst {};
 
-template <auto &ref, typename Src, typename Dst>
-TYPE_TRAIT_INCLUDES(is_barrier_effect, BarrierEffect <ref, Src, Dst>);
+	constexpr bool operator==(const norm_bar &) const = default;
+	constexpr bool valid() const { return src.valid() || dst.valid(); }
+};
 
-template <Topology T>
-TYPE_TRAIT_INCLUDES(is_resolvant_index_effect, ResolvantForIndexBuffer <T>);
+struct norm_entry {
+	norm_key key {};
+	NormOp op = NormOp::eNone;
+	norm_bar bar {};
 
-template <Topology T>
-TYPE_TRAIT_INCLUDES(is_dependency_index_effect, DependencyForIndexBuffer <T>);
+	constexpr bool operator==(const norm_entry &) const = default;
+	constexpr bool empty() const { return op == NormOp::eNone && !bar.valid(); }
+};
 
-template <Topology T>
-TYPE_TRAIT_INCLUDES(is_indicator_index_effect, DependencyIndicatorForIndexBuffer <T>);
-
-template <>
-TYPE_TRAIT_INCLUDES(is_enforcer_index_effect, DependencyEnforcerForIndexBuffer);
-
-template <>
-TYPE_TRAIT_INCLUDES(is_dependency_sentinel_effect, DependencySentinel);
-
-template <auto &ref>
-TYPE_TRAIT_INCLUDES(is_target_write_effect, TargetWrite <ref>);
-
-template <auto &ref>
-TYPE_TRAIT_INCLUDES(is_target_read_effect, TargetRead <ref>);
-
-template <auto &ref>
-TYPE_TRAIT_INCLUDES(is_declares_sampled_effect, DeclaresSampled <ref>);
-
-template <auto &ref>
-TYPE_TRAIT_INCLUDES(is_samples_target_effect, SamplesTarget <ref>);
-
-template <typename Head, typename ... Tail>
-consteval auto tlist_prepend(Tlist <Tail...>, Head) -> Tlist <Head, Tail...>;
-
-template <typename Head, typename List>
-using tlist_prepend_t = decltype(tlist_prepend(List(), Head()));
-
-// Combine dependency/resolution state
-consteval auto tag_operator(tag_none, tag_none) -> tag_none;
-consteval auto tag_operator(tag_none, tag_dep) -> tag_dep;
-consteval auto tag_operator(tag_none, tag_res) -> tag_res;
-consteval auto tag_operator(tag_dep, tag_none) -> tag_dep;
-consteval auto tag_operator(tag_res, tag_none) -> tag_res;
-consteval auto tag_operator(tag_dep, tag_dep) -> tag_dep;
-consteval auto tag_operator(tag_res, tag_res) -> tag_res;
-consteval auto tag_operator(tag_dep, tag_res) -> tag_none;
-consteval auto tag_operator(tag_res, tag_dep) -> tag_none;
-
-// Combine barrier phase transitions for a key
-consteval auto tag_operator(no_bar, no_bar) -> no_bar;
-
-template <typename Src, typename Dst>
-consteval auto tag_operator(no_bar, tag_bar <Src, Dst>) -> tag_bar <Src, Dst>;
-
-template <typename Src, typename Dst>
-consteval auto tag_operator(tag_bar <Src, Dst>, no_bar) -> tag_bar <Src, Dst>;
-
-template <typename SrcA, typename DstA, typename SrcB, typename DstB>
-consteval auto tag_operator(tag_bar <SrcA, DstA>, tag_bar <SrcB, DstB>)
+constexpr NormOp combine_op(NormOp a, NormOp b)
 {
-	if constexpr (std::is_same_v <DstA, SrcB>) {
-		return tag_bar <SrcA, DstB> ();
-	} else if constexpr (std::is_same_v <DstB, SrcA>) {
-		return tag_bar <SrcB, DstA> ();
-	} else {
-		return no_bar();
-	}
+	if (a == NormOp::eNone)
+		return b;
+	if (b == NormOp::eNone)
+		return a;
+	if (a == b)
+		return a;
+	if ((a == NormOp::eDep && b == NormOp::eRes) ||
+	    (a == NormOp::eRes && b == NormOp::eDep))
+		return NormOp::eNone;
+	// pending_dep is demoted to dep once it meets any resolved op
+	if (a == NormOp::ePendingDep)
+		return combine_op(NormOp::eDep, b);
+	if (b == NormOp::ePendingDep)
+		return combine_op(a, NormOp::eDep);
+	return NormOp::eNone;
 }
 
-template <typename A, typename B>
-using tag_operator_t = decltype(tag_operator(A(), B()));
-
-// Update or remove a key entry in the summary map
-template <typename Key, typename DepRes, typename Bar>
-consteval auto map_apply(Key, DepRes, Bar, Tlist <>)
+// lossy: non-chaining phases collapse to no-bar
+constexpr norm_bar combine_bar(norm_bar a, norm_bar b)
 {
-	if constexpr (std::is_same_v <DepRes, tag_none> and std::is_same_v <Bar, no_bar>) {
-		return Tlist <> ();
-	} else {
-		return Tlist <effect_entry <Key, DepRes, Bar>> ();
-	}
+	if (!a.valid()) return b;
+	if (!b.valid()) return a;
+	if (a.dst == b.src) return { a.src, b.dst };
+	if (b.dst == a.src) return { b.src, a.dst };
+	return {};
 }
 
-template <typename Key, typename DepRes, typename Bar, typename Head, typename ... Tail>
-consteval auto map_apply(Key, DepRes, Bar, Tlist <Head, Tail...>)
+constexpr norm_entry combine(norm_entry a, norm_entry b)
 {
-	if constexpr (std::is_same_v <typename Head::key, Key>) {
-		using dep = tag_operator_t <typename Head::dep, DepRes>;
-		using bar = tag_operator_t <typename Head::bar, Bar>;
-		if constexpr (std::is_same_v <dep, tag_none> and std::is_same_v <bar, no_bar>) {
-			return Tlist <Tail...> ();
-		} else {
-			return Tlist <effect_entry <Key, dep, bar>, Tail...> ();
-		}
-	} else {
-		auto rest = map_apply(Key(), DepRes(), Bar(), Tlist <Tail...> ());
-		using rest_t = decltype(rest);
-		return tlist_prepend_t <Head, rest_t> ();
-	}
+	return { a.key, combine_op(a.op, b.op), combine_bar(a.bar, b.bar) };
 }
 
-template <typename Key, typename DepRes, typename Bar, typename Map>
-using map_apply_t = decltype(map_apply(Key(), DepRes(), Bar(), Map()));
+enum class EffectKind : std::uint8_t {
+	eUnsupported,
+	eOrdinary,
+	eBarrier,
+	eIndicator,
+	eEnforcer,
+	eSentinel,
+};
 
-template <typename ... Entries>
-consteval bool map_has_dep(Tlist <Entries...>)
-{
-	return (false || ... || std::is_same_v <typename Entries::dep, tag_dep>);
-}
+struct effect_projection {
+	EffectKind kind = EffectKind::eUnsupported;
+	norm_entry entry {};
+};
 
 template <typename T>
-struct is_target_key : std::false_type {};
+constexpr effect_projection project_effect(const T &)
+{
+	return { EffectKind::eUnsupported, {} };
+}
 
 template <auto &ref>
-struct is_target_key <key_target <ref>> : std::true_type {};
-
-template <typename ... Entries>
-consteval bool map_has_non_target_dep(Tlist <Entries...>)
+constexpr effect_projection project_effect(const Dependency <ref> &)
 {
-	return (false || ... ||
-		(std::is_same_v <typename Entries::dep, tag_dep> && !is_target_key <typename Entries::key> ::value));
+	return { EffectKind::eOrdinary, { { KeyKind::eRef, (void *) &ref }, NormOp::eDep, {} } };
 }
-
-// Track pending index-buffer indicators (Option B)
-template <typename Key, typename List, size_t ... Is>
-consteval bool contains_key(std::index_sequence <Is...>)
-{
-	return (false || ... || std::is_same_v <typename List::template get <Is>, Key>);
-}
-
-template <typename Key, typename ... Entries>
-consteval auto indicators_add(Tlist <Entries...>, Key)
-{
-	using list = Tlist <Entries...>;
-	if constexpr (contains_key <Key, list> (std::make_index_sequence <list::size> ())) {
-		return list();
-	} else {
-		return tlist_concat(list(), Tlist <Key> ());
-	}
-}
-
-template <typename Indicators, typename Key>
-using indicators_add_t = decltype(indicators_add(Indicators(), Key()));
-
-template <typename Map>
-consteval auto enforce_index_deps(Map, Tlist <>)
-{
-	return Map();
-}
-
-template <typename Map, typename Head, typename ... Tail>
-consteval auto enforce_index_deps(Map, Tlist <Head, Tail...>)
-{
-	auto next = map_apply(Head(), tag_dep(), no_bar(), Map());
-	return enforce_index_deps(next, Tlist <Tail...> ());
-}
-
-template <typename Map, typename Indicators>
-using enforce_index_deps_t = decltype(enforce_index_deps(Map(), Indicators()));
-
-template <typename Map, typename Indicators, typename Effect>
-consteval auto normalize_step(Map, Indicators, Effect)
-{
-	if constexpr (is_dependency_sentinel_effect_v <Effect>) {
-		if constexpr (map_has_non_target_dep(Map()))
-			static_assert(false, "command recording has unresolved dependencies"_ss);
-		return std::pair <Map, Indicators> ();
-	} else if constexpr (is_enforcer_index_effect_v <Effect>) {
-		return std::pair <enforce_index_deps_t <Map, Indicators>, Tlist <>> ();
-	} else if constexpr (is_indicator_index_effect_v <Effect>) {
-		return std::pair <Map, indicators_add_t <Indicators, key_index <Effect::topology>>> ();
-	} else if constexpr (is_dependency_effect_v <Effect>) {
-		return std::pair <
-			map_apply_t <key_ref <Effect::handle>, tag_dep, no_bar, Map>,
-			Indicators
-		> ();
-	} else if constexpr (is_resolvant_effect_v <Effect>) {
-		return std::pair <
-			map_apply_t <key_ref <Effect::handle>, tag_res, no_bar, Map>,
-			Indicators
-		> ();
-	} else if constexpr (is_barrier_effect_v <Effect>) {
-		return std::pair <
-			map_apply_t <
-				key_ref <Effect::handle>,
-				tag_none,
-				tag_bar <
-					typename Effect::src_phase,
-					typename Effect::dst_phase
-				>,
-				Map
-			>,
-			Indicators
-		> ();
-	} else if constexpr (is_resolvant_index_effect_v <Effect>) {
-		return std::pair <
-			map_apply_t <key_index <Effect::topology>, tag_res, no_bar, Map>,
-			Indicators
-		> ();
-	} else if constexpr (is_dependency_index_effect_v <Effect>) {
-		return std::pair <
-			map_apply_t <key_index <Effect::topology>, tag_dep, no_bar, Map>,
-			Indicators
-		> ();
-	} else if constexpr (is_target_write_effect_v <Effect>) {
-		return std::pair <
-			map_apply_t <key_target <Effect::handle>, tag_res, no_bar, Map>,
-			Indicators
-		> ();
-	} else if constexpr (is_target_read_effect_v <Effect>) {
-		return std::pair <
-			map_apply_t <key_target <Effect::handle>, tag_dep, no_bar, Map>,
-			Indicators
-		> ();
-	} else if constexpr (is_declares_sampled_effect_v <Effect>) {
-		return std::pair <
-			map_apply_t <key_sampled_decl <Effect::target>, tag_res, no_bar, Map>,
-			Indicators
-		> ();
-	} else if constexpr (is_samples_target_effect_v <Effect>) {
-		return std::pair <
-			map_apply_t <key_sampled_decl <Effect::target>, tag_dep, no_bar, Map>,
-			Indicators
-		> ();
-	} else {
-		static_assert(false, "unsupported command effect"_ss);
-		return std::pair <Map, Indicators> ();
-	}
-}
-
-template <typename Map, typename Indicators, typename Effect>
-using normalize_step_t = decltype(normalize_step(Map(), Indicators(), Effect()));
-
-// Fold a list of effects into the summary map + indicator list
-template <typename Map, typename Indicators, typename ... Effects>
-struct normalize_fold;
-
-template <typename Map, typename Indicators>
-struct normalize_fold <Map, Indicators> {
-	using map = Map;
-};
-
-template <typename Map, typename Indicators, typename Head, typename ... Tail>
-struct normalize_fold <Map, Indicators, Head, Tail...> {
-	using step = normalize_step_t <Map, Indicators, Head>;
-	using next_map = typename step::first_type;
-	using next_indicators = typename step::second_type;
-	using map = typename normalize_fold <next_map, next_indicators, Tail...> ::map;
-};
-
-template <typename Entry>
-struct entry_effects;
-
-template <auto &ref, typename Bar>
-struct bar_effects;
 
 template <auto &ref>
-struct bar_effects <ref, no_bar> {
-	using type = Tlist <>;
-};
+constexpr effect_projection project_effect(const Resolvant <ref> &)
+{
+	return { EffectKind::eOrdinary, { { KeyKind::eRef, (void *) &ref }, NormOp::eRes, {} } };
+}
+
+template <auto &ref>
+constexpr effect_projection project_effect(const TargetWrite <ref> &)
+{
+	return { EffectKind::eOrdinary, { { KeyKind::eTarget, (void *) &ref }, NormOp::eRes, {} } };
+}
+
+template <auto &ref>
+constexpr effect_projection project_effect(const TargetRead <ref> &)
+{
+	return { EffectKind::eOrdinary, { { KeyKind::eTarget, (void *) &ref }, NormOp::eDep, {} } };
+}
+
+template <auto &ref>
+constexpr effect_projection project_effect(const DeclaresSampled <ref> &)
+{
+	return { EffectKind::eOrdinary, { { KeyKind::eSampledDecl, (void *) &ref }, NormOp::eRes, {} } };
+}
+
+template <auto &ref>
+constexpr effect_projection project_effect(const SamplesTarget <ref> &)
+{
+	return { EffectKind::eOrdinary, { { KeyKind::eSampledDecl, (void *) &ref }, NormOp::eDep, {} } };
+}
+
+template <Topology T>
+constexpr effect_projection project_effect(const DependencyForIndexBuffer <T> &)
+{
+	return { EffectKind::eOrdinary, { { KeyKind::eIndex, nullptr, T }, NormOp::eDep, {} } };
+}
+
+template <Topology T>
+constexpr effect_projection project_effect(const ResolvantForIndexBuffer <T> &)
+{
+	return { EffectKind::eOrdinary, { { KeyKind::eIndex, nullptr, T }, NormOp::eRes, {} } };
+}
 
 template <auto &ref, typename Src, typename Dst>
-struct bar_effects <ref, tag_bar <Src, Dst>> {
-	using type = Tlist <BarrierEffect <ref, Src, Dst>>;
-};
-
-template <auto &ref, typename DepRes, typename Bar>
-struct entry_effects <effect_entry <key_ref <ref>, DepRes, Bar>> {
-	using dep = std::conditional_t <
-		std::is_same_v <DepRes, tag_dep>,
-		Tlist <Dependency <ref>>,
-		std::conditional_t <
-			std::is_same_v <DepRes, tag_res>,
-			Tlist <Resolvant <ref>>,
-			Tlist <>
-		>
-	>;
-	using bar = typename bar_effects <ref, Bar> ::type;
-	using type = tlist_concat_t <dep, bar>;
-};
-
-template <auto &ref, typename DepRes, typename Bar>
-struct entry_effects <effect_entry <key_target <ref>, DepRes, Bar>> {
-	static_assert(std::is_same_v <Bar, no_bar>, "render target cannot carry barrier effects");
-	using type = std::conditional_t <
-		std::is_same_v <DepRes, tag_dep>,
-		Tlist <TargetRead <ref>>,
-		std::conditional_t <
-			std::is_same_v <DepRes, tag_res>,
-			Tlist <TargetWrite <ref>>,
-			Tlist <>
-		>
-	>;
-};
-
-template <auto &ref, typename DepRes, typename Bar>
-struct entry_effects <effect_entry <key_sampled_decl <ref>, DepRes, Bar>> {
-	static_assert(std::is_same_v <Bar, no_bar>, "sampled declaration cannot carry barrier effects");
-	using type = std::conditional_t <
-		std::is_same_v <DepRes, tag_dep>,
-		Tlist <SamplesTarget <ref>>,
-		std::conditional_t <
-			std::is_same_v <DepRes, tag_res>,
-			Tlist <DeclaresSampled <ref>>,
-			Tlist <>
-		>
-	>;
-};
-
-template <Topology T, typename DepRes, typename Bar>
-struct entry_effects <effect_entry <key_index <T>, DepRes, Bar>> {
-	static_assert(std::is_same_v <Bar, no_bar>, "index buffer cannot carry barrier effects");
-	using type = std::conditional_t <
-		std::is_same_v <DepRes, tag_dep>,
-		Tlist <DependencyForIndexBuffer <T>>,
-		std::conditional_t <
-			std::is_same_v <DepRes, tag_res>,
-			Tlist <ResolvantForIndexBuffer <T>>,
-			Tlist <>
-		>
-	>;
-};
-
-// Convert the per-key summary map back into a canonical effect list
-template <typename ... Entries>
-consteval auto map_to_effects(Tlist <Entries...>)
+constexpr effect_projection project_effect(const BarrierEffect <ref, Src, Dst> &)
 {
-	if constexpr (sizeof...(Entries) == 0) {
-		return Tlist <> ();
-	} else if constexpr (sizeof...(Entries) == 1) {
-		return (typename entry_effects <Entries> ::type(), ...);
+	return {
+		EffectKind::eBarrier,
+		{
+			{ KeyKind::eRef, (void *) &ref },
+			NormOp::eNone,
+			{ { Src::stage, Src::access }, { Dst::stage, Dst::access } },
+		},
+	};
+}
+
+template <Topology T>
+constexpr effect_projection project_effect(const DependencyIndicatorForIndexBuffer <T> &)
+{
+	return { EffectKind::eIndicator, { { KeyKind::eIndex, nullptr, T }, NormOp::ePendingDep, {} } };
+}
+
+constexpr effect_projection project_effect(const DependencyEnforcerForIndexBuffer &)
+{
+	return { EffectKind::eEnforcer, {} };
+}
+
+constexpr effect_projection project_effect(const DependencySentinel &)
+{
+	return { EffectKind::eSentinel, {} };
+}
+
+template <std::size_t N>
+struct norm_state {
+	std::array <norm_entry, N> entries {};
+	std::size_t count = 0;
+	bool sentinel_error = false;
+	norm_key first_error_key {};
+
+	constexpr std::size_t find(norm_key k) const
+	{
+		for (std::size_t i = 0; i < count; ++i)
+			if (entries[i].key == k) return i;
+		return N;
+	}
+
+	constexpr void apply(norm_entry e)
+	{
+		std::size_t i = find(e.key);
+		if (i == N) {
+			entries[count++] = e;
+			return;
+		}
+		entries[i] = combine(entries[i], e);
+		if (entries[i].empty()) {
+			entries[i] = entries[--count];
+			entries[count] = {};
+		}
+	}
+
+	// target deps are excluded: cross-pass ordering may span module boundaries
+	constexpr bool has_non_target_dep() const
+	{
+		for (std::size_t i = 0; i < count; ++i) {
+			const auto &e = entries[i];
+			if (e.op == NormOp::eDep && e.key.kind != KeyKind::eTarget)
+				return true;
+		}
+		return false;
+	}
+
+	constexpr void enforce_index_deps()
+	{
+		for (std::size_t i = 0; i < count; ++i) {
+			if (entries[i].op == NormOp::ePendingDep)
+				entries[i].op = NormOp::eDep;
+		}
+	}
+};
+
+template <typename Effect, std::size_t N>
+constexpr void apply_effect(norm_state <N> &state)
+{
+	constexpr auto p = project_effect(Effect {});
+	static_assert(p.kind != EffectKind::eUnsupported,
+		"normalize: unsupported command effect");
+
+	if constexpr (p.kind == EffectKind::eSentinel) {
+		if (state.has_non_target_dep()) {
+			state.sentinel_error = true;
+			for (std::size_t i = 0; i < state.count; ++i) {
+				const auto &e = state.entries[i];
+				if (e.op == NormOp::eDep && e.key.kind != KeyKind::eTarget) {
+					state.first_error_key = e.key;
+					break;
+				}
+			}
+		}
+	} else if constexpr (p.kind == EffectKind::eEnforcer) {
+		state.enforce_index_deps();
 	} else {
-		return tlist_concat(typename entry_effects <Entries> ::type()...);
+		state.apply(p.entry);
 	}
 }
 
-template <typename List>
-struct normalize_effects;
-
 template <typename ... Effects>
-struct normalize_effects <Tlist <Effects...>> {
-	using map = typename normalize_fold <Tlist <>, Tlist <>, Effects...> ::map;
-	using type = decltype(map_to_effects(map()));
-};
+consteval auto fold_effects()
+{
+	norm_state <sizeof...(Effects) + 1> state {};
+	(apply_effect <Effects> (state), ...);
+	return state;
+}
 
-template <typename List>
-using normalize_effects_t = typename normalize_effects <List> ::type;
+// opaque carrier for a normalized entry; projects back to itself on re-normalization
+template <norm_entry Value>
+struct NormalEntry {};
+
+template <norm_entry Value>
+constexpr effect_projection project_effect(const NormalEntry <Value> &)
+{
+	return {
+		(Value.bar.valid() && Value.op == NormOp::eNone)
+			? EffectKind::eBarrier
+			: EffectKind::eOrdinary,
+		Value,
+	};
+}
+
+template <auto State, std::size_t ... Is>
+auto decode_state(std::index_sequence <Is...>)
+	-> Tlist <NormalEntry <State.entries[Is]>...>;
+
+// Returns a pair (normalized Tlist, error). `error` is int(0) when the fold
+// is clean, or a static_string with a diagnostic when the sentinel caught an
+// unresolved dep. The call site (operator|) discriminates on the error type
+// and fires the static_assert locally — keeping the instantiation chain short.
+template <typename ... Effects>
+consteval auto normalize_effects(Tlist <Effects...>)
+{
+	constexpr auto state = fold_effects <Effects...> ();
+	using tlist_t = decltype(decode_state <state> (std::make_index_sequence <state.count> ()));
+
+	if constexpr (state.sentinel_error)
+		return std::pair { tlist_t {}, "command recording has unresolved dependencies"_ss };
+	else
+		return std::pair { tlist_t {}, 0 };
+}
 
 } // namespace rcgp
