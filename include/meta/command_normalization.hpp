@@ -29,6 +29,9 @@ struct key_ref {};
 template <auto &ref>
 struct key_target {};
 
+template <auto &ref>
+struct key_sampled_decl {};
+
 template <Topology T>
 struct key_index {};
 
@@ -51,6 +54,8 @@ TYPE_TRAIT(is_dependency_sentinel_effect);
 
 TYPE_TRAIT(is_target_write_effect);
 TYPE_TRAIT(is_target_read_effect);
+TYPE_TRAIT(is_declares_sampled_effect);
+TYPE_TRAIT(is_samples_target_effect);
 
 template <auto &ref>
 TYPE_TRAIT_INCLUDES(is_dependency_effect, Dependency <ref>);
@@ -81,6 +86,12 @@ TYPE_TRAIT_INCLUDES(is_target_write_effect, TargetWrite <ref>);
 
 template <auto &ref>
 TYPE_TRAIT_INCLUDES(is_target_read_effect, TargetRead <ref>);
+
+template <auto &ref>
+TYPE_TRAIT_INCLUDES(is_declares_sampled_effect, DeclaresSampled <ref>);
+
+template <auto &ref>
+TYPE_TRAIT_INCLUDES(is_samples_target_effect, SamplesTarget <ref>);
 
 template <typename Head, typename ... Tail>
 consteval auto tlist_prepend(Tlist <Tail...>, Head) -> Tlist <Head, Tail...>;
@@ -265,6 +276,16 @@ consteval auto normalize_step(Map, Indicators, Effect)
 			map_apply_t <key_target <Effect::handle>, tag_dep, no_bar, Map>,
 			Indicators
 		> ();
+	} else if constexpr (is_declares_sampled_effect_v <Effect>) {
+		return std::pair <
+			map_apply_t <key_sampled_decl <Effect::target>, tag_res, no_bar, Map>,
+			Indicators
+		> ();
+	} else if constexpr (is_samples_target_effect_v <Effect>) {
+		return std::pair <
+			map_apply_t <key_sampled_decl <Effect::target>, tag_dep, no_bar, Map>,
+			Indicators
+		> ();
 	} else {
 		static_assert(false, "unsupported command effect"_ss);
 		return std::pair <Map, Indicators> ();
@@ -331,6 +352,20 @@ struct entry_effects <effect_entry <key_target <ref>, DepRes, Bar>> {
 		std::conditional_t <
 			std::is_same_v <DepRes, tag_res>,
 			Tlist <TargetWrite <ref>>,
+			Tlist <>
+		>
+	>;
+};
+
+template <auto &ref, typename DepRes, typename Bar>
+struct entry_effects <effect_entry <key_sampled_decl <ref>, DepRes, Bar>> {
+	static_assert(std::is_same_v <Bar, no_bar>, "sampled declaration cannot carry barrier effects");
+	using type = std::conditional_t <
+		std::is_same_v <DepRes, tag_dep>,
+		Tlist <SamplesTarget <ref>>,
+		std::conditional_t <
+			std::is_same_v <DepRes, tag_res>,
+			Tlist <DeclaresSampled <ref>>,
 			Tlist <>
 		>
 	>;

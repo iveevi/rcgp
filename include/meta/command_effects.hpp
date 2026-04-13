@@ -57,7 +57,6 @@ struct BarrierEffect {
 	using dst_phase = DstPhase;
 };
 
-// Render target effects
 template <auto &ref>
 struct TargetWrite {
 	static constexpr auto &handle = ref;
@@ -68,17 +67,53 @@ struct TargetRead {
 	static constexpr auto &handle = ref;
 };
 
-// Dependency sequences for pipelines
+template <auto &ref>
+struct DeclaresSampled {
+	static constexpr auto &target = ref;
+};
+
+template <auto &ref>
+struct SamplesTarget {
+	static constexpr auto &target = ref;
+};
+
 template <auto &... refs>
 consteval auto command_effects_for_streams(Tlist <contract <refs>...>)
 {
 	return Tlist <Dependency <refs>...> {};
 }
 
+template <typename Field>
+struct samples_target_for {
+	using type = Tlist <>;
+};
+
+template <auto &t>
+struct samples_target_for <sampler <t>> {
+	using type = Tlist <SamplesTarget <t>>;
+};
+
+template <typename Wrapper>
+consteval auto samples_targets_for_wrapper()
+{
+	using ref_type = std::decay_t <decltype(Wrapper::contract::handle)>;
+	if constexpr (is_resource_group_v <ref_type>) {
+		return [] <typename ... Fields> (Tlist <Fields...>) {
+			return tlist_concat(Tlist <> {}, Tlist <> {},
+				typename samples_target_for <Fields> ::type {}...);
+		} (typename ref_type::struct_type::fields {});
+	} else {
+		return Tlist <> {};
+	}
+}
+
 template <typename ... Wrappers>
 consteval auto command_effects_for_grcs(Tlist <Wrappers...>)
 {
-	return Tlist <Dependency <Wrappers::contract::handle>...> {};
+	auto deps = Tlist <Dependency <Wrappers::contract::handle>...> {};
+	auto samples = tlist_concat(Tlist <> {}, Tlist <> {},
+		samples_targets_for_wrapper <Wrappers> ()...);
+	return tlist_concat(deps, samples);
 }
 
 template <Topology T, typename AS, typename GAMAP, typename GRCs>

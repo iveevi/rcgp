@@ -2,6 +2,7 @@
 
 #include "../rhi/device.hpp"
 #include "../rhi/image.hpp"
+#include "resources.hpp"
 
 namespace rcgp {
 
@@ -31,6 +32,36 @@ struct MirrorSampler {
 			? image.layout
 			: layout;
 		return sm;
+	}
+};
+
+template <auto &target_ref>
+requires is_render_target_v <reference_base_of <target_ref>>
+struct TargetMirrorSampler {
+	using image_type = std::conditional_t <
+		is_depth_target_v <reference_base_of <target_ref>>,
+		DepthTargetImage, ColorTargetImage
+	>;
+
+	image_type *image = nullptr;
+	vk::Sampler sampler {};
+
+	vk::DescriptorImageInfo descriptor_info() const {
+		return vk::DescriptorImageInfo()
+			.setSampler(sampler)
+			.setImageView(image->view)
+			.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+	}
+
+	static TargetMirrorSampler from(
+		const Device &device,
+		image_type *img,
+		const vk::SamplerCreateInfo &sinfo
+	) {
+		TargetMirrorSampler result;
+		result.image = img;
+		result.sampler = device.logical.createSampler(sinfo);
+		return result;
 	}
 };
 

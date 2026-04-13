@@ -4,16 +4,24 @@
 #include <functional>
 #include <memory>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "../rhi/command_buffer.hpp"
+#include "../rhi/image.hpp"
 #include "command_normalization.hpp"
 
 namespace rcgp {
 
+struct TargetRegistration {
+	Image *image = nullptr;
+	bool is_depth = false;
+};
+
 struct SerializationContext {
 	size_t pplid;
+	std::map <void *, TargetRegistration> target_images;
 };
 
 using command_operator = std::function <void (const CommandBuffer &, SerializationContext &)>;
@@ -66,6 +74,7 @@ template <typename ... Effects>
 struct Commands <true, Effects...> {
 	CommandBuffer handle;
 	std::shared_ptr <bool> recording = std::make_shared <bool> (false);
+	std::shared_ptr <SerializationContext> sctx = std::make_shared <SerializationContext> ();
 
 	Commands() = default;
 	explicit Commands(const CommandBuffer &cmd) : handle(cmd) {}
@@ -75,6 +84,7 @@ struct Commands <true, Effects...> {
 			handle.reset();
 			handle.begin(vk::CommandBufferBeginInfo());
 			*recording = true;
+			*sctx = SerializationContext {};
 		}
 	}
 
@@ -135,13 +145,13 @@ auto operator|(Commands <true, A...> live, const Commands <false, B...> &deferre
 	using result_t = commands_from_t <true, normalized>;
 
 	live.ensure_recording();
-	SerializationContext sctx {};
 	for (auto &op : deferred)
-		op(live.handle, sctx);
+		op(live.handle, *live.sctx);
 
 	result_t result;
 	result.handle = live.handle;
 	result.recording = live.recording;
+	result.sctx = live.sctx;
 	return result;
 }
 

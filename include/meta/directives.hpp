@@ -78,7 +78,6 @@ auto bind_pipeline(const Pipeline &pipeline)
 		cmd.bindPipeline(cid.bind_point, pipeline.handle);
 	};
 
-	// TODO: load up the dependencies
 	constexpr auto dependencies = command_effects(pipeline);
 
 	using list = decltype(dependencies);

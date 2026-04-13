@@ -87,6 +87,20 @@ jems::handle resource_intrinsic(const Sampler <T, D> &, uint32_t binding)
 	});
 }
 
+template <auto &target_ref>
+jems::handle resource_intrinsic(const sampler <target_ref> &, uint32_t binding)
+{
+	// TODO: deal with type and dimension using reference base
+	return jems::global_resource(GlobalResource {
+		jems::type(primitive_of <float, 2> ()),
+		GlobalResourceKind::eSampler,
+		GlobalResourceLayout::eNone,
+		GlobalResourceAccess::eRead,
+		std::nullopt,
+		binding
+	});
+}
+
 // TODO: array slot for global resources
 template <typename R, int64_t D>
 requires is_global_resource_v <R>

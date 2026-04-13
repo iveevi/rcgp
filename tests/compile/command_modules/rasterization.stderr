@@ -1,27 +1,27 @@
 In file included from rasterization.cpp:1:
 In file included from rcgp.hpp:4:
 In file included from rcgp-meta.hpp:9:
-In file included from commands.hpp:11:
-command_normalization.hpp:219:18: error: static assertion failed: command recording has unresolved dependencies
-  219 |                         static_assert(false, "command recording has unresolved dependencies"_ss);
+In file included from commands.hpp:13:
+command_normalization.hpp:230:18: error: static assertion failed: command recording has unresolved dependencies
+  230 |                         static_assert(false, "command recording has unresolved dependencies"_ss);
       |                                       ^~~~~
-command_normalization.hpp:275:35: note: in instantiation of function template specialization 'rcgp::normalize_step<rcgp::Tlist<rcgp::effect_entry<rcgp::key_ref<material>, rcgp::tag_dep, rcgp::no_bar>>, rcgp::Tlist<>, rcgp::DependencySentinel>' requested here
-  275 | using normalize_step_t = decltype(normalize_step(Map(), Indicators(), Effect()));
+command_normalization.hpp:296:35: note: in instantiation of function template specialization 'rcgp::normalize_step<rcgp::Tlist<rcgp::effect_entry<rcgp::key_ref<material>, rcgp::tag_dep, rcgp::no_bar>>, rcgp::Tlist<>, rcgp::DependencySentinel>' requested here
+  296 | using normalize_step_t = decltype(normalize_step(Map(), Indicators(), Effect()));
       |                                   ^
-command_normalization.hpp:288:15: note: in instantiation of template type alias 'normalize_step_t' requested here
-  288 |         using step = normalize_step_t <Map, Indicators, Head>;
+command_normalization.hpp:309:15: note: in instantiation of template type alias 'normalize_step_t' requested here
+  309 |         using step = normalize_step_t <Map, Indicators, Head>;
       |                      ^
-command_normalization.hpp:291:23: note: in instantiation of template class 'rcgp::normalize_fold<rcgp::Tlist<rcgp::effect_entry<rcgp::key_ref<material>, rcgp::tag_dep, rcgp::no_bar>>, rcgp::Tlist<>, rcgp::DependencySentinel>' requested here
-  291 |         using map = typename normalize_fold <next_map, next_indicators, Tail...> ::map;
+command_normalization.hpp:312:23: note: in instantiation of template class 'rcgp::normalize_fold<rcgp::Tlist<rcgp::effect_entry<rcgp::key_ref<material>, rcgp::tag_dep, rcgp::no_bar>>, rcgp::Tlist<>, rcgp::DependencySentinel>' requested here
+  312 |         using map = typename normalize_fold <next_map, next_indicators, Tail...> ::map;
       |                              ^
-command_normalization.hpp:371:23: note: in instantiation of template class 'rcgp::normalize_fold<rcgp::Tlist<>, rcgp::Tlist<>, rcgp::Dependency<material>, rcgp::DependencySentinel>' requested here
-  371 |         using map = typename normalize_fold <Tlist <>, Tlist <>, Effects...> ::map;
+command_normalization.hpp:406:23: note: in instantiation of template class 'rcgp::normalize_fold<rcgp::Tlist<>, rcgp::Tlist<>, rcgp::Dependency<material>, rcgp::DependencySentinel>' requested here
+  406 |         using map = typename normalize_fold <Tlist <>, Tlist <>, Effects...> ::map;
       |                              ^
-command_normalization.hpp:376:1: note: in instantiation of template class 'rcgp::normalize_effects<rcgp::Tlist<rcgp::Dependency<material>, rcgp::DependencySentinel>>' requested here
-  376 | using normalize_effects_t = typename normalize_effects <List> ::type;
+command_normalization.hpp:411:1: note: in instantiation of template class 'rcgp::normalize_effects<rcgp::Tlist<rcgp::Dependency<material>, rcgp::DependencySentinel>>' requested here
+  411 | using normalize_effects_t = typename normalize_effects <List> ::type;
       | ^
-commands.hpp:114:21: note: in instantiation of template type alias 'normalize_effects_t' requested here
-  114 |         using normalized = normalize_effects_t <Tlist <A..., B...>>;
+commands.hpp:124:21: note: in instantiation of template type alias 'normalize_effects_t' requested here
+  124 |         using normalized = normalize_effects_t <Tlist <A..., B...>>;
       |                            ^
 rasterization.cpp:168:3: note: in instantiation of function template specialization 'rcgp::operator|<rcgp::Dependency<material>, rcgp::DependencySentinel>' requested here
   168 |                 | draw(3);

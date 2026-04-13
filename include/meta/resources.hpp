@@ -6,6 +6,7 @@
 #include "../dsl/array.hpp"
 #include "../util/error.hpp"
 #include "../util/cti.hpp"
+#include "contract.hpp"
 #include "layouts.hpp"
 
 namespace rcgp {
@@ -196,6 +197,12 @@ TYPE_TRAIT(is_render_target);
 	template <>
 	TYPE_TRAIT_INCLUDES(is_render_target, DepthTarget);
 
+template <auto &target_ref>
+requires is_render_target_v <reference_base_of <target_ref>>
+struct sampler : resource_handle {
+	using handle_type = typename Sampler <float, 2> ::handle_type;
+};
+
 // Type traits for these resources
 TYPE_TRAIT(is_attribute_stream);
 	template <typename T, template <typename> typename L, vk::VertexInputRate R>
@@ -229,5 +236,11 @@ TYPE_TRAIT(is_resource_array);
 	template <typename R, int64_t D>
 	requires is_global_resource_v <R>
 	TYPE_TRAIT_INCLUDES(is_resource_array, array <R, D>);
+
+template <auto &target_ref>
+TYPE_TRAIT_INCLUDES(is_global_resource, sampler <target_ref>);
+
+template <auto &target_ref>
+TYPE_TRAIT_INCLUDES(is_sampler, sampler <target_ref>);
 
 } // namespace rcgp

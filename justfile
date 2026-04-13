@@ -37,6 +37,7 @@ compile:
 	python tests/compile/check_compile_fail.py {{compiler}} {{cxxflags}} tests/compile/command_modules/compute.cpp
 	python tests/compile/check_compile_fail.py {{compiler}} {{cxxflags}} tests/compile/command_modules/mesh_shading.cpp
 	python tests/compile/check_compile_fail.py {{compiler}} {{cxxflags}} tests/compile/command_modules/raytracing.cpp
+	python tests/compile/check_compile_fail.py {{compiler}} {{cxxflags}} tests/compile/command_modules/deferred.cpp
 
 # Tests for JIT tracing of the DSL
 dsl *args: build_test

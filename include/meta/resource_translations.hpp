@@ -18,6 +18,10 @@ struct Image;
 struct MirrorSampler;
 struct RaytracingAccelerationStructure;
 
+template <auto &target_ref>
+requires is_render_target_v <reference_base_of <target_ref>>
+struct TargetMirrorSampler;
+
 // Resource translation mappings
 template <typename T>
 struct resource_translation {};
@@ -53,6 +57,12 @@ struct resource_translation <StorageBuffer <T, L, A>> {
 template <typename T, size_t D>
 struct resource_translation <Sampler <T, D>> {
 	using handle_type = MirrorSampler;
+	using host_type = std::nullptr_t;
+};
+
+template <auto &target_ref>
+struct resource_translation <sampler <target_ref>> {
+	using handle_type = TargetMirrorSampler <target_ref>;
 	using host_type = std::nullptr_t;
 };
 
