@@ -424,4 +424,38 @@ auto foreach(const std::vector <T> &container, F &&ftn)
 	return C { binder };
 }
 
+template <typename T, typename F>
+auto branch(bool condition, T &&if_true, F &&if_false)
+{
+	constexpr bool t_invocable = std::is_invocable_v <T>;
+	constexpr bool f_invocable = std::is_invocable_v <F>;
+	static_assert(t_invocable, "branch: arg@1 must be invocable with no arguments");
+	static_assert(f_invocable, "branch: arg@2 must be invocable with no arguments");
+
+	using TC = std::invoke_result_t <T>;
+	using FC = std::invoke_result_t <F>;
+
+	constexpr bool t_is_commands = is_commands_v <TC>;
+	constexpr bool f_is_commands = is_commands_v <FC>;
+	static_assert(t_is_commands, "branch: arg@1 must return a Commands module");
+	static_assert(f_is_commands, "branch: arg@2 must return a Commands module");
+
+	constexpr bool arms_match = std::is_same_v <TC, FC>;
+	static_assert(arms_match,
+		"branch: both arms must produce identical Commands types; "
+		"any divergence in effects (bindings, dispatches, barriers) is rejected");
+
+	auto binder = [=](const CommandBuffer &cmd, SerializationContext &sctx) {
+		if (condition) {
+			for (auto &op : if_true())
+				op(cmd, sctx);
+		} else {
+			for (auto &op : if_false())
+				op(cmd, sctx);
+		}
+	};
+
+	return TC { binder };
+}
+
 } // namespace rcgp

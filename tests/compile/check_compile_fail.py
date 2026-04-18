@@ -50,7 +50,17 @@ def main():
             fromfile=str(expected_path),
             tofile="actual",
         )
-        sys.stderr.writelines(diff)
+        for line in diff:
+            if line.startswith("+++") or line.startswith("---"):
+                sys.stderr.write(f"\033[1m{line}\033[0m")
+            elif line.startswith("@@"):
+                sys.stderr.write(f"\033[36m{line}\033[0m")
+            elif line.startswith("+"):
+                sys.stderr.write(f"\033[32m{line}\033[0m")
+            elif line.startswith("-"):
+                sys.stderr.write(f"\033[31m{line}\033[0m")
+            else:
+                sys.stderr.write(line)
         sys.exit(1)
 
 if __name__ == "__main__":
