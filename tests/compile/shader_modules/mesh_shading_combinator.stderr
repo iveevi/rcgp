@@ -1,8 +1,8 @@
 In file included from mesh_shading_combinator.cpp:1:
 In file included from rcgp.hpp:4:
 In file included from rcgp-meta.hpp:8:
-combinators.hpp:205:17: error: static assertion failed due to requirement 'is_task': mesh-shading combinator: arg@0 is not a task shader
-  205 |                 static_assert(is_task, "mesh-shading combinator: arg@0 is not a task shader");
+combinators.hpp:206:17: error: static assertion failed due to requirement 'is_task': mesh-shading combinator: arg@0 is not a task shader
+  206 |                 static_assert(is_task, "mesh-shading combinator: arg@0 is not a task shader");
       |                               ^~~~~~~
 mesh_shading_combinator.cpp:44:4: note: in instantiation of function template specialization 'rcgp::MeshShadingCombinator::operator()<rcgp::shader_stage<rcgp::ShaderStage::eVertex, void, rcgp::write_only_intrinsic<rcgp::SystemValue::eClipPosition, rcgp::ShaderStage::eVertex, rcgp::vector<float, 4>>>, rcgp::shader_stage<rcgp::ShaderStage::eMesh, rcgp::MeshletPayload<rcgp::MeshPrimitive::eTriangles, 64, 126, MeshOutputs>, rcgp::TaskPayload<rcgp::vector<float, 3>>, rcgp::WorkGroup<1>>, rcgp::shader_stage<rcgp::ShaderStage::eFragment, rcgp::vector<float, 4>, rcgp::vector<float, 3>>>' requested here
    44 |         } (vs, ms, fs);
@@ -10,21 +10,29 @@ mesh_shading_combinator.cpp:44:4: note: in instantiation of function template sp
 In file included from mesh_shading_combinator.cpp:1:
 In file included from rcgp.hpp:4:
 In file included from rcgp-meta.hpp:8:
-combinators.hpp:211:17: error: static assertion failed due to requirement 'payload_compatible': mesh-shading combinator: task shader payload type does not match mesh shader payload type
-  211 |                 static_assert(payload_compatible, "mesh-shading combinator: task shader payload type does not match mesh shader payload type");
-      |                               ^~~~~~~~~~~~~~~~~~
-combinators.hpp:211:17: error: static assertion failed due to requirement 'payload_compatible': mesh-shading combinator: task shader payload type does not match mesh shader payload type
-  211 |                 static_assert(payload_compatible, "mesh-shading combinator: task shader payload type does not match mesh shader payload type");
-      |                               ^~~~~~~~~~~~~~~~~~
+combinators.hpp:213:18: error: static assertion failed: mesh-shading combinator got incompatible task and mesh payloads:
+    task shader emits: void
+    mesh shader expects: f32[3]
+  213 |                         static_assert(false, payload);
+      |                                       ^~~~~
+combinators.hpp:213:18: error: static assertion failed: mesh-shading combinator got incompatible task and mesh payloads:
+    task shader emits: f32[3]
+    mesh shader expects: f32[2]
+  213 |                         static_assert(false, payload);
+      |                                       ^~~~~
 mesh_shading_combinator.cpp:64:4: note: in instantiation of function template specialization 'rcgp::MeshShadingCombinator::operator()<rcgp::shader_stage<rcgp::ShaderStage::eTask, rcgp::TaskPayload<rcgp::vector<float, 3>>, rcgp::TaskGroup<1>>, rcgp::shader_stage<rcgp::ShaderStage::eMesh, rcgp::MeshletPayload<rcgp::MeshPrimitive::eTriangles, 64, 126, MeshOutputs>, rcgp::TaskPayload<rcgp::vector<float, 2>>, rcgp::WorkGroup<1>>, rcgp::shader_stage<rcgp::ShaderStage::eFragment, rcgp::vector<float, 4>, rcgp::vector<float, 3>>>' requested here
    64 |         } (ts, ms, fs);
       |           ^
 In file included from mesh_shading_combinator.cpp:1:
 In file included from rcgp.hpp:4:
 In file included from rcgp-meta.hpp:8:
-combinators.hpp:213:17: error: static assertion failed due to requirement 'io_compatible': mesh-shading combinator: mesh shader outputs do not match fragment shader inputs
-  213 |                 static_assert(io_compatible, "mesh-shading combinator: mesh shader outputs do not match fragment shader inputs");
-      |                               ^~~~~~~~~~~~~
+combinators.hpp:217:18: error: static assertion failed: mesh-shading combinator got incompatible shader modules:
+    mesh shader outputs: (f32[3])
+    fragment shader inputs: (f32[2])
+type mismatch in @0; mesh shader returns f32[3] while
+fragment shader requires f32[2]
+  217 |                         static_assert(false, io);
+      |                                       ^~~~~
 mesh_shading_combinator.cpp:84:4: note: in instantiation of function template specialization 'rcgp::MeshShadingCombinator::operator()<rcgp::shader_stage<rcgp::ShaderStage::eTask, rcgp::TaskPayload<rcgp::vector<float, 3>>, rcgp::TaskGroup<1>>, rcgp::shader_stage<rcgp::ShaderStage::eMesh, rcgp::MeshletPayload<rcgp::MeshPrimitive::eTriangles, 64, 126, MeshOutputs>, rcgp::TaskPayload<rcgp::vector<float, 3>>, rcgp::WorkGroup<1>>, rcgp::shader_stage<rcgp::ShaderStage::eFragment, rcgp::vector<float, 4>, rcgp::vector<float, 2>>>' requested here
    84 |         } (ts, ms, fs);
       |           ^

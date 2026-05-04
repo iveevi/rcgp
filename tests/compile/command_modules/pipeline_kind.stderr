@@ -31,7 +31,7 @@ In file included from rcgp-meta.hpp:9:
 commands.hpp:89:17: error: static assertion failed: command recording: terminal directive expects a different pipeline kind than the one currently bound
    89 |                 static_assert(false, norm.second);
       |                               ^~~~~
-pipeline_kind.cpp:163:21: note: in instantiation of function template specialization 'rcgp::operator|<rcgp::ActivatePipeline<rcgp::PipelineKind::eRasterization>, rcgp::NormalEntry<norm_entry{{4, nullptr, 0}, 3, {{0, 0}, {0, 0}}}>, rcgp::TerminalSentinel<rcgp::PipelineKind::eCompute>>' requested here
+pipeline_kind.cpp:163:21: note: in instantiation of function template specialization 'rcgp::operator|<rcgp::ActivatePipeline<rcgp::PipelineKind::eRasterization>, rcgp::NormalEntry<norm_entry{{4, nullptr, 0}, 3, {{0, 0}, {0, 0}}, nullptr}>, rcgp::TerminalSentinel<rcgp::PipelineKind::eCompute>>' requested here
   163 |         auto cmds = stage1 | dispatch(1);
       |                            ^
 4 errors generated.

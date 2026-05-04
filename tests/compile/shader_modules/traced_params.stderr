@@ -2,7 +2,7 @@ In file included from traced_params.cpp:1:
 In file included from rcgp.hpp:4:
 In file included from rcgp-meta.hpp:13:
 In file included from function_construction.hpp:9:
-inject_arguments.hpp:168:17: error: static assertion failed: argument type rcgp::vector<float, 3> is not supported in Stage X
+inject_arguments.hpp:168:17: error: static assertion failed: argument type f32[3] is not supported in Stage X
   168 |                 static_assert(false, "argument type "_ss + $ss_type(T)
       |                               ^~~~~
 inject_arguments.hpp:179:4: note: in instantiation of function template specialization 'rcgp::inject_one_argument<rcgp::ShaderStage::eVertex, rcgp::vector<float, 3>>' requested here
@@ -18,7 +18,7 @@ In file included from traced_params.cpp:1:
 In file included from rcgp.hpp:4:
 In file included from rcgp-meta.hpp:13:
 In file included from function_construction.hpp:9:
-inject_arguments.hpp:168:17: error: static assertion failed: argument type rcgp::vector<float, 3> is not supported in Stage X
+inject_arguments.hpp:168:17: error: static assertion failed: argument type f32[3] is not supported in Stage X
   168 |                 static_assert(false, "argument type "_ss + $ss_type(T)
       |                               ^~~~~
 inject_arguments.hpp:179:4: note: in instantiation of function template specialization 'rcgp::inject_one_argument<rcgp::ShaderStage::eCompute, rcgp::vector<float, 3>>' requested here
@@ -34,7 +34,7 @@ In file included from traced_params.cpp:1:
 In file included from rcgp.hpp:4:
 In file included from rcgp-meta.hpp:13:
 In file included from function_construction.hpp:9:
-inject_arguments.hpp:168:17: error: static assertion failed: argument type rcgp::vector<float, 3> is not supported in Stage X
+inject_arguments.hpp:168:17: error: static assertion failed: argument type f32[3] is not supported in Stage X
   168 |                 static_assert(false, "argument type "_ss + $ss_type(T)
       |                               ^~~~~
 inject_arguments.hpp:179:4: note: in instantiation of function template specialization 'rcgp::inject_one_argument<rcgp::ShaderStage::eMesh, rcgp::vector<float, 3>>' requested here

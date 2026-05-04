@@ -1,8 +1,8 @@
 In file included from compute_combinator.cpp:1:
 In file included from rcgp.hpp:4:
 In file included from rcgp-meta.hpp:8:
-combinators.hpp:174:17: error: static assertion failed due to requirement 'is_compute': compute combinator: arg@0 is not a compute shader
-  174 |                 static_assert(is_compute, "compute combinator: arg@0 is not a compute shader");
+combinators.hpp:175:17: error: static assertion failed due to requirement 'is_compute': compute combinator: arg@0 is not a compute shader
+  175 |                 static_assert(is_compute, "compute combinator: arg@0 is not a compute shader");
       |                               ^~~~~~~~~~
 compute_combinator.cpp:24:4: note: in instantiation of function template specialization 'rcgp::ComputeCombinator::operator()<rcgp::shader_stage<rcgp::ShaderStage::eVertex, void, rcgp::write_only_intrinsic<rcgp::SystemValue::eClipPosition, rcgp::ShaderStage::eVertex, rcgp::vector<float, 4>>>>' requested here
    24 |         } (vs);
@@ -10,8 +10,8 @@ compute_combinator.cpp:24:4: note: in instantiation of function template special
 In file included from compute_combinator.cpp:1:
 In file included from rcgp.hpp:4:
 In file included from rcgp-meta.hpp:8:
-combinators.hpp:174:17: error: static assertion failed due to requirement 'is_compute': compute combinator: arg@0 is not a compute shader
-  174 |                 static_assert(is_compute, "compute combinator: arg@0 is not a compute shader");
+combinators.hpp:175:17: error: static assertion failed due to requirement 'is_compute': compute combinator: arg@0 is not a compute shader
+  175 |                 static_assert(is_compute, "compute combinator: arg@0 is not a compute shader");
       |                               ^~~~~~~~~~
 compute_combinator.cpp:35:4: note: in instantiation of function template specialization 'rcgp::ComputeCombinator::operator()<rcgp::shader_stage<rcgp::ShaderStage::eFragment, rcgp::vector<float, 4>, rcgp::vector<float, 3>>>' requested here
    35 |         } (fs);

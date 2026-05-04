@@ -78,8 +78,9 @@ struct RasterizationCombinator {
 		static_assert(is_vertex, "rasterization combinator: arg@0 is not a vertex shader");
 		constexpr bool is_fragment = is_fragment_shader_v <FragmentShader>;
 		static_assert(is_fragment, "rasterization combinator: arg@1 is not a fragment shader");
-		constexpr bool io_compatible = vertex_fragment_io_compatible <VertexShader, FragmentShader>;
-		static_assert(io_compatible, "rasterization combinator: vertex shader outputs do not match fragment shader inputs");
+		constexpr auto io = check_vertex_fragment_io <VertexShader, FragmentShader> ();
+		if constexpr (not std::is_same_v <std::decay_t <decltype(io)>, int>)
+			static_assert(false, io);
 
 		transfer_io_rates(vertex_shader, fragment_shader);
 
@@ -207,10 +208,13 @@ struct MeshShadingCombinator {
 		static_assert(is_mesh, "mesh-shading combinator: arg@1 is not a mesh shader");
 		constexpr bool is_fragment = is_fragment_shader_v <FragmentShader>;
 		static_assert(is_fragment, "mesh-shading combinator: arg@2 is not a fragment shader");
-		constexpr bool payload_compatible = task_mesh_payload_compatible <TaskShader, MeshShader>;
-		static_assert(payload_compatible, "mesh-shading combinator: task shader payload type does not match mesh shader payload type");
-		constexpr bool io_compatible = mesh_fragment_io_compatible <MeshShader, FragmentShader>;
-		static_assert(io_compatible, "mesh-shading combinator: mesh shader outputs do not match fragment shader inputs");
+		constexpr auto payload = check_task_mesh_payload <TaskShader, MeshShader> ();
+		if constexpr (not std::is_same_v <std::decay_t <decltype(payload)>, int>)
+			static_assert(false, payload);
+
+		constexpr auto io = check_mesh_fragment_io <MeshShader, FragmentShader> ();
+		if constexpr (not std::is_same_v <std::decay_t <decltype(io)>, int>)
+			static_assert(false, io);
 
 		auto gvrs = merge_stage_wrappers(tlist_concat(
 			TaskShader::gvrs,
@@ -264,11 +268,10 @@ struct RayTracingCombinator {
 		static_assert(all_miss, "ray tracing combinator: arg@1 (miss shader tuple) contains a non-miss-shader element");
 		constexpr bool all_chit = (is_closest_hit_shader_v <ClosestHitShaders> and ...);
 		static_assert(all_chit, "ray tracing combinator: arg@2 (closest-hit shader tuple) contains a non-closest-hit-shader element");
-		constexpr bool receivers_covered = raytracing_receivers_covered <
-			all_dispatcher_addresses_t <RayGenerationShader, MissShaders..., ClosestHitShaders...>,
-			all_receiver_addresses_t <MissShaders..., ClosestHitShaders...>
-		>;
-		static_assert(receivers_covered, "ray tracing combinator: a receiver has no matching dispatcher in the pipeline");
+		constexpr auto coverage = check_raytracing_coverage <RayGenerationShader> (
+			Tlist <MissShaders...> {}, Tlist <ClosestHitShaders...> {});
+		if constexpr (not std::is_same_v <std::decay_t <decltype(coverage)>, int>)
+			static_assert(false, coverage);
 
 		auto gvrs = [&] <size_t... CI, size_t... MI> (
 			std::index_sequence <CI...>,

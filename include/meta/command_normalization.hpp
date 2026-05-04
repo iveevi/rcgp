@@ -11,6 +11,7 @@
 #include "barrier.hpp"
 #include "command_effects.hpp"
 #include "static_string.hpp"
+#include "type_string_overrides.hpp"
 
 namespace rcgp {
 
@@ -57,6 +58,7 @@ struct norm_entry {
 	norm_key key {};
 	NormOp op = NormOp::eNone;
 	norm_bar bar {};
+	const char *name = nullptr;
 
 	constexpr bool operator==(const norm_entry &) const = default;
 	constexpr bool empty() const { return op == NormOp::eNone && !bar.valid(); }
@@ -93,8 +95,27 @@ constexpr norm_bar combine_bar(norm_bar a, norm_bar b)
 
 constexpr norm_entry combine(norm_entry a, norm_entry b)
 {
-	return { a.key, combine_op(a.op, b.op), combine_bar(a.bar, b.bar) };
+	return {
+		a.key,
+		combine_op(a.op, b.op),
+		combine_bar(a.bar, b.bar),
+		(a.name != nullptr) ? a.name : b.name,
+	};
 }
+
+// Static-storage null-terminated buffer of `ref`'s bare name; its `.data()`
+// is stashed in `norm_entry::name` so dep diagnostics can name the resource.
+template <auto &ref>
+inline constexpr auto ref_name_storage = [] {
+	constexpr auto v = ref_name_view <ref> ();
+	std::array <char, v.size() + 1> buf {};
+	for (std::size_t i = 0; i < v.size(); ++i)
+		buf[i] = v[i];
+	return buf;
+} ();
+
+template <auto &ref>
+inline constexpr const char *ref_name_cstr = ref_name_storage <ref> .data();
 
 enum class EffectKind : std::uint8_t {
 	eUnsupported,
@@ -122,13 +143,13 @@ constexpr effect_projection project_effect(const T &)
 template <auto &ref>
 constexpr effect_projection project_effect(const Dependency <ref> &)
 {
-	return { EffectKind::eOrdinary, { { KeyKind::eRef, (void *) &ref }, NormOp::eDep, {} } };
+	return { EffectKind::eOrdinary, { { KeyKind::eRef, (void *) &ref }, NormOp::eDep, {}, ref_name_cstr <ref> } };
 }
 
 template <auto &ref>
 constexpr effect_projection project_effect(const Resolvant <ref> &)
 {
-	return { EffectKind::eOrdinary, { { KeyKind::eRef, (void *) &ref }, NormOp::eRes, {} } };
+	return { EffectKind::eOrdinary, { { KeyKind::eRef, (void *) &ref }, NormOp::eRes, {}, ref_name_cstr <ref> } };
 }
 
 template <auto &ref>
@@ -146,13 +167,13 @@ constexpr effect_projection project_effect(const TargetRead <ref> &)
 template <auto &ref>
 constexpr effect_projection project_effect(const DeclaresSampled <ref> &)
 {
-	return { EffectKind::eOrdinary, { { KeyKind::eSampledDecl, (void *) &ref }, NormOp::eRes, {} } };
+	return { EffectKind::eOrdinary, { { KeyKind::eSampledDecl, (void *) &ref }, NormOp::eRes, {}, ref_name_cstr <ref> } };
 }
 
 template <auto &ref>
 constexpr effect_projection project_effect(const SamplesTarget <ref> &)
 {
-	return { EffectKind::eOrdinary, { { KeyKind::eSampledDecl, (void *) &ref }, NormOp::eDep, {} } };
+	return { EffectKind::eOrdinary, { { KeyKind::eSampledDecl, (void *) &ref }, NormOp::eDep, {}, ref_name_cstr <ref> } };
 }
 
 template <Topology T>
@@ -339,6 +360,75 @@ struct prepend_pipeline_marker <K, Tlist <Ts...>> {
 	using type = Tlist <ActivatePipeline <K>, Ts...>;
 };
 
+constexpr bool entry_is_unresolved(const norm_entry &e)
+{
+	return e.op == NormOp::eDep
+		&& (e.key.kind == KeyKind::eRef
+			|| e.key.kind == KeyKind::eSampledDecl
+			|| e.key.kind == KeyKind::eIndex);
+}
+
+consteval std::size_t cstrlen(const char *s)
+{
+	std::size_t n = 0;
+	while (s && s[n])
+		++n;
+	return n;
+}
+
+template <auto State>
+consteval std::size_t unresolved_names_total_len()
+{
+	std::size_t total = 0;
+	bool first = true;
+	for (std::size_t i = 0; i < State.count; ++i) {
+		const auto &e = State.entries[i];
+		if (!entry_is_unresolved(e))
+			continue;
+		if (!first) total += 2; // ", "
+		first = false;
+		if (e.name != nullptr) {
+			total += cstrlen(e.name);
+		} else if (e.key.kind == KeyKind::eIndex) {
+			total += sizeof("<index buffer>") - 1;
+		} else {
+			total += sizeof("<unnamed>") - 1;
+		}
+	}
+	return total;
+}
+
+template <auto State>
+consteval auto unresolved_names_string()
+{
+	constexpr std::size_t L = unresolved_names_total_len <State> ();
+	static_string <L> result;
+	std::size_t out = 0;
+	bool first = true;
+	for (std::size_t i = 0; i < State.count; ++i) {
+		const auto &e = State.entries[i];
+		if (!entry_is_unresolved(e))
+			continue;
+		if (!first) {
+			result.elements[out++] = ',';
+			result.elements[out++] = ' ';
+		}
+		first = false;
+		auto write = [&] (const char *s) {
+			for (std::size_t j = 0; s[j]; ++j)
+				result.elements[out++] = s[j];
+		};
+		if (e.name != nullptr) {
+			write(e.name);
+		} else if (e.key.kind == KeyKind::eIndex) {
+			write("<index buffer>");
+		} else {
+			write("<unnamed>");
+		}
+	}
+	return result;
+}
+
 template <typename ... Effects>
 consteval auto normalize_effects(Tlist <Effects...>)
 {
@@ -346,12 +436,17 @@ consteval auto normalize_effects(Tlist <Effects...>)
 	using entries_list = decltype(decode_entries <state> (std::make_index_sequence <state.count> ()));
 	using tlist_t = typename prepend_pipeline_marker <state.current_pipeline, entries_list> ::type;
 
-	if constexpr (state.sentinel_error)
-		return std::pair { tlist_t {}, "command recording has unresolved dependencies"_ss };
-	else if constexpr (state.pipeline_kind_error)
+	if constexpr (state.sentinel_error) {
+		return std::pair {
+			tlist_t {},
+			"commands combinator detected dispatch before all dependencies\nwere provided:\n\tmissing dependencies: "_ss
+				+ unresolved_names_string <state> ()
+		};
+	} else if constexpr (state.pipeline_kind_error) {
 		return std::pair { tlist_t {}, "command recording: terminal directive expects a different pipeline kind than the one currently bound"_ss };
-	else
+	} else {
 		return std::pair { tlist_t {}, 0 };
+	}
 }
 
 } // namespace rcgp

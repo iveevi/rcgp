@@ -1,0 +1,12 @@
+In file included from dep_missing_format.cpp:5:
+In file included from rcgp.hpp:4:
+In file included from rcgp-meta.hpp:9:
+commands.hpp:89:17: error: static assertion failed: commands combinator detected dispatch before all dependencies
+were provided:
+	missing dependencies: lights
+   89 |                 static_assert(false, norm.second);
+      |                               ^~~~~
+dep_missing_format.cpp:32:3: note: in instantiation of function template specialization 'rcgp::operator|<rcgp::ActivatePipeline<rcgp::PipelineKind::eRasterization>, rcgp::DependencyIndicatorForIndexBuffer<rcgp::Topology::eTriangleList>, rcgp::Dependency<lights>, rcgp::TerminalSentinel<rcgp::PipelineKind::eRasterization>>' requested here
+   32 |                 | draw(3);
+      |                 ^
+1 error generated.

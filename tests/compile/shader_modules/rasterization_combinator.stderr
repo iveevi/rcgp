@@ -13,9 +13,13 @@ In file included from rcgp-meta.hpp:8:
 combinators.hpp:80:17: error: static assertion failed due to requirement 'is_fragment': rasterization combinator: arg@1 is not a fragment shader
    80 |                 static_assert(is_fragment, "rasterization combinator: arg@1 is not a fragment shader");
       |                               ^~~~~~~~~~~
-combinators.hpp:82:17: error: static assertion failed due to requirement 'io_compatible': rasterization combinator: vertex shader outputs do not match fragment shader inputs
-   82 |                 static_assert(io_compatible, "rasterization combinator: vertex shader outputs do not match fragment shader inputs");
-      |                               ^~~~~~~~~~~~~
+combinators.hpp:83:18: error: static assertion failed: rasterization combinator got incompatible shader modules:
+    vertex shader outputs: (f32[4])
+    fragment shader inputs: ()
+arity mismatch; vertex shader emits 1 outputs while
+fragment shader requires 0 inputs
+   83 |                         static_assert(false, io);
+      |                                       ^~~~~
 combinators.hpp:78:17: error: static assertion failed due to requirement 'is_vertex': rasterization combinator: arg@0 is not a vertex shader
    78 |                 static_assert(is_vertex, "rasterization combinator: arg@0 is not a vertex shader");
       |                               ^~~~~~~~~
@@ -25,12 +29,20 @@ rasterization_combinator.cpp:59:4: note: in instantiation of function template s
 In file included from rasterization_combinator.cpp:1:
 In file included from rcgp.hpp:4:
 In file included from rcgp-meta.hpp:8:
-combinators.hpp:82:17: error: static assertion failed due to requirement 'io_compatible': rasterization combinator: vertex shader outputs do not match fragment shader inputs
-   82 |                 static_assert(io_compatible, "rasterization combinator: vertex shader outputs do not match fragment shader inputs");
-      |                               ^~~~~~~~~~~~~
-combinators.hpp:82:17: error: static assertion failed due to requirement 'io_compatible': rasterization combinator: vertex shader outputs do not match fragment shader inputs
-   82 |                 static_assert(io_compatible, "rasterization combinator: vertex shader outputs do not match fragment shader inputs");
-      |                               ^~~~~~~~~~~~~
+combinators.hpp:83:18: error: static assertion failed: rasterization combinator got incompatible shader modules:
+    vertex shader outputs: ()
+    fragment shader inputs: (f32[3])
+arity mismatch; vertex shader emits 0 outputs while
+fragment shader requires 1 inputs
+   83 |                         static_assert(false, io);
+      |                                       ^~~~~
+combinators.hpp:83:18: error: static assertion failed: rasterization combinator got incompatible shader modules:
+    vertex shader outputs: (f32[3])
+    fragment shader inputs: (f32[2])
+type mismatch in @0; vertex shader returns f32[3] while
+fragment shader requires f32[2]
+   83 |                         static_assert(false, io);
+      |                                       ^~~~~
 rasterization_combinator.cpp:75:4: note: in instantiation of function template specialization 'rcgp::RasterizationCombinator<rcgp::Topology::eTriangleList>::operator()<rcgp::shader_stage<rcgp::ShaderStage::eVertex, rcgp::Smooth<rcgp::vector<float, 3>>, rcgp::write_only_intrinsic<rcgp::SystemValue::eClipPosition, rcgp::ShaderStage::eVertex, rcgp::vector<float, 4>>>, rcgp::shader_stage<rcgp::ShaderStage::eFragment, rcgp::vector<float, 4>, rcgp::vector<float, 2>>>' requested here
    75 |         } (vs, fs);
       |           ^

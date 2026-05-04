@@ -1,10 +1,12 @@
 In file included from mesh_shading.cpp:1:
 In file included from rcgp.hpp:4:
 In file included from rcgp-meta.hpp:9:
-commands.hpp:89:17: error: static assertion failed: command recording has unresolved dependencies
+commands.hpp:89:17: error: static assertion failed: commands combinator detected dispatch before all dependencies
+were provided:
+	missing dependencies: params
    89 |                 static_assert(false, norm.second);
       |                               ^~~~~
-mesh_shading.cpp:110:3: note: in instantiation of function template specialization 'rcgp::operator|<rcgp::ActivatePipeline<rcgp::PipelineKind::eMeshShading>, rcgp::NormalEntry<norm_entry{{1, &params, 0}, 1, {{0, 0}, {0, 0}}}>, rcgp::TerminalSentinel<rcgp::PipelineKind::eMeshShading>>' requested here
+mesh_shading.cpp:110:3: note: in instantiation of function template specialization 'rcgp::operator|<rcgp::ActivatePipeline<rcgp::PipelineKind::eMeshShading>, rcgp::NormalEntry<norm_entry{{1, &params, 0}, 1, {{0, 0}, {0, 0}}, &ref_name_storage._M_elems[0]}>, rcgp::TerminalSentinel<rcgp::PipelineKind::eMeshShading>>' requested here
   110 |                 | draw_mesh_tasks(1);
       |                 ^
 1 error generated.
