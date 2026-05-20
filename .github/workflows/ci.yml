@@ -26,7 +26,7 @@ jobs:
       VK_LOADER_DRIVERS_SELECT: lvp_icd.json
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install toolchain and deps
         run: |
