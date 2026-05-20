@@ -377,22 +377,25 @@ void emit_context(AsmEmitter &em, const SharedBlockReference &sbr)
 		em.emit_fmt_line("stage outputs: {{ {} }}", result);
 	}
 
-	size_t total_resources = 0;
-	for (auto &[_, refs] : sbr->global_resources)
-		total_resources += refs.size();
+	std::vector <Reference> ordered_resources;
+	for (const auto &[_, refs] : sbr->global_resources) {
+		for (const auto &grsrc : refs)
+			ordered_resources.push_back(grsrc);
+	}
 
-	if (total_resources) {
+	std::stable_sort(ordered_resources.begin(), ordered_resources.end(),
+	[](const Reference &a, const Reference &b) {
+		return a->as <GlobalResource> ()
+			< b->as <GlobalResource> ();
+	});
+
+	if (!ordered_resources.empty()) {
 		std::string result;
-
-		size_t i = 0;
-		for (const auto &[_, refs] : sbr->global_resources) {
-			for (const auto &grsrc : refs) {
-				result += em.ref(grsrc);
-				if (++i < total_resources)
-					result += ", ";
-			}
+		for (size_t i = 0; i < ordered_resources.size(); i++) {
+			result += em.ref(ordered_resources[i]);
+			if (i + 1 < ordered_resources.size())
+				result += ", ";
 		}
-
 		em.emit_fmt_line("resources: {{ {} }},", result);
 	}
 

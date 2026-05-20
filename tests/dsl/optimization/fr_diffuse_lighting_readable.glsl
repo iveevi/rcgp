@@ -15,16 +15,16 @@ layout (location = 2) smooth in vec2 lin2;
 
 layout (location = 0) out vec3 lout0;
 
-layout (std430, set = 0, binding = 0) readonly buffer Buffer0x0 {
-    int count;
-    fwd_PointLight lights[];
-} r0b0;
-
 layout (set = 0, binding = 0) uniform sampler2D r0b0;
 
 layout (set = 0, binding = 1) uniform sampler2D r0b1;
 
 layout (set = 0, binding = 2) uniform sampler2D r0b2;
+
+layout (std430, set = 0, binding = 0) readonly buffer Buffer0x0 {
+    int count;
+    fwd_PointLight lights[];
+} r0b0;
 
 void main()
 {

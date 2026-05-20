@@ -927,14 +927,19 @@ void emit_whole(GLSLEmitter &em)
 		em.emit_newline();
 	}
 
-	// Global shader resources
-	// NOTE: Top-level is sufficient because of context inheritence
+	std::vector <const GlobalResource *> ordered_resources;
 	for (auto &[_, refs] : em.main->global_resources) {
-		for (auto &ref : refs) {
-			auto &grsrc = ref->as <GlobalResource> ();
-			emit_resource(em, grsrc);
-		}
+		for (auto &ref : refs)
+			ordered_resources.push_back(&ref->as <GlobalResource> ());
 	}
+	
+	std::stable_sort(ordered_resources.begin(), ordered_resources.end(),
+	[](const GlobalResource *a, const GlobalResource *b) {
+		return *a < *b;
+	});
+
+	for (const auto *grsrc : ordered_resources)
+		emit_resource(em, *grsrc);
 
 	// Subroutines
 	// TODO: top sort

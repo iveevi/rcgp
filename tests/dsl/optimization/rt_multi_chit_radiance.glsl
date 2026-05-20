@@ -7,11 +7,11 @@ hitAttributeEXT vec2 hit_attribute;
 
 layout (set = 0, binding = 0) uniform accelerationStructureEXT r0b0;
 
-layout (location = 0) rayPayloadInEXT vec3 payload0;
-
 layout (location = 1) rayPayloadEXT float payload1;
 
 layout (location = 2) rayPayloadEXT vec3 payload2;
+
+layout (location = 0) rayPayloadInEXT vec3 payload0;
 
 void main()
 {

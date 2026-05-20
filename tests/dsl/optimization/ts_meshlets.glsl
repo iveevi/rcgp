@@ -26,21 +26,13 @@ layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
 taskPayloadSharedEXT meshlets_TaskPayloadData task_payload;
 
-#ifdef __GNUC__
 layout (std430, push_constant) uniform PC {
     layout (offset = 0) meshlets_ViewData pc;
 };
 
-#endif
 layout (std430, set = 0, binding = 0) readonly buffer Buffer0x0 {
     meshlets_MeshletData value[];
 } r0b0;
-#ifdef __clang__
-
-layout (std430, push_constant) uniform PC {
-    layout (offset = 0) meshlets_ViewData pc;
-};
-#endif
 
 void main()
 {

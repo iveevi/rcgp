@@ -5,9 +5,9 @@
 
 layout (set = 0, binding = 0) uniform accelerationStructureEXT r0b0;
 
-layout (set = 0, binding = 0) uniform writeonly image2D r0b0;
-
 layout (location = 0) rayPayloadEXT vec3 payload0;
+
+layout (set = 0, binding = 0) uniform writeonly image2D r0b0;
 
 void main()
 {

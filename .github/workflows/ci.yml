@@ -72,8 +72,8 @@ jobs:
 
       - name: Build library
         run: |
-          # Bypass the libc-has-pthread probe (always true on glibc >= 2.34);
-          # works around clang-20's apt.llvm.org snapshot tripping the check.
+          # CMAKE_HAVE_LIBC_PTHREAD bypasses a probe that fails on clang-20's
+          # apt.llvm.org snapshot but is trivially true on glibc >= 2.34.
           cmake -G Ninja -B build \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_LINKER_TYPE=DEFAULT \

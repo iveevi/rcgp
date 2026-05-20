@@ -1,10 +1,11 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
-#include <memory>
 
 #include "../util/variant.hpp"
 #include "enumerations.hpp"
@@ -152,6 +153,19 @@ struct GlobalResource {
 	std::optional <int64_t> count;
 
 	std::string repr() const;
+
+	auto stable_key() const {
+		return std::tuple(
+			std::to_underlying(kind),
+			group.value_or(0),
+			index.value_or(0),
+			offset.value_or(0)
+		);
+	}
+
+	bool operator<(const GlobalResource &other) const {
+		return stable_key() < other.stable_key();
+	}
 };
 
 struct Argument {

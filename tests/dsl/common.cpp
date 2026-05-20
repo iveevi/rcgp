@@ -146,8 +146,7 @@ std::string read_file_contents(const std::filesystem::path &path)
         return s.str();
 }
 
-// Read fixture file through unifdef so per-compiler #ifdef blocks resolve to
-// the variant matching the compiler that built the test binary.
+// unifdef the fixture against the host compiler's identity macros.
 static std::string read_expected(const std::filesystem::path &path)
 {
 #if defined(__clang__)
