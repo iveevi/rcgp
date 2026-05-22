@@ -1,79 +1,31 @@
-# RCGP
+# RCGP: Resource Contracts for Graphics Programming
 
-Reference implementation for *RCGP: Resource Contracts for Graphics
-Programming* (SIGGRAPH 2026 / TOG).
+RCGP is a pure-C++ graphics programming framework based on the SIGGRAPH 2026 paper [*RCGP: Resource Contracts for Graphics Programming*](https://iveevi.github.io/rcgp/). It establishes a type system for resources in graphics applications, such as storage buffers and textures, that enables static verification of resource usage in both shader code and host code.
 
 <p align="center">
   <img src="https://iveevi.github.io/rcgp/teaser.png" width="100%" />
 </p>
 
-RCGP is a header-and-static-library C++ project. This README explains how to
-pull it into your own application.
+# Usage
 
-## Requirements
+RCGP is designed to be usable in any Vulkan project using C++26 and beyond, and is supported on GCC 15+ and Clang 19+ compilers.
 
-- A C++26 toolchain with a recent standard library:
-  - GCC 15+ (provides `<print>`, `std::views::enumerate`, `vector::append_range`), or
-  - Clang 19+ paired with libstdc++-15+ or libc++ 17+.
-- CMake ≥ 4.0
-- Vulkan SDK ≥ 1.3.275 (with ray tracing extensions; needs `vk::ResultValue::has_value`)
-- `glslang`, `fmt` ≥ 9.1 (for `fmt::println`), `glfw`
-- Python 3 (used by the build for source generation)
-
-## Adding RCGP to a CMake project
-
-Place the RCGP source tree somewhere under your project (for example as a
-git submodule at `third_party/rcgp`) and pull it in with `add_subdirectory`:
-
-```cmake
-cmake_minimum_required(VERSION 4.0)
-project(my_app CXX)
-
-set(CMAKE_CXX_STANDARD 26)
-
-find_package(Vulkan REQUIRED)
-find_package(glslang REQUIRED)
-
-add_subdirectory(third_party/rcgp EXCLUDE_FROM_ALL)
-
-add_executable(my_app main.cpp)
-target_link_libraries(my_app PRIVATE rcgp)
-```
-
-That is the full integration. Linking against the `rcgp` target gives you:
-
-- the `rcgp` static library,
-- its public headers (the `include/` directory is added automatically),
-- and all of its transitive dependencies — `fmt`, `glfw`, `Vulkan::Vulkan`,
-  and the `glslang` libraries — so you do not have to repeat them on your
-  own targets.
-
-In `main.cpp`, include the umbrella header:
+To use the framework, do the following:
 
 ```cpp
 #include <rcgp.hpp>
+
+// Recommended, especially for shader code
+using namespace rcgp;
 ```
 
-## Optional: glm interop
+This repository does not come with batteries included; users will need to provide the following dependencies:
+* Vulkan, for the core graphics backend.
+* [glslang](https://github.com/KhronosGroup/glslang), for compiling the transpiled GLSL shader modules to SPIR-V.
+* [fmt](https://github.com/fmtlib/fmt), for various IO utilities.
+* [glfw](https://github.com/glfw/glfw), for OS-window management.
+* Python 3, used for parts of the build process.
 
-If your application uses [glm](https://github.com/g-truc/glm), define
-`RCGP_SUPPORT_GLM` *before* including any RCGP header to enable implicit
-conversions between RCGP's vector/matrix types and `glm::vecN` / `glm::matN`:
+Optionally, to enable automatic conversions to [glm](https://github.com/g-truc/glm) matrix and vector types, define `RCGP_SUPPORT_GLM` before the inclusion of `rcgp.hpp` and, of course, include the glm library itself.
 
-```cmake
-target_compile_definitions(my_app PRIVATE RCGP_SUPPORT_GLM)
-```
-
-## Without CMake
-
-If you build by hand, you need C++26 and the RCGP headers on your include
-path:
-
-```
--std=c++26 -I path/to/rcgp/include
-```
-
-You will also need to compile the sources under `path/to/rcgp/source/` (and
-link the result into your binary alongside Vulkan, glslang, fmt, and glfw).
-The CMake build is the supported path; the hand-rolled flags above are only
-a sketch.
+Samples and documentation will be coming soon!
