@@ -309,14 +309,11 @@ Reference builtin_intrinsic_type_ref(const SharedBlockReference &sbr, const Buil
 	}
 	case BuiltinIntrinsicCode::eSelect:
 		return arg_type(1);
-	case BuiltinIntrinsicCode::eCastFloat:
 	case BuiltinIntrinsicCode::eIntBitsToFloat:
 	case BuiltinIntrinsicCode::eUintBitsToFloat:
 		return get_or_add_type(sbr, Primitive::eFloat);
-	case BuiltinIntrinsicCode::eCastInt:
 	case BuiltinIntrinsicCode::eFloatBitsToInt:
 		return get_or_add_type(sbr, Primitive::eInt32);
-	case BuiltinIntrinsicCode::eCastUint:
 	case BuiltinIntrinsicCode::eFloatBitsToUint:
 		return get_or_add_type(sbr, Primitive::eUInt32);
 	case BuiltinIntrinsicCode::eIsNan:

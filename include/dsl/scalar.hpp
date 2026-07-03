@@ -30,8 +30,12 @@ public:
 	template <native_scalar U>
 	requires std::is_convertible_v <U, T>
 	scalar(const scalar <U> &value, $location) {
-		_ref = jems::local(jems::type(primitive_of <T> (), loc));
-		jems::store(_ref, value);
+		auto type = jems::type(primitive_of <T> (), loc);
+		_ref = jems::local(type, loc);
+		if constexpr (std::is_same_v <U, T>)
+			jems::store(_ref, value);
+		else
+			jems::store(_ref, jems::construct(type, { value }, loc));
 	}
 
 	scalar &operator=(const scalar &rhs) {

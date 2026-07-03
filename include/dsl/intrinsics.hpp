@@ -67,34 +67,6 @@ auto pow(const T &a, const U &b)
 	);
 }
 
-// Value conversion casts (e.g. float(uint_val))
-template <typename To>
-struct cast_impl;
-
-template <>
-struct cast_impl <f32> {
-	static f32 from(const u32 &v) { return f32::reinterpret(builtin(eCastFloat, v)); }
-	static f32 from(const i32 &v) { return f32::reinterpret(builtin(eCastFloat, v)); }
-};
-
-template <>
-struct cast_impl <i32> {
-	static i32 from(const f32 &v) { return i32::reinterpret(builtin(eCastInt, v)); }
-	static i32 from(const u32 &v) { return i32::reinterpret(builtin(eCastInt, v)); }
-};
-
-template <>
-struct cast_impl <u32> {
-	static u32 from(const f32 &v) { return u32::reinterpret(builtin(eCastUint, v)); }
-	static u32 from(const i32 &v) { return u32::reinterpret(builtin(eCastUint, v)); }
-};
-
-template <typename To, typename From>
-To cast(const From &v)
-{
-	return cast_impl <To> ::from(v);
-}
-
 // Bitwise reinterpret casts
 template <typename To>
 struct bitcast_impl;
