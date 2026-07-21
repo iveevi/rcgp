@@ -28,4 +28,4 @@ This repository does not come with batteries included; users will need to provid
 
 Optionally, to enable automatic conversions to [glm](https://github.com/g-truc/glm) matrix and vector types, define `RCGP_SUPPORT_GLM` before the inclusion of `rcgp.hpp` and, of course, include the glm library itself.
 
-Samples and documentation will be coming soon!
+Samples are available in a separate repository, [rcgp-samples](https://github.com/iveevi/rcgp-samples), covering rasterization, glTF geometry and textured materials, with more on the way. Documentation will be coming soon!
